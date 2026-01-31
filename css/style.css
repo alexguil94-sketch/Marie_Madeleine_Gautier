@@ -1,0 +1,151 @@
+/* Base UI (layout, cards, grid, lightbox) */
+:root{
+  --radius:18px;
+  --shadow:0 18px 55px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;}
+a{text-decoration:none}
+img{max-width:100%; display:block}
+
+.container{width:min(1180px, calc(100% - 56px)); margin:0 auto}
+@media (max-width:720px){ .container{width:calc(100% - 32px)} }
+
+/* spacing below sticky header */
+.page{padding-top:92px}
+
+.card{border:1px solid rgba(255,255,255,.10); border-radius:var(--radius); background: rgba(255,255,255,.03)}
+.card-pad{padding:20px}
+
+.kicker{color: rgba(197,160,89,.95); text-transform:uppercase; letter-spacing:2px; font-size:12px}
+.hr{height:1px; background: rgba(197,160,89,.22); margin:22px 0}
+
+/* buttons */
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:10px; padding:14px 22px; border-radius:999px; border:1px solid rgba(197,160,89,.45); background: rgba(197,160,89,.12); color:inherit; cursor:pointer; font-weight:700; letter-spacing:1px; text-transform:uppercase; font-size:12px}
+.btn:hover{background: rgba(197,160,89,.18)}
+.btn.ghost{border-color: rgba(255,255,255,.14); background: transparent}
+
+/* forms */
+.input, select, textarea{
+  width:100%;
+  background: rgba(0,0,0,.22);
+  border:1px solid rgba(255,255,255,.12);
+  color: inherit;
+  padding:12px 12px;
+  border-radius:12px;
+  outline:none;
+}
+textarea{resize:vertical}
+
+.toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between}
+
+.grid{display:grid; gap:14px; grid-template-columns: repeat(4, minmax(0,1fr))}
+@media (max-width:980px){ .grid{grid-template-columns: repeat(3, minmax(0,1fr))} }
+@media (max-width:740px){ .grid{grid-template-columns: repeat(2, minmax(0,1fr))} }
+@media (max-width:420px){ .grid{grid-template-columns: 1fr} }
+
+.columns{display:grid; gap:14px; grid-template-columns:1fr 1fr}
+@media (max-width:740px){ .columns{grid-template-columns:1fr} }
+
+/* work tile */
+.work{border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.22); position:relative; cursor:pointer; padding:0}
+.work img{width:100%; height:230px; object-fit:cover; transform:scale(1); transition: transform 600ms ease}
+.work:hover img{transform: scale(1.08)}
+.work .meta{position:absolute; left:0; right:0; bottom:0; padding:10px 12px; background: linear-gradient(to top, rgba(0,0,0,.72), transparent); font-size:13px}
+
+/* Gallery: masonry layout (keeps tall portrait photos intact, no forced crop) */
+.gallery-grid{
+  columns: 4 240px;
+  column-gap: 14px;
+}
+@media (max-width:980px){ .gallery-grid{columns: 3 220px;} }
+@media (max-width:740px){ .gallery-grid{columns: 2 200px;} }
+@media (max-width:420px){ .gallery-grid{columns: 1;} }
+
+.work--gallery{
+  display: inline-block;
+  width: 100%;
+  margin: 0 0 14px;
+  break-inside: avoid;
+}
+
+.work--gallery img{
+  height: auto;
+  object-fit: contain;
+}
+
+.work--gallery:hover img{transform: scale(1.03)}
+
+/* lightbox */
+.lightbox{position:fixed; inset:0; z-index:80; background: rgba(0,0,0,.82); display:none; align-items:center; justify-content:center}
+.lightbox.is-open{display:flex}
+.lightbox-panel{width:min(1100px, calc(100% - 28px)); height:min(80vh, 760px); border:1px solid rgba(255,255,255,.12); border-radius:18px; background: rgba(10,10,10,.55); overflow:hidden; display:grid; grid-template-rows:auto 1fr auto}
+.lightbox-top, .lightbox-bot{padding:10px 12px; display:flex; align-items:center; justify-content:space-between; gap:10px}
+.lightbox-canvas{position:relative; overflow:hidden; background: rgba(0,0,0,.35)}
+.lightbox-canvas img{
+  position:absolute;
+  top:50%; left:50%;
+  transform: translate(-50%,-50%) scale(1);
+  transform-origin:center;
+  user-select:none; -webkit-user-drag:none;
+  /* Fit tall/large photos by default */
+  max-width:92%;
+  max-height:92%;
+  width:auto;
+  height:auto;
+}
+.icon-btn{border:1px solid rgba(255,255,255,.12); background:transparent; color:inherit; padding:10px 12px; border-radius:12px; cursor:pointer}
+.icon-btn:hover{background: rgba(255,255,255,.06)}
+
+/* reveal */
+.reveal{opacity:0; transform: translateY(12px); transition: opacity 900ms ease, transform 900ms ease}
+.reveal.is-visible{opacity:1; transform:none}
+
+/* map */
+.map-wrap{height:520px; overflow:hidden}
+#worldMap{height:520px; width:100%}
+
+/* calendar */
+.cal{display:grid; gap:10px}
+.cal-head{display:flex; align-items:center; justify-content:space-between; gap:10px}
+.cal-grid{display:grid; gap:8px; grid-template-columns: repeat(7, minmax(0,1fr))}
+.day{border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:10px; background: rgba(0,0,0,.20); min-height:92px; cursor:pointer}
+.day.has-event{border-color: rgba(197,160,89,.55)}
+.day .n{opacity:.75; font-size:12px}
+.day .dot{width:6px; height:6px; border-radius:999px; background: rgb(197,160,89); display:inline-block; margin-top:8px}
+
+/* exhibition item */
+.list{padding:10px}
+.item{padding:12px; border:1px solid rgba(255,255,255,.12); background: rgba(0,0,0,.22); border-radius:14px; display:flex; justify-content:space-between; gap:12px}
+.item + .item{margin-top:10px}
+.badge{border:1px solid rgba(197,160,89,.45); padding:4px 10px; border-radius:999px; color: rgb(197,160,89); font-size:12px}
+
+/* footer */
+.site-footer{margin-top:46px}
+.footer-inner{display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap}
+.muted{opacity:.78}
+
+/* -----------------------------
+   Gallery masonry (portrait-friendly)
+   - preserves vertical photos (no cropping)
+   - avoids big empty gaps
+------------------------------*/
+.gallery-grid{
+  columns: 4 240px;
+  column-gap: 14px;
+}
+@media (max-width:980px){ .gallery-grid{columns: 3 220px;} }
+@media (max-width:740px){ .gallery-grid{columns: 2 200px;} }
+@media (max-width:420px){ .gallery-grid{columns: 1;} }
+
+.work--gallery{
+  display:inline-block;
+  width:100%;
+  margin: 0 0 14px;
+  break-inside: avoid;
+}
+.work--gallery img{
+  height:auto;
+  object-fit: contain;
+}

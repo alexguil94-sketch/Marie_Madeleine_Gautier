@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Administration</title>
+  <meta http-equiv="refresh" content="0; url=/admin/" />
+</head>
+<body>
+  <p>Redirection vers l’administration… <a href="/admin/">Ouvrir l’admin</a></p>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+<!-- Chemins ABSOLUS + anti-cache -->
+<script src="/js/supabase-config.js?v=2"></script>
+<script src="/js/supabase-client.js?v=2"></script>
+<script>
+  console.log("[CFG]", window.SUPABASE_URL, !!window.SUPABASE_ANON_KEY, window.SUPABASE_ANON_KEY?.length);
+</script>
+
+<script src="/admin/guard.js?v=2"></script>
+<script src="/admin/admin.js?v=2"></script>
+
+
+</body>
+</html>

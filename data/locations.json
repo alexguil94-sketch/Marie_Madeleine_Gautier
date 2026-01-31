@@ -1,0 +1,23 @@
+[
+  {
+    "title": "Galerie — Collection permanente",
+    "city": "Paris",
+    "lat": 48.8566,
+    "lng": 2.3522,
+    "date": "Toute l’année"
+  },
+  {
+    "title": "Exposition",
+    "city": "New York",
+    "lat": 40.7128,
+    "lng": -74.006,
+    "date": "Printemps 2026"
+  },
+  {
+    "title": "Exposition",
+    "city": "Hong Kong",
+    "lat": 22.3193,
+    "lng": 114.1694,
+    "date": "Été 2026"
+  }
+]
