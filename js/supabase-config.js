@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // js/supabase-config.js
 // (clé anon seulement, jamais la service_role)
 

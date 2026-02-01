@@ -4,9 +4,13 @@
 Dans Supabase → **Authentication → Settings** :
 - Désactive **Allow new users to sign up** (invite only)
 - Ajoute les **Redirect URLs** :
-  - `https://marie-madeleine-gautier.netlify.app/admin/`
-  - ton futur domaine : `https://marie-madeleine-gautier.fr/admin/` (exemple)
-  - (optionnel) `http://localhost:5500/admin/` si tu testes en local
+- `https://marie-madeleine-gautier.netlify.app/admin/`
+- `https://marie-madeleine-gautier.netlify.app/login.html`
+- ton futur domaine : `https://marie-madeleine-gautier.fr/admin/` (exemple)
+- ton futur domaine : `https://marie-madeleine-gautier.fr/login.html` (exemple)
+- (optionnel) `http://localhost:5500/login.html` + `http://localhost:5500/admin/` si tu testes en local
+
+💡 Si tu actives Google/Discord/Facebook, assure-toi aussi que ces URLs sont autorisées côté provider.
 
 ## 2) Database
 Supabase → **SQL Editor** : colle `schema.sql` puis Run.
@@ -31,3 +35,9 @@ Ouvre `js/supabase-config.js` et colle :
 
 Commit + push → Netlify redéploie.
 
+
+
+## 6) Connexions Google / Discord / Facebook + liaison d’identités
+- Active les providers dans **Authentication → Providers**.
+- Si tu veux que l’utilisateur puisse *lier/délier* plusieurs providers à un même compte depuis `login.html`, active **Enable Manual Linking** (Auth settings).
+- Ensuite, la page `login.html` expose : connexion OAuth + liaison (`linkIdentity`) + délison (`unlinkIdentity`).

@@ -48,6 +48,54 @@
         <div class="muted" id="who" style="margin-top:8px"></div>
       </form>
 
+      
+      <div style="height:14px"></div>
+      <div class="hr" style="margin:14px 0"></div>
+
+      <div class="muted" style="margin-bottom:10px">Connexion rapide</div>
+      <div class="row">
+        <button class="btn" type="button" data-oauth="google">Continuer avec Google</button>
+        <button class="btn" type="button" data-oauth="discord">Continuer avec Discord</button>
+        <button class="btn" type="button" data-oauth="facebook">Continuer avec Facebook</button>
+      </div>
+
+      <div id="accountBox" style="display:none; margin-top:18px">
+        <div class="hr" style="margin:14px 0"></div>
+        <h2 style="margin:0 0 6px; font-size:18px">Mon compte</h2>
+        <div class="muted" style="margin:0 0 10px">Identités liées + mot de passe</div>
+
+        <div class="card" style="background:rgba(0,0,0,.18); border-radius:14px; padding:12px">
+          <div class="muted" style="margin-bottom:8px">Identités</div>
+          <div id="identitiesList" class="muted"></div>
+          <div style="height:10px"></div>
+          <div class="row">
+            <button class="btn" type="button" data-link="google">Lier Google</button>
+            <button class="btn" type="button" data-link="discord">Lier Discord</button>
+            <button class="btn" type="button" data-link="facebook">Lier Facebook</button>
+          </div>
+        </div>
+
+        <div style="height:12px"></div>
+
+        <form id="pwdForm" class="card" style="background:rgba(0,0,0,.18); border-radius:14px; padding:12px">
+          <div class="muted" style="margin-bottom:8px">Changer le mot de passe</div>
+          <input class="input" name="newPassword" type="password" placeholder="Nouveau mot de passe (min 8)" minlength="8" required>
+          <div style="height:10px"></div>
+          <input class="input" name="newPassword2" type="password" placeholder="Confirmer le nouveau mot de passe" minlength="8" required>
+          <div style="height:12px"></div>
+          <div class="row">
+            <button class="btn primary" type="submit">Mettre à jour</button>
+            <button class="btn" type="button" id="btnGoAdmin" style="display:none">Aller à l’admin</button>
+          </div>
+          <div class="muted" id="pwdMsg" style="margin-top:8px"></div>
+        </form>
+
+        <div class="muted" style="margin-top:10px">
+          Astuce : pour le “mot de passe oublié”, utilise le bouton ci-dessus (email) — le lien de récupération peut arriver dans les spams.
+        </div>
+      </div>
+
+
       <p class="muted" style="margin:14px 0 0">
         Retour : <a href="index.html">Accueil</a>
       </p>

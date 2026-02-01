@@ -1,1 +1,9 @@
 /admin   /admin/   301!
+/gallery   /gallery.html   200
+/artiste   /artiste.html   200
+/utopia    /utopia.html    200
+/books     /books.html     200
+/agenda    /agenda.html    200
+/contact   /contact.html   200
+/login     /login.html     200
+/admin     /admin/         301
