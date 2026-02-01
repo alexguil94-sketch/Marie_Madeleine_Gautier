@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Marie-Madeleine Gautier — Accueil</title>
+
+  <script>(function(){const t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="icon" href="/favicon.ico">
+  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="stylesheet" href="css/luxe.css"/>
+</head>
+<body>
+  <div id="siteHeader"></div>
+
+  <header class="hero hero--welcome">
+    <div class="hero-welcome__overlay">
+      <h1 class="hero-welcome__title" aria-label="Là où naissent les mondes — MMG">
+        <span class="drop d1">Là où naissent les</span>
+        <span class="drop d2">mondes</span>
+        <span class="hero-welcome__sigle drop d3">MMG</span>
+      </h1>
+      <p class="muted" style="margin-top:18px; max-width: 820px; margin-inline:auto">
+        Sculptures, textes et expositions — une signature où la matière rencontre l’utopie.
+      </p>
+    </div>
+  </header>
+
+  <div class="hero-bridge" aria-hidden="true"></div>
+
+  <main class="page">
+    <section class="section">
+      <div class="container">
+        <div class="card card-pad reveal">
+          <div class="kicker">Agenda</div>
+          <h2 style="margin:10px 0 0">Expositions & galeries</h2>
+          <p class="muted" style="max-width:860px">
+            Retrouvez les prochaines dates, lieux et événements — et les archives des expositions passées.
+          </p>
+          <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:14px">
+            <a class="btn" href="agenda.html">Voir l’agenda</a>
+            <a class="btn ghost" href="gallery.html">Explorer la galerie</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="actualites">
+      <div class="container">
+        <div class="card card-pad reveal">
+          <div class="kicker">Actualités</div>
+          <h2 style="margin:10px 0 0">Vidéos, images et petites nouvelles</h2>
+          <p class="muted" style="max-width:860px">
+            Une vitrine vivante : publications, coulisses et annonces. Les commentaires sont réservés aux personnes connectées.
+          </p>
+
+          <div class="hr"></div>
+
+          <div id="newsRoot" class="news-grid"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="siteFooter"></div>
+
+  <!-- Supabase (news + commentaires) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/news.js"></script>
+
+  <script src="js/layout.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/luxe.js"></script>
+</body>
+</html>

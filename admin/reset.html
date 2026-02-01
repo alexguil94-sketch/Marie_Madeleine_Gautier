@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Réinitialisation du mot de passe</title>
+  <link rel="stylesheet" href="./admin.css?v=1" />
+</head>
+<body>
+  <div class="admin-shell" style="max-width:520px;margin:40px auto;padding:20px">
+    <h1>Nouveau mot de passe</h1>
+
+    <form id="resetForm">
+      <input class="input" type="password" name="pwd" placeholder="Nouveau mot de passe" minlength="8" required />
+      <button class="btn" type="submit">Mettre à jour</button>
+      <div id="resetMsg" class="muted" style="margin-top:10px"></div>
+    </form>
+  </div>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script defer src="../js/supabase-config.js?v=1"></script>
+  <script defer src="../js/supabase-client.js?v=1"></script>
+
+  <script>
+    window.addEventListener("DOMContentLoaded", async () => {
+      const sb = window.mmgSupabase;
+      const form = document.getElementById("resetForm");
+      const msg = document.getElementById("resetMsg");
+
+      // Si le lien recovery est valide, Supabase met une session dans l'URL puis la détecte
+      const { data } = await sb.auth.getSession();
+      if (!data.session) {
+        msg.textContent = "Lien invalide/expiré. Refais une demande de récupération.";
+        return;
+      }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        msg.textContent = "Mise à jour…";
+
+        const pwd = form.elements.pwd.value;
+        const { error } = await sb.auth.updateUser({ password: pwd });
+
+        if (error) {
+          msg.textContent = "Erreur : " + error.message;
+          return;
+        }
+
+        msg.textContent = "Mot de passe mis à jour ✅ Tu peux te reconnecter.";
+        await sb.auth.signOut();
+        setTimeout(() => location.href = "./", 800);
+      });
+    });
+  </script>
+</body>
+</html>

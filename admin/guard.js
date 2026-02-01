@@ -1,0 +1,44 @@
+(async function(){
+  const sb = window.mmgSupabase;
+
+  const hard404 = () => {
+    document.documentElement.innerHTML = `
+      <head><meta name="robots" content="noindex,nofollow"></head>
+      <body style="font-family:system-ui;background:#0b0b0b;color:#fff;padding:40px">
+        <h1 style="margin:0 0 12px">404</h1>
+        <p style="opacity:.8;margin:0">Not found.</p>
+      </body>`;
+  };
+
+  const redirectToLogin = () => {
+    const back = encodeURIComponent(location.pathname + location.search + location.hash);
+    // ../login.html car on est dans /admin/
+    location.replace(`../login.html?redirect=${back}`);
+  };
+
+  if(!sb || !sb.auth){
+    hard404();
+    return;
+  }
+
+  const { data } = await sb.auth.getSession();
+  const user = data?.session?.user || null;
+
+  if(!user){
+    redirectToLogin();
+    return;
+  }
+
+  const { data: profile, error } = await sb
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if(error || !profile || profile.role !== 'admin'){
+    hard404();
+    return;
+  }
+
+  document.documentElement.classList.add('admin-ok');
+})();

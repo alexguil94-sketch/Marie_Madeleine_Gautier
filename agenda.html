@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Marie-Madeleine Gautier — Agenda</title>
+
+  <script>(function(){const t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="stylesheet" href="css/luxe.css"/>
+  
+
+</head>
+<body>
+  <div id="siteHeader"></div>
+
+  <main class="page">
+    <div class="container">
+      <section class="reveal">
+        <div class="card card-pad">
+          <div class="kicker" data-i18n="agenda.kicker">Agenda</div>
+          <h1 style="margin:10px 0 0" data-i18n="agenda.title">Agenda des expositions</h1>
+          <p class="muted" data-i18n="agenda.subtitle">Expositions + calendrier au même endroit.</p>
+          <div class="hr"></div>
+
+          <div class="agenda-tabs">
+            <a class="pill" href="#expositions" data-i18n="agenda.jumpExpos">Expositions</a>
+            <a class="pill" href="#calendrier" data-i18n="agenda.jumpCal">Calendrier</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="reveal" id="expositions">
+        <div class="card card-pad">
+          <div class="kicker" data-i18n="expo.kicker">Dashboard</div>
+          <h2 style="margin:10px 0 0" data-i18n="expo.title">Expositions : passées & à venir</h2>
+          <p class="muted" data-i18n="expo.subtitle">Ajoutez, supprimez, exportez/importez vos expositions facilement.</p>
+          <div class="hr"></div>
+          <div id="expoRoot"></div>
+        </div>
+      </section>
+
+      <section class="reveal" id="calendrier">
+        <div class="card card-pad">
+          <div class="kicker" data-i18n="cal.kicker">Agenda</div>
+          <h2 style="margin:10px 0 0" data-i18n="cal.title">Calendrier des expositions à venir</h2>
+          <div class="hr"></div>
+          <div id="calRoot"></div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- IMPORTANT: exhibitions.js avant calendar.js -->
+  <script src="js/exhibitions.js"></script>
+  <script src="js/calendar.js"></script>
+
+  <div id="siteFooter"></div>
+
+  <script src="js/layout.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/luxe.js"></script>
+</body>
+</html>

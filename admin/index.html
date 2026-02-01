@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Administration</title>
+
+  <link rel="stylesheet" href="./admin.css?v=1" />
+</head>
+
+<body>
+  <div class="admin-wrap">
+    <div class="admin-head">
+      <a class="admin-brand" href="../index.html">
+        <strong>MMG</strong>
+      </a>
+      <div class="admin-login-row">
+        <span id="adminUser" class="admin-user"></span>
+        <button id="btnSignOut" class="btn" type="button">Se déconnecter</button>
+      </div>
+    </div>
+
+    <!-- LOGIN (sera caché quand connecté) -->
+    <section id="loginCard" class="admin-card">
+      <h2 style="margin:0 0 10px">Connexion admin</h2>
+
+      <!-- Option: tu peux virer ce form si tu forces le login global,
+           MAIS garde au moins le bloc #loginCard pour éviter crash JS -->
+      <form id="loginForm" class="admin-form">
+        <div class="field">
+          <span>Email</span>
+          <input class="input" name="email" type="email" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <span>Mot de passe</span>
+          <input class="input" name="password" type="password" autocomplete="current-password" required>
+        </div>
+
+        <div class="admin-login-row">
+          <button class="btn" type="submit">Se connecter</button>
+
+          <!-- Si tu fais une page login globale -->
+          <a class="btn" href="../login.html?redirect=%2Fadmin%2F">Connexion globale</a>
+
+          <!-- Reset : plutôt sur la page globale -->
+          <a class="btn" href="./reset.html">Mot de passe oublié</a>
+        </div>
+
+        <div id="loginMsg" class="muted" style="margin-top:10px"></div>
+      </form>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section id="dash" class="admin-shell" hidden>
+      <aside class="admin-sidebar">
+        <div class="admin-kicker">Navigation</div>
+        <nav class="admin-nav">
+          <button class="admin-nav__btn is-active" type="button" data-view="works">Galerie</button>
+          <button class="admin-nav__btn" type="button" data-view="news">Actualités</button>
+          <button class="admin-nav__btn" type="button" data-view="publications">Publications</button>
+          <button class="admin-nav__btn" type="button" data-view="comments">Modération</button>
+        </nav>
+      </aside>
+
+      <main class="admin-main">
+        <!-- WORKS -->
+        <section id="view-works">
+          <div class="admin-view__head">
+            <h2 style="margin:0">Ajouter une œuvre</h2>
+          </div>
+
+          <form id="workForm" class="admin-form">
+            <div class="row">
+              <div class="field">
+                <span>Titre</span>
+                <input class="input" name="title" required>
+              </div>
+              <div class="field">
+                <span>Année</span>
+                <input class="input" name="year" inputmode="numeric">
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <span>Catégorie</span>
+                <input class="input" name="category">
+              </div>
+              <div class="field">
+                <span>Publié</span>
+                <label class="admin-toggle"><input type="checkbox" checked disabled><span>oui</span></label>
+              </div>
+            </div>
+
+            <div class="field">
+              <span>Description</span>
+              <textarea class="input" name="description" rows="4"></textarea>
+            </div>
+
+            <input id="workImages" type="file" accept="image/*" multiple hidden>
+            <div id="workDrop" class="dropzone" tabindex="0">
+              <div class="dropzone__title">Dépose tes images ici</div>
+              <div class="dropzone__sub">ou clique pour sélectionner (max 10)</div>
+              <div id="workDropMeta" class="dropzone__meta"></div>
+            </div>
+            <div id="workPreview" class="dz-previews"></div>
+
+            <button class="btn" type="submit">Publier</button>
+            <div id="workMsg" class="muted"></div>
+          </form>
+        </section>
+
+        <!-- NEWS -->
+        <section id="view-news" hidden>
+          <div class="admin-view__head">
+            <h2 style="margin:0">Ajouter une actu</h2>
+          </div>
+
+          <form id="newsForm" class="admin-form">
+            <div class="row">
+              <div class="field">
+                <span>Titre</span>
+                <input class="input" name="title" required>
+              </div>
+              <div class="field">
+                <span>Date</span>
+                <input class="input" name="date" type="date">
+              </div>
+            </div>
+
+            <div class="field">
+              <span>Texte</span>
+              <textarea class="input" name="body" rows="4"></textarea>
+            </div>
+
+            <div class="field">
+              <span>Média</span>
+              <select class="input" name="mediaType">
+                <option value="image">Image</option>
+                <option value="youtube">YouTube</option>
+              </select>
+            </div>
+
+            <div id="mediaImageWrap">
+              <input id="newsImage" type="file" accept="image/*" hidden>
+              <div id="newsDrop" class="dropzone" tabindex="0">
+                <div class="dropzone__title">Image</div>
+                <div class="dropzone__sub">dépose ou clique (1 fichier)</div>
+                <div id="newsDropMeta" class="dropzone__meta"></div>
+              </div>
+              <div id="newsPreview" class="dz-previews"></div>
+            </div>
+
+            <div id="mediaYoutubeWrap" style="display:none">
+              <div class="field">
+                <span>YouTube (URL ou ID)</span>
+                <input class="input" name="youtube" placeholder="https://youtu.be/… ou ID">
+              </div>
+            </div>
+
+            <button class="btn" type="submit">Publier</button>
+            <div id="newsMsg" class="muted"></div>
+          </form>
+        </section>
+
+        <!-- PUBLICATIONS -->
+        <section id="view-publications" hidden>
+          <div class="admin-view__head">
+            <h2 style="margin:0">Publication</h2>
+          </div>
+
+          <form id="pubForm" class="admin-form">
+            <div class="row">
+              <div class="field">
+                <span>Titre</span>
+                <input class="input" name="title" required>
+              </div>
+              <div class="field">
+                <span>Date</span>
+                <input class="input" name="date" type="date">
+              </div>
+            </div>
+
+            <div class="field">
+              <span>Texte</span>
+              <textarea class="input" name="body" rows="4"></textarea>
+            </div>
+
+            <label class="admin-toggle">
+              <input type="checkbox" name="published" checked>
+              <span>Publié</span>
+            </label>
+
+            <input id="pubImages" type="file" accept="image/*" multiple hidden>
+            <div id="pubDrop" class="dropzone" tabindex="0">
+              <div class="dropzone__title">Photos</div>
+              <div class="dropzone__sub">max 6</div>
+              <div id="pubDropMeta" class="dropzone__meta"></div>
+            </div>
+            <div id="pubPreview" class="dz-previews"></div>
+
+            <button class="btn" type="submit">Créer</button>
+            <div id="pubMsg" class="muted"></div>
+          </form>
+
+          <div id="pubList" class="admin-list"></div>
+        </section>
+
+        <!-- COMMENTS / MODERATION -->
+        <section id="view-comments" hidden>
+          <div class="admin-view__head">
+            <h2 style="margin:0">Modération</h2>
+          </div>
+
+          <div id="modMsg" class="muted"></div>
+          <div id="moderationList" class="admin-list"></div>
+        </section>
+      </main>
+    </section>
+  </div>
+
+  <!-- Scripts -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script defer src="../js/supabase-config.js?v=1"></script>
+  <script defer src="../js/supabase-client.js?v=1"></script>
+  <script defer src="./guard.js?v=1"></script>
+  <script defer src="./admin.js?v=1"></script>
+</body>
+</html>
