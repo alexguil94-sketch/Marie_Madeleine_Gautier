@@ -10,18 +10,17 @@
 <body>
   <p>Redirection vers l’administration… <a href="/admin/">Ouvrir l’admin</a></p>
 
+<link rel="stylesheet" href="./admin.css?v=1" />
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
-<!-- Chemins ABSOLUS + anti-cache -->
-<script src="/js/supabase-config.js?v=2"></script>
-<script src="/js/supabase-client.js?v=2"></script>
-<script>
-  console.log("[CFG]", window.SUPABASE_URL, !!window.SUPABASE_ANON_KEY, window.SUPABASE_ANON_KEY?.length);
-</script>
+<!-- config + client : chemins ABSOLUS depuis la racine -->
+<script src="/js/supabase-config.js?v=1"></script>
+<script src="/js/supabase-client.js?v=1"></script>
 
-<script src="/admin/guard.js?v=2"></script>
-<script src="/admin/admin.js?v=2"></script>
+<!-- fichiers admin : dans le même dossier -->
+<script src=".guard.js?v=1"></script>
+<script src="admin.js?v=1"></script>
 
 
 </body>
