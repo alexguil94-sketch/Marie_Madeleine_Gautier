@@ -12,26 +12,24 @@
 <body>
   <div class="admin-wrap">
     <div class="admin-head">
-      <a class="admin-brand" href="../index.html">
-        <strong>MMG</strong>
-      </a>
+      <a class="admin-brand" href="../index.html"><strong>MMG</strong></a>
+
       <div class="admin-login-row">
         <span id="adminUser" class="admin-user"></span>
         <button id="btnSignOut" class="btn" type="button">Se déconnecter</button>
       </div>
     </div>
 
-    <!-- LOGIN (sera caché quand connecté) -->
+    <!-- LOGIN (si tu utilises guard.js + login.html global, ce bloc ne s'affichera presque jamais) -->
     <section id="loginCard" class="admin-card">
       <h2 style="margin:0 0 10px">Connexion admin</h2>
 
-      <!-- Option: tu peux virer ce form si tu forces le login global,
-           MAIS garde au moins le bloc #loginCard pour éviter crash JS -->
       <form id="loginForm" class="admin-form">
         <div class="field">
           <span>Email</span>
           <input class="input" name="email" type="email" autocomplete="email" required>
         </div>
+
         <div class="field">
           <span>Mot de passe</span>
           <input class="input" name="password" type="password" autocomplete="current-password" required>
@@ -39,11 +37,7 @@
 
         <div class="admin-login-row">
           <button class="btn" type="submit">Se connecter</button>
-
-          <!-- Si tu fais une page login globale -->
           <a class="btn" href="../login.html?redirect=%2Fadmin%2F">Connexion globale</a>
-
-          <!-- Reset : plutôt sur la page globale -->
           <a class="btn" href="./reset.html">Mot de passe oublié</a>
         </div>
 
@@ -87,9 +81,13 @@
                 <span>Catégorie</span>
                 <input class="input" name="category">
               </div>
+
               <div class="field">
                 <span>Publié</span>
-                <label class="admin-toggle"><input type="checkbox" checked disabled><span>oui</span></label>
+                <label class="admin-toggle">
+                  <input type="checkbox" name="published" checked>
+                  <span>oui</span>
+                </label>
               </div>
             </div>
 
@@ -106,7 +104,7 @@
             </div>
             <div id="workPreview" class="dz-previews"></div>
 
-            <button class="btn" type="submit">Publier</button>
+            <button class="btn" type="submit">Enregistrer</button>
             <div id="workMsg" class="muted"></div>
           </form>
         </section>
