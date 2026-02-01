@@ -5,23 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex,nofollow" />
   <title>Administration</title>
-  <meta http-equiv="refresh" content="0; url=/admin/" />
+
+  <link rel="stylesheet" href="./admin.css?v=1" />
 </head>
 <body>
-  <p>Redirection vers l’administration… <a href="/admin/">Ouvrir l’admin</a></p>
+  <!-- … ton HTML admin (loginCard, dash, etc) … -->
 
-<link rel="stylesheet" href="./admin.css?v=1" />
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <!-- IMPORTANT: depuis /admin/ on remonte d’un niveau -->
+  <script defer src="../js/supabase-config.js?v=1"></script>
+  <script defer src="../js/supabase-client.js?v=1"></script>
 
-<!-- config + client : chemins ABSOLUS depuis la racine -->
-<script src="/js/supabase-config.js?v=1"></script>
-<script src="/js/supabase-client.js?v=1"></script>
-
-<!-- fichiers admin : dans le même dossier -->
-<script src=".guard.js?v=1"></script>
-<script src="admin.js?v=1"></script>
-
-
+  <!-- IMPORTANT: ./guard.js (pas .guard.js) -->
+  <script defer src="./guard.js?v=1"></script>
+  <script defer src="./admin.js?v=1"></script>
 </body>
 </html>
