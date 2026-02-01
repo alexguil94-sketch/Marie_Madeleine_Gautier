@@ -1,99 +1,137 @@
-(function(){
+(() => {
   const sb = window.mmgSupabase;
-  const t = (k)=> (window.__t ? window.__t(k) : k);
 
-  const $ = (id)=> document.getElementById(id);
-  const form = $('loginForm');
-  const msg = $('loginMsg');
-  const btnMagic = $('btnMagic');
-  const btnSignUp = $('btnSignUp');
-  const btnSignOut = $('btnSignOut');
+  const form = document.getElementById("loginForm");
+  const msg = document.getElementById("msg");
+  const who = document.getElementById("who");
+  const btnForgot = document.getElementById("btnForgot");
+  const btnSignOut = document.getElementById("btnSignOut");
 
-  function setMsg(text, isError=false){
-    if(!msg) return;
-    msg.textContent = text || '';
-    msg.style.color = isError ? 'var(--danger, #ff6b6b)' : '';
+  const setMsg = (t) => (msg.textContent = t || "");
+
+  const getRedirect = () => {
+    const p = new URLSearchParams(location.search);
+    const r = p.get("redirect") || "";
+    // sécurité anti open-redirect : on accepte seulement les URLs same-origin
+    try {
+      const u = new URL(r, location.origin);
+      if (u.origin !== location.origin) return "";
+      return u.pathname + u.search + u.hash;
+    } catch {
+      return "";
+    }
+  };
+
+  const isAdminTarget = (path) => path.includes("/admin");
+
+  async function getRole(userId) {
+    const { data, error } = await sb
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (error) return null;
+    return data?.role || null;
   }
 
-  function getRedirect(){
-    try{
-      const u = new URL(location.href);
-      const r = u.searchParams.get('redirect');
-      // allow only same-origin path-ish redirects
-      if(r && (r.startsWith('/') || r.startsWith(location.origin))) return r;
-    }catch{}
-    return 'index.html';
-  }
+  async function goAfterLogin(user) {
+    const redirect = getRedirect();
 
-  async function refreshUI(){
-    if(!sb){ setMsg('Supabase non configuré', true); return; }
-    const { data } = await sb.auth.getSession();
-    const user = data?.session?.user || null;
-    if(btnSignOut) btnSignOut.hidden = !user;
-    if(user){
-      setMsg((t('auth.ok') || 'Connexion réussie…') + ' ' + (user.email || ''));
-      // small delay to let user see message
-      setTimeout(()=>{ location.href = getRedirect(); }, 300);
+    // Si on vise l'admin, on check le rôle
+    if (redirect && isAdminTarget(redirect)) {
+      const role = await getRole(user.id);
+      if (role !== "admin") {
+        setMsg("Accès refusé : ce compte n’est pas admin.");
+        await sb.auth.signOut();
+        return;
+      }
+      location.href = redirect;
+      return;
+    }
+
+    // Si pas de redirect, si admin -> /admin/ sinon -> home
+    const role = await getRole(user.id);
+    if (role === "admin") {
+      location.href = "admin/";
+    } else {
+      location.href = redirect || "index.html";
     }
   }
 
-  if(btnSignOut){
-    btnSignOut.addEventListener('click', async ()=>{
-      try{ await sb?.auth?.signOut?.(); }catch{}
-      setMsg('');
-      btnSignOut.hidden = true;
-    });
+  async function refreshUI() {
+    if (!sb?.auth) {
+      setMsg("Supabase non configuré.");
+      return;
+    }
+
+    const { data } = await sb.auth.getSession();
+    const user = data?.session?.user || null;
+
+    if (!user) {
+      who.textContent = "";
+      btnSignOut.style.display = "none";
+      return;
+    }
+
+    btnSignOut.style.display = "";
+    who.textContent = `Connecté : ${user.email || ""}`;
   }
 
-  if(form){
-    form.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      if(!sb) return setMsg('Supabase non configuré', true);
+  // Login submit
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    setMsg("Connexion…");
 
-      const fd = new FormData(form);
-      const email = String(fd.get('email')||'').trim();
-      const password = String(fd.get('password')||'').trim();
-      if(!email) return;
+    const fd = new FormData(form);
+    const email = String(fd.get("email") || "").trim();
+    const password = String(fd.get("password") || "");
 
-      if(!password){
-        return setMsg((t('auth.err')||'Erreur :') + ' ' + 'Mot de passe requis pour cette action.', true);
-      }
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      setMsg("Erreur : " + (error.message || "connexion impossible"));
+      return;
+    }
 
-      const { error } = await sb.auth.signInWithPassword({ email, password });
-      if(error) return setMsg((t('auth.err')||'Erreur :') + ' ' + error.message, true);
-      await refreshUI();
-    });
-  }
+    setMsg("");
+    await refreshUI();
+    await goAfterLogin(data.user);
+  });
 
-  if(btnMagic){
-    btnMagic.addEventListener('click', async ()=>{
-      if(!sb) return setMsg('Supabase non configuré', true);
-      const email = String(document.querySelector('[name="email"]')?.value || '').trim();
-      if(!email) return setMsg((t('auth.err')||'Erreur :') + ' ' + 'Email requis.', true);
+  // Forgot password
+  btnForgot?.addEventListener("click", async () => {
+    const email = (form?.elements?.email?.value || "").trim();
+    if (!email) {
+      setMsg("Entre ton email puis clique “Mot de passe oublié”.");
+      return;
+    }
 
-      // Redirect back to this login page, then we will forward to ?redirect=...
-      const redirectTo = location.origin + '/login.html?redirect=' + encodeURIComponent(getRedirect());
-      const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: redirectTo }});
-      if(error) return setMsg((t('auth.err')||'Erreur :') + ' ' + error.message, true);
-      setMsg(t('auth.sent') || 'Lien envoyé. Vérifiez vos emails.');
-    });
-  }
+    setMsg("Envoi de l’email de récupération…");
+    const redirectTo = new URL("admin/reset.html", location.href).toString();
 
-  if(btnSignUp){
-    btnSignUp.addEventListener('click', async ()=>{
-      if(!sb) return setMsg('Supabase non configuré', true);
-      const email = String(document.querySelector('[name="email"]')?.value || '').trim();
-      const password = String(document.querySelector('[name="password"]')?.value || '').trim();
-      if(!email || !password) return setMsg((t('auth.err')||'Erreur :') + ' ' + 'Email + mot de passe requis.', true);
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) {
+      setMsg("Erreur : " + (error.message || "impossible d’envoyer l’email"));
+      return;
+    }
+    setMsg("Email envoyé ✅ Ouvre le lien dans ta boîte mail (rapidement).");
+  });
 
-      const redirectTo = location.origin + '/login.html?redirect=' + encodeURIComponent(getRedirect());
-      const { error } = await sb.auth.signUp({ email, password, options:{ emailRedirectTo: redirectTo }});
-      if(error) return setMsg((t('auth.err')||'Erreur :') + ' ' + error.message, true);
-      setMsg('Compte créé. Confirmez via email si demandé, puis reconnectez-vous.');
-    });
-  }
+  // Sign out
+  btnSignOut?.addEventListener("click", async () => {
+    await sb.auth.signOut();
+    setMsg("Déconnecté.");
+    await refreshUI();
+  });
 
-  // If already signed in, redirect
-  window.addEventListener('DOMContentLoaded', refreshUI);
+  // Auto: si déjà connecté, on redirige
+  window.addEventListener("DOMContentLoaded", async () => {
+    await refreshUI();
 
+    const { data } = await sb.auth.getSession();
+    const user = data?.session?.user || null;
+    if (user) {
+      await goAfterLogin(user);
+    }
+  });
 })();

@@ -20,11 +20,11 @@
   const { data } = await sb.auth.getSession();
   const user = data?.session?.user || null;
 
-  if(!user){
-    // Show login form
-    document.documentElement.classList.add('admin-ok');
-    return;
-  }
+ if(!user){
+  const back = encodeURIComponent(location.pathname + location.search + location.hash);
+  location.href = `../login.html?redirect=${back}`;
+  return;
+}
 
   const { data: profile, error } = await sb
     .from('profiles')
