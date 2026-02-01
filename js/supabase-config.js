@@ -3,7 +3,7 @@
 
 window.MMG_SUPABASE = {
   url: "https://dwmiiloophmziyqilygd.supabase.co",
-  anonKey: "sb_publishable_pB6gLuFpPOxjQ3Dp7XGRKw_ITcYdKEZ",
+  anonKey: "uNrn?48edE3DDaR",
   bucket: "media",
 };
 
