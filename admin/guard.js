@@ -1,7 +1,6 @@
 (async function(){
-  // Guard for /admin: allow login page for signed-out users,
-  // allow dashboard only for users with role=admin, otherwise show 404.
   const sb = window.mmgSupabase;
+
   const hard404 = () => {
     document.documentElement.innerHTML = `
       <head><meta name="robots" content="noindex,nofollow"></head>
@@ -11,20 +10,24 @@
       </body>`;
   };
 
+  const redirectToLogin = () => {
+    const back = encodeURIComponent(location.pathname + location.search + location.hash);
+    // ../login.html car on est dans /admin/
+    location.replace(`../login.html?redirect=${back}`);
+  };
+
   if(!sb || !sb.auth){
-    // If Supabase not configured, show page (it will display message)
-    document.documentElement.classList.add('admin-ok');
+    hard404();
     return;
   }
 
   const { data } = await sb.auth.getSession();
   const user = data?.session?.user || null;
 
- if(!user){
-  const back = encodeURIComponent(location.pathname + location.search + location.hash);
-  location.href = `../login.html?redirect=${back}`;
-  return;
-}
+  if(!user){
+    redirectToLogin();
+    return;
+  }
 
   const { data: profile, error } = await sb
     .from('profiles')

@@ -107,7 +107,8 @@
     }
 
     setMsg("Envoi de l’email de récupération…");
-    const redirectTo = new URL("admin/reset.html", location.href).toString();
+    const redirectTo = new URL("/admin/reset.html", location.origin).toString();
+
 
     const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
     if (error) {
@@ -131,7 +132,8 @@
     const { data } = await sb.auth.getSession();
     const user = data?.session?.user || null;
     if (user) {
-      await goAfterLogin(user);
+      await goAfterLogin(data.user || data.session?.user);
+
     }
   });
 })();
