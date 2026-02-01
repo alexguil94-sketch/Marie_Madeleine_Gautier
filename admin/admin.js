@@ -579,3 +579,14 @@
 
   init();
 })();
+const btnForgot = document.getElementById("btnForgot");
+
+btnForgot?.addEventListener("click", async () => {
+  const email = prompt("Email du compte :")?.trim();
+  if (!email) return;
+
+  const redirectTo = new URL("reset.html", location.href).toString();
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
+
+  setMsg(loginMsg, error ? ("Erreur : " + error.message) : "Email de récupération envoyé ✅");
+});
