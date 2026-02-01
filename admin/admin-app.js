@@ -1,25 +1,16 @@
 /* admin/admin-app.js
-   MMG Admin bundle (core + auth + works + ui)
-   - Compatible avec TON HTML: #loginCard, #loginForm, #dash, #workForm, #workDrop, #workImages...
-   - Requires: ../js/supabase-config.js and supabase-js v2
+   MMG Admin (core + auth + works + UI)
+   - DB works: id, title, year, category, description, cover_url, thumb_url
+   - Storage bucket: media
 */
 
 (() => {
   "use strict";
 
-  // =========================================================
+  // ---------------------------
   // CORE
-  // =========================================================
+  // ---------------------------
   const Admin = (window.Admin = window.Admin || {});
-
-  Admin.cfg = (() => {
-    const c = window.MMG_SUPABASE || {};
-    const url = c.url || window.SUPABASE_URL;
-    const anonKey = c.anonKey || window.SUPABASE_ANON_KEY;
-    const bucket = c.bucket || window.SUPABASE_BUCKET || "media";
-    return { url, anonKey, bucket };
-  })();
-
   const qs = (sel, root = document) => root.querySelector(sel);
 
   const errText = (e) =>
@@ -45,17 +36,21 @@
   };
 
   Admin.qs = qs;
-  Admin.errText = errText;
   Admin.toast = toast;
+  Admin.errText = errText;
+
+  Admin.cfg = (() => {
+    const c = window.MMG_SUPABASE || {};
+    const url = c.url || window.SUPABASE_URL;
+    const anonKey = c.anonKey || window.SUPABASE_ANON_KEY;
+    const bucket = c.bucket || window.SUPABASE_BUCKET || "media";
+    return { url, anonKey, bucket };
+  })();
 
   const assertConfigured = () => {
     const { url, anonKey } = Admin.cfg;
-    if (!url || !anonKey) {
-      throw new Error("Supabase non configuré. Vérifie ../js/supabase-config.js (url + anonKey).");
-    }
-    if (!window.supabase?.createClient) {
-      throw new Error("supabase-js manquant. Ajoute le CDN @supabase/supabase-js@2 avant admin-app.js");
-    }
+    if (!url || !anonKey) throw new Error("Supabase non configuré. Vérifie ../js/supabase-config.js (url + anonKey).");
+    if (!window.supabase?.createClient) throw new Error("supabase-js manquant (CDN @supabase/supabase-js@2).");
   };
 
   const initClient = () => {
@@ -70,17 +65,16 @@
 
   const sb = (Admin.sb = initClient());
 
-  Admin.publicUrl = (path) => {
-    if (!path) return "";
+  Admin.getPublicUrl = (path) => {
     const { data } = sb.storage.from(Admin.cfg.bucket).getPublicUrl(path);
     return data?.publicUrl || "";
   };
 
-  console.log("[ADMIN] ready", { url: Admin.cfg.url, bucket: Admin.cfg.bucket });
+  console.log("[ADMIN] core ready", { url: Admin.cfg.url, bucket: Admin.cfg.bucket });
 
-  // =========================================================
+  // ---------------------------
   // AUTH (admin via profiles.role)
-  // =========================================================
+  // ---------------------------
   const getUser = async () => {
     const { data, error } = await sb.auth.getUser();
     if (error) return { user: null, error };
@@ -103,25 +97,15 @@
     return { ok: true, user };
   };
 
-  const signIn = async (email, password) => {
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    return data;
-  };
-
-  const signOut = async () => {
-    await sb.auth.signOut();
-  };
-
-  // =========================================================
-  // UI TOGGLE (login vs dash)
-  // =========================================================
+  // ---------------------------
+  // UI (login <-> dash)
+  // ---------------------------
   const loginCard = qs("#loginCard");
   const dash = qs("#dash");
   const adminUser = qs("#adminUser");
-  const btnSignOut = qs("#btnSignOut") || qs("[data-logout]");
   const loginForm = qs("#loginForm");
   const loginMsg = qs("#loginMsg");
+  const btnSignOut = qs("#btnSignOut") || qs("[data-logout]");
 
   const showDash = (user) => {
     if (loginCard) loginCard.hidden = true;
@@ -137,7 +121,7 @@
 
   if (btnSignOut) {
     btnSignOut.addEventListener("click", async () => {
-      await signOut();
+      await sb.auth.signOut();
       toast("Déconnecté.", "ok");
       showLogin();
     });
@@ -153,7 +137,8 @@
       const password = String(fd.get("password") || "");
 
       try {
-        await signIn(email, password);
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) throw error;
 
         const res = await ensureAdmin();
         if (!res.ok) throw new Error("Compte connecté mais pas admin.");
@@ -170,9 +155,9 @@
     });
   }
 
-  // =========================================================
-  // WORKS (dropzone + cover upload)
-  // =========================================================
+  // ---------------------------
+  // WORKS (TON schéma: cover_url / thumb_url)
+  // ---------------------------
   const Works = {
     form: qs("#workForm"),
     list: qs("#worksList"),
@@ -196,10 +181,7 @@
   const renderPreviews = () => {
     if (!Works.preview) return;
     Works.preview.innerHTML = "";
-
-    if (Works.dropMeta) {
-      Works.dropMeta.textContent = Works.files.length ? `${Works.files.length} fichier(s) sélectionné(s)` : "";
-    }
+    if (Works.dropMeta) Works.dropMeta.textContent = Works.files.length ? `${Works.files.length} fichier(s)` : "";
 
     Works.files.forEach((f, idx) => {
       const card = document.createElement("div");
@@ -224,7 +206,7 @@
     });
   };
 
-  const setFiles = (incoming) => {
+  const addFiles = (incoming) => {
     const arr = Array.from(incoming || []);
     Works.files = [...Works.files, ...arr].slice(0, 10);
     renderPreviews();
@@ -240,7 +222,7 @@
     });
 
     Works.inputFiles.addEventListener("change", () => {
-      setFiles(Works.inputFiles.files);
+      addFiles(Works.inputFiles.files);
       Works.inputFiles.value = "";
     });
 
@@ -250,16 +232,14 @@
         Works.drop.classList.add("is-over");
       });
     });
-
     ["dragleave", "drop"].forEach((ev) => {
       Works.drop.addEventListener(ev, (e) => {
         e.preventDefault();
         Works.drop.classList.remove("is-over");
       });
     });
-
     Works.drop.addEventListener("drop", (e) => {
-      if (e.dataTransfer?.files?.length) setFiles(e.dataTransfer.files);
+      if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files);
     });
   }
 
@@ -274,16 +254,15 @@
   const fetchWorks = async () => {
     const { data, error } = await sb
       .from("works")
-      .select("id,title,year,category,description,status,sort_order,image_path,updated_at")
-      .order("sort_order", { ascending: true })
-      .order("updated_at", { ascending: false });
+      .select("id,title,year,category,description,cover_url,thumb_url,created_at")
+      .order("created_at", { ascending: false });
+
     if (error) throw error;
     return data || [];
   };
 
-  const renderWorksList = (works) => {
+  const renderList = (works) => {
     if (!Works.list) return;
-
     Works.list.innerHTML = "";
 
     if (!works.length) {
@@ -305,12 +284,12 @@
       thumb.style.objectFit = "cover";
       thumb.style.borderRadius = "14px";
       thumb.style.border = "1px solid rgba(255,255,255,.12)";
-      thumb.src = w.image_path ? Admin.publicUrl(w.image_path) : "";
+      thumb.src = w.thumb_url || w.cover_url || "";
       if (!thumb.src) thumb.style.background = "rgba(255,255,255,.06)";
 
       const txt = document.createElement("div");
       txt.innerHTML = `
-        <div class="admin-item__meta">${w.status || "—"} • ${w.year ?? ""} • #${w.sort_order ?? 0}</div>
+        <div class="admin-item__meta">${w.year ?? ""} • ${w.category ?? ""}</div>
         <strong>${w.title || "(sans titre)"}</strong>
       `;
 
@@ -319,26 +298,6 @@
 
       const actions = document.createElement("div");
       actions.className = "admin-actions";
-
-      const btnToggle = document.createElement("button");
-      btnToggle.className = "btn";
-      btnToggle.type = "button";
-      btnToggle.textContent = w.status === "published" ? "Dépublier" : "Publier";
-      btnToggle.addEventListener("click", async () => {
-        btnToggle.disabled = true;
-        try {
-          const next = w.status === "published" ? "draft" : "published";
-          const { error } = await sb.from("works").update({ status: next }).eq("id", w.id);
-          if (error) throw error;
-          toast("Statut mis à jour.", "ok");
-          await Works.refresh();
-        } catch (e) {
-          console.error(e);
-          toast(errText(e), "err");
-        } finally {
-          btnToggle.disabled = false;
-        }
-      });
 
       const btnDel = document.createElement("button");
       btnDel.className = "btn";
@@ -349,9 +308,7 @@
         if (!confirm(`Supprimer "${w.title}" ?`)) return;
         btnDel.disabled = true;
         try {
-          if (w.image_path) {
-            await sb.storage.from(Admin.cfg.bucket).remove([w.image_path]);
-          }
+          // optionnel : si tu veux aussi supprimer dans storage, on peut le faire si tu stockes le PATH
           const { error } = await sb.from("works").delete().eq("id", w.id);
           if (error) throw error;
           toast("Œuvre supprimée.", "ok");
@@ -364,9 +321,7 @@
         }
       });
 
-      actions.appendChild(btnToggle);
       actions.appendChild(btnDel);
-
       row.appendChild(left);
       row.appendChild(actions);
       Works.list.appendChild(row);
@@ -375,15 +330,14 @@
 
   Works.refresh = async () => {
     try {
-      const works = await fetchWorks();
-      renderWorksList(works);
+      renderList(await fetchWorks());
     } catch (e) {
       console.error(e);
       toast(errText(e), "err");
     }
   };
 
-  // Submit work (create + upload cover)
+  // Submit: create work + upload cover + update cover_url/thumb_url
   if (Works.form) {
     Works.form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -394,12 +348,11 @@
       const yearRaw = String(fd.get("year") || "").trim();
       const category = String(fd.get("category") || "").trim();
       const description = String(fd.get("description") || "").trim();
-      const published = !!fd.get("published");
 
       if (!title) return toast("Titre obligatoire.", "warn");
 
       try {
-        // 1) create work row
+        // 1) create row
         const { data: w, error: e1 } = await sb
           .from("works")
           .insert({
@@ -407,26 +360,24 @@
             year: yearRaw ? Number(yearRaw) : null,
             category: category || null,
             description: description || null,
-            status: published ? "published" : "draft",
           })
           .select("*")
           .single();
-
         if (e1) throw e1;
 
-        // 2) upload cover image (first file)
+        // 2) upload cover
         if (Works.files.length) {
           const cover = Works.files[0];
           const coverPath = `works/${w.id}/cover.${extOf(cover.name)}`;
 
           await uploadOne(coverPath, cover);
 
-          const { error: e2 } = await sb
-            .from("works")
-            .update({ image_path: coverPath, image_alt: title })
-            .eq("id", w.id);
+          const coverUrl = Admin.getPublicUrl(coverPath);
+          // thumb = cover pour l’instant (tu peux faire une vraie miniature plus tard)
+          const thumbUrl = coverUrl;
 
-          if (e2) console.warn("update image_path failed:", e2);
+          const { error: e2 } = await sb.from("works").update({ cover_url: coverUrl, thumb_url: thumbUrl }).eq("id", w.id);
+          if (e2) throw e2;
         }
 
         Works.files = [];
@@ -443,21 +394,17 @@
     });
   }
 
-  // =========================================================
-  // INIT
-  // =========================================================
+  // ---------------------------
+  // BOOT
+  // ---------------------------
   const boot = async () => {
-    // Check DOM requirements
     if (!Works.list) {
       console.warn("[ADMIN] Ajoute <div id='worksList' class='admin-list'></div> après le form #workForm.");
     }
 
     const res = await ensureAdmin();
-
     if (!res.ok) {
       showLogin();
-      // Option: forcer la connexion globale
-      // if (res.reason === "not_logged") Admin.redirectToLogin();
       return;
     }
 
