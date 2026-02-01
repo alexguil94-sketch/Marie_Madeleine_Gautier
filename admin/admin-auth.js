@@ -1,63 +1,60 @@
 /* admin/js/admin-auth.js
-   - Guard admin: nécessite session + role=admin dans public.profiles
-   - Gère logout et affichage user
+   - Ensure user is logged in AND is admin (profiles.role === 'admin')
+   - Provides logout binding
 */
 
 (() => {
-  const $ = (sel, root = document) => root.querySelector(sel);
+  const Admin = window.Admin;
+  if (!Admin?.sb) throw new Error("Admin core non chargé");
 
-  const setText = (sel, text) => {
-    const el = $(sel);
-    if (el) el.textContent = text ?? "";
+  Admin.getUser = async () => {
+    const { data, error } = await Admin.sb.auth.getUser();
+    if (error) return { user: null, error };
+    return { user: data.user, error: null };
   };
 
-  async function requireAdmin() {
-    if (!window.SB?.auth) throw new Error("Supabase client not ready");
-
-    const redirect = encodeURIComponent("/admin/");
-    const { data: s } = await SB.auth.getSession();
-
-    if (!s?.session?.user) {
-      window.location.href = `/login.html?redirect=${redirect}`;
-      return null;
-    }
-
-    // Check role
-    const uid = s.session.user.id;
-    const { data: prof, error } = await SB.db
+  Admin.getMyRole = async (userId) => {
+    const { data, error } = await Admin.sb
       .from("profiles")
-      .select("role, display_name")
-      .eq("id", uid)
+      .select("role")
+      .eq("id", userId)
       .maybeSingle();
+    return { role: data?.role || null, error };
+  };
 
-    if (error) {
-      console.error("[ADMIN] profiles read error", error);
-      alert("Erreur: impossible de vérifier votre rôle (profiles/RLS).");
-      window.location.href = `/login.html?redirect=${redirect}`;
-      return null;
-    }
+  Admin.ensureAdmin = async () => {
+    const { user, error: uErr } = await Admin.getUser();
+    if (uErr || !user) return { ok: false, reason: "not_logged" };
 
-    if (!prof || prof.role !== "admin") {
-      alert("Accès refusé: ce compte n'est pas admin.");
-      window.location.href = `/login.html?redirect=${redirect}`;
-      return null;
-    }
+    const { role, error: rErr } = await Admin.getMyRole(user.id);
+    if (rErr) return { ok: false, reason: "role_error", error: rErr };
+    if (role !== "admin") return { ok: false, reason: "not_admin" };
 
-    // Fill UI
-    setText('[data-admin-user-email]', s.session.user.email);
-    setText('[data-admin-user-name]', prof.display_name || "");
+    return { ok: true, user, role };
+  };
 
-    return s.session.user;
-  }
+  Admin.redirectToLogin = () => {
+    const redirect = encodeURIComponent(location.pathname.replace(/^\//, "/"));
+    location.href = `/login.html?redirect=${redirect}`;
+  };
 
-  async function wireLogout() {
-    const btn = document.querySelector("[data-admin-logout]");
+  Admin.bindLogout = (selector = "[data-logout]") => {
+    const btn = Admin.qs(selector);
     if (!btn) return;
     btn.addEventListener("click", async () => {
-      await SB.auth.signOut();
-      window.location.href = "/login.html";
+      await Admin.sb.auth.signOut();
+      Admin.toast("Déconnecté.", "ok");
+      Admin.redirectToLogin();
     });
-  }
+  };
 
-  window.AdminAuth = { requireAdmin, wireLogout };
+  Admin.showAuthError = (msg) => {
+    const box = Admin.qs("#adminAuthError");
+    if (box) {
+      box.textContent = msg;
+      box.style.display = "block";
+    } else {
+      alert(msg);
+    }
+  };
 })();

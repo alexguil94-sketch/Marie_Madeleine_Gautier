@@ -1,311 +1,413 @@
 /* admin/js/admin-works.js
-   CRUD "works" + upload image cover
-   Table works attendue: id, title, slug, status, sort_order, image_path, image_alt, updated_at
+   Admin works manager:
+   - list all works (draft/published/archived)
+   - create/update
+   - upload cover image to Storage: works/<id>/cover.<ext>
+   - publish/unpublish
+   - delete (db + storage file)
+   - drag&drop reorder (sort_order)
 */
 
 (() => {
-  const $ = (sel, root = document) => root.querySelector(sel);
+  const Admin = window.Admin;
+  if (!Admin?.sb) throw new Error("Admin core non chargé");
 
-  const els = () => ({
-    list: $("[data-works-list]"),
-    form: $("[data-work-form]"),
-    title: $("[data-work-title]"),
-    status: $("[data-work-status]"),
-    sort: $("[data-work-sort]"),
-    file: $("[data-work-file]"),
-    alt: $("[data-work-alt]"),
-    save: $("[data-work-save]"),
-    cancel: $("[data-work-cancel]"),
-    newBtn: $("[data-work-new]"),
-    preview: $("[data-work-preview]"),
-    msg: $("[data-works-msg]"),
-  });
-
-  let editingId = null;
-
-  const setMsg = (t) => {
-    const { msg } = els();
-    if (!msg) return;
-    msg.textContent = t || "";
+  // === SELECTORS (si ton HTML est différent, change ici) ===
+  const SEL = {
+    list: "#worksList",
+    form: "#workForm",
+    // inputs in the form
+    title: "[name='title']",
+    status: "[name='status']",
+    sort: "[name='sort_order']",
+    alt: "[name='image_alt']",
+    file: "[name='image_file']",
+    desc: "[name='description']",
+    year: "[name='year']",
+    medium: "[name='medium']",
+    dims: "[name='dimensions']",
+    price: "[name='price_eur']",
+    idHidden: "[name='id']",
+    resetBtn: "[data-work-reset]",
   };
 
-  const resetForm = () => {
-    const e = els();
-    if (!e.form) return;
-    editingId = null;
-    e.form.reset?.();
-    if (e.title) e.title.value = "";
-    if (e.status) e.status.value = "draft";
-    if (e.sort) e.sort.value = "0";
-    if (e.alt) e.alt.value = "";
-    if (e.file) e.file.value = "";
-    if (e.preview) e.preview.innerHTML = "";
-    setMsg("");
+  const state = {
+    works: [],
+    draggingId: null,
   };
 
-  const renderPreview = (url, alt) => {
-    const { preview } = els();
-    if (!preview) return;
-    if (!url) {
-      preview.innerHTML = "";
-      return;
-    }
-    preview.innerHTML = `
-      <div style="display:flex; gap:12px; align-items:center; margin-top:8px;">
-        <img src="${url}" alt="${escapeHtml(alt || "")}" style="width:88px;height:88px;object-fit:cover;border-radius:12px;border:1px solid rgba(255,255,255,.12);" />
-        <div style="opacity:.85;font-size:.9rem;">Aperçu</div>
-      </div>
-    `;
+  const el = {};
+  const cacheEls = () => {
+    el.list = Admin.qs(SEL.list);
+    el.form = Admin.qs(SEL.form);
+    if (!el.list || !el.form) return false;
+
+    el.inTitle = Admin.qs(SEL.title, el.form);
+    el.inStatus = Admin.qs(SEL.status, el.form);
+    el.inSort = Admin.qs(SEL.sort, el.form);
+    el.inAlt = Admin.qs(SEL.alt, el.form);
+    el.inFile = Admin.qs(SEL.file, el.form);
+    el.inDesc = Admin.qs(SEL.desc, el.form);
+    el.inYear = Admin.qs(SEL.year, el.form);
+    el.inMedium = Admin.qs(SEL.medium, el.form);
+    el.inDims = Admin.qs(SEL.dims, el.form);
+    el.inPrice = Admin.qs(SEL.price, el.form);
+    el.inId = Admin.qs(SEL.idHidden, el.form);
+    el.resetBtn = Admin.qs(SEL.resetBtn, el.form);
+    return true;
   };
 
-  const escapeHtml = (s) =>
-    String(s ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
+  const readForm = () => {
+    const toInt = (v) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
+    return {
+      id: el.inId?.value?.trim() || null,
+      title: el.inTitle?.value?.trim() || "",
+      status: el.inStatus?.value || "draft",
+      sort_order: toInt(el.inSort?.value ?? 0) ?? 0,
+      image_alt: (el.inAlt?.value || "").trim(),
+      description: (el.inDesc?.value || "").trim(),
+      year: toInt(el.inYear?.value),
+      medium: (el.inMedium?.value || "").trim(),
+      dimensions: (el.inDims?.value || "").trim(),
+      price_eur: toInt(el.inPrice?.value),
+      file: el.inFile?.files?.[0] || null,
+    };
+  };
 
-  async function fetchWorks() {
-    const { data, error } = await SB.db
+  const fillForm = (w) => {
+    if (el.inId) el.inId.value = w?.id || "";
+    if (el.inTitle) el.inTitle.value = w?.title || "";
+    if (el.inStatus) el.inStatus.value = w?.status || "draft";
+    if (el.inSort) el.inSort.value = String(w?.sort_order ?? 0);
+    if (el.inAlt) el.inAlt.value = w?.image_alt || w?.title || "";
+    if (el.inDesc) el.inDesc.value = w?.description || "";
+    if (el.inYear) el.inYear.value = w?.year ?? "";
+    if (el.inMedium) el.inMedium.value = w?.medium ?? "";
+    if (el.inDims) el.inDims.value = w?.dimensions ?? "";
+    if (el.inPrice) el.inPrice.value = w?.price_eur ?? "";
+    if (el.inFile) el.inFile.value = ""; // reset file input
+  };
+
+  const clearForm = () => fillForm(null);
+
+  const fetchWorks = async () => {
+    const { data, error } = await Admin.sb
       .from("works")
-      .select("id,title,status,sort_order,image_path,image_alt,updated_at")
+      .select(
+        "id,title,status,sort_order,image_path,image_alt,updated_at,created_at"
+      )
       .order("sort_order", { ascending: true })
       .order("updated_at", { ascending: false });
 
     if (error) throw error;
-    return data || [];
-  }
+    state.works = data || [];
+    return state.works;
+  };
 
-  function worksRow(w) {
-    const imgUrl = w.image_path ? SB.getPublicUrl(w.image_path) : "";
-    const badge =
-      w.status === "published" ? "✅ Publié" : w.status === "draft" ? "📝 Brouillon" : "📦 Archivé";
+  const uploadCover = async (workId, file) => {
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const safeExt = ext.replace(/[^a-z0-9]/g, "") || "jpg";
+    const path = `works/${workId}/cover.${safeExt}`;
 
-    return `
-      <div data-work-row="${w.id}" style="display:flex;gap:12px;align-items:center;padding:10px;border:1px solid rgba(255,255,255,.12);border-radius:14px;margin:8px 0;">
-        <div style="width:56px;height:56px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.12);flex:0 0 auto;background:rgba(255,255,255,.04);display:flex;align-items:center;justify-content:center;">
-          ${imgUrl ? `<img src="${imgUrl}" alt="${escapeHtml(w.image_alt || w.title)}" style="width:56px;height:56px;object-fit:cover;">` : `<span style="opacity:.5;">—</span>`}
-        </div>
+    const { error } = await Admin.sb.storage
+      .from(Admin.cfg.bucket)
+      .upload(path, file, {
+        upsert: true,
+        contentType: file.type || "image/jpeg",
+      });
 
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-            ${escapeHtml(w.title)}
-          </div>
-          <div style="opacity:.75;font-size:.9rem;">${badge} · ordre: ${w.sort_order}</div>
-        </div>
-
-        <div style="display:flex;gap:8px;flex:0 0 auto;">
-          <button data-action="edit" data-id="${w.id}">Modifier</button>
-          <button data-action="toggle" data-id="${w.id}" data-status="${w.status}">
-            ${w.status === "published" ? "Dépublier" : "Publier"}
-          </button>
-          <button data-action="delete" data-id="${w.id}" style="opacity:.9;">Supprimer</button>
-        </div>
-      </div>
-    `;
-  }
-
-  async function renderList() {
-    const e = els();
-    if (!e.list) return;
-    setMsg("Chargement…");
-    const works = await fetchWorks();
-    e.list.innerHTML = works.map(worksRow).join("") || `<div style="opacity:.7;">Aucune œuvre.</div>`;
-    setMsg("");
-  }
-
-  async function loadToForm(id) {
-    const { data, error } = await SB.db
-      .from("works")
-      .select("id,title,status,sort_order,image_path,image_alt")
-      .eq("id", id)
-      .single();
-
-    if (error) throw error;
-
-    editingId = data.id;
-
-    const e = els();
-    e.title.value = data.title || "";
-    e.status.value = data.status || "draft";
-    e.sort.value = String(data.sort_order ?? 0);
-    e.alt.value = data.image_alt || data.title || "";
-
-    const url = data.image_path ? SB.getPublicUrl(data.image_path) : "";
-    renderPreview(url, data.image_alt || data.title);
-  }
-
-  function getFileExt(name) {
-    const parts = String(name || "").split(".");
-    const ext = parts.length > 1 ? parts.pop().toLowerCase() : "jpg";
-    return ext.replace(/[^a-z0-9]/g, "") || "jpg";
-  }
-
-  async function uploadCover(workId, file) {
-    const ext = getFileExt(file.name);
-    const path = `works/${workId}/cover.${ext}`;
-    const { error } = await SB.storage.from(SB.cfg.bucket).upload(path, file, {
-      upsert: true,
-      contentType: file.type || "image/jpeg",
-      cacheControl: "3600",
-    });
     if (error) throw error;
     return path;
-  }
+  };
 
-  async function createWorkBase({ title, status, sort_order, image_alt }) {
-    const slug = SB.slugify(title);
-    const { data, error } = await SB.db
+  const upsertWork = async (payload) => {
+    const base = {
+      title: payload.title,
+      status: payload.status,
+      sort_order: payload.sort_order,
+      image_alt: payload.image_alt || payload.title,
+      description: payload.description || null,
+      year: payload.year,
+      medium: payload.medium || null,
+      dimensions: payload.dimensions || null,
+      price_eur: payload.price_eur,
+    };
+
+    if (!base.title) throw new Error("Titre obligatoire.");
+
+    if (!payload.id) {
+      // INSERT
+      const { data, error } = await Admin.sb
+        .from("works")
+        .insert(base)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return data;
+    } else {
+      // UPDATE
+      const { data, error } = await Admin.sb
+        .from("works")
+        .update(base)
+        .eq("id", payload.id)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return data;
+    }
+  };
+
+  const setStatus = async (id, status) => {
+    const { error } = await Admin.sb.from("works").update({ status }).eq("id", id);
+    if (error) throw error;
+    await Admin.audit("set_status", "works", id, { status });
+  };
+
+  const deleteWork = async (id) => {
+    // read image path
+    const { data: w, error: e1 } = await Admin.sb
       .from("works")
-      .insert({
-        title,
-        slug: slug || null,
-        status,
-        sort_order,
-        image_alt: image_alt || title,
-        created_by: (await SB.auth.getUser()).data.user?.id || null,
-      })
-      .select("*")
+      .select("image_path,title")
+      .eq("id", id)
       .single();
+    if (e1) throw e1;
 
-    if (error) throw error;
-    return data;
-  }
+    // delete storage file if exists
+    if (w?.image_path) {
+      const { error: e2 } = await Admin.sb.storage
+        .from(Admin.cfg.bucket)
+        .remove([w.image_path]);
+      if (e2) {
+        // on continue quand même: parfois l'image a déjà été supprimée
+        console.warn("remove storage failed", e2);
+      }
+    }
 
-  async function updateWorkBase(id, patch) {
-    const { error } = await SB.db.from("works").update(patch).eq("id", id);
-    if (error) throw error;
-  }
+    // delete db row
+    const { error: e3 } = await Admin.sb.from("works").delete().eq("id", id);
+    if (e3) throw e3;
 
-  async function onSave(e) {
-    e.preventDefault();
-    const el = els();
+    await Admin.audit("delete", "works", id, { title: w?.title });
+  };
 
-    const title = (el.title?.value || "").trim();
-    if (!title) return alert("Titre obligatoire.");
+  const render = () => {
+    el.list.innerHTML = "";
+    if (!state.works.length) {
+      el.list.innerHTML = `<p style="opacity:.7">Aucune œuvre pour l’instant.</p>`;
+      return;
+    }
 
-    const status = el.status?.value || "draft";
-    const sort_order = parseInt(el.sort?.value || "0", 10) || 0;
-    const image_alt = (el.alt?.value || "").trim() || title;
-    const file = el.file?.files?.[0] || null;
+    const wrap = document.createElement("div");
+    wrap.style.display = "grid";
+    wrap.style.gap = "10px";
 
+    state.works.forEach((w) => {
+      const row = document.createElement("div");
+      row.dataset.id = w.id;
+      row.draggable = true;
+      row.style.display = "grid";
+      row.style.gridTemplateColumns = "64px 1fr auto";
+      row.style.gap = "10px";
+      row.style.alignItems = "center";
+      row.style.padding = "10px";
+      row.style.border = "1px solid rgba(255,255,255,.12)";
+      row.style.borderRadius = "12px";
+      row.style.background = "rgba(0,0,0,.15)";
+
+      const img = document.createElement("img");
+      img.alt = w.image_alt || w.title || "";
+      img.width = 64;
+      img.height = 64;
+      img.style.objectFit = "cover";
+      img.style.borderRadius = "10px";
+      img.style.border = "1px solid rgba(255,255,255,.12)";
+      img.src = w.image_path ? Admin.publicUrl(w.image_path) : "";
+      if (!img.src) {
+        img.style.background = "rgba(255,255,255,.06)";
+      }
+
+      const mid = document.createElement("div");
+      const badge =
+        w.status === "published"
+          ? "✅ publié"
+          : w.status === "draft"
+          ? "📝 brouillon"
+          : "📦 archivé";
+      mid.innerHTML = `
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <strong>${escapeHtml(w.title || "(sans titre)")}</strong>
+          <span style="opacity:.75;font-size:12px">${badge}</span>
+          <span style="opacity:.55;font-size:12px">#${w.sort_order ?? 0}</span>
+        </div>
+        <div style="opacity:.55;font-size:12px">id: ${w.id}</div>
+      `;
+
+      const right = document.createElement("div");
+      right.style.display = "flex";
+      right.style.gap = "8px";
+      right.style.flexWrap = "wrap";
+      right.style.justifyContent = "flex-end";
+
+      const btnEdit = mkBtn("Éditer", async () => {
+        fillForm(w);
+        Admin.toast("Mode édition.", "info");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+
+      const btnPub = mkBtn(
+        w.status === "published" ? "Dépublier" : "Publier",
+        async () => {
+          await setStatus(w.id, w.status === "published" ? "draft" : "published");
+          Admin.toast("Statut mis à jour.", "ok");
+          await refresh();
+        }
+      );
+
+      const btnDel = mkBtn("Supprimer", async () => {
+        const ok = confirm(`Supprimer l'œuvre : "${w.title}" ?`);
+        if (!ok) return;
+        await deleteWork(w.id);
+        Admin.toast("Œuvre supprimée.", "ok");
+        await refresh();
+      });
+      btnDel.style.borderColor = "rgba(255,100,100,.35)";
+
+      right.append(btnEdit, btnPub, btnDel);
+
+      // drag events
+      row.addEventListener("dragstart", () => {
+        state.draggingId = w.id;
+        row.style.opacity = "0.6";
+      });
+      row.addEventListener("dragend", () => {
+        state.draggingId = null;
+        row.style.opacity = "1";
+      });
+      row.addEventListener("dragover", (e) => {
+        e.preventDefault();
+      });
+      row.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        const targetId = row.dataset.id;
+        if (!state.draggingId || state.draggingId === targetId) return;
+        reorder(state.draggingId, targetId);
+        await persistSortOrder();
+        Admin.toast("Ordre mis à jour.", "ok");
+        await refresh(false);
+      });
+
+      row.append(img, mid, right);
+      wrap.appendChild(row);
+    });
+
+    el.list.appendChild(wrap);
+  };
+
+  const reorder = (dragId, targetId) => {
+    const arr = state.works.slice();
+    const from = arr.findIndex((x) => x.id === dragId);
+    const to = arr.findIndex((x) => x.id === targetId);
+    if (from < 0 || to < 0) return;
+    const [moved] = arr.splice(from, 1);
+    arr.splice(to, 0, moved);
+
+    // renumber sort_order (0..n-1)
+    state.works = arr.map((w, idx) => ({ ...w, sort_order: idx }));
+    render();
+  };
+
+  const persistSortOrder = async () => {
+    // batch update (simple)
+    const updates = state.works.map((w) => ({ id: w.id, sort_order: w.sort_order }));
+    // On envoie une requête par item (simple et fiable). Si tu veux, je te fais une RPC bulk plus tard.
+    for (const u of updates) {
+      const { error } = await Admin.sb.from("works").update({ sort_order: u.sort_order }).eq("id", u.id);
+      if (error) throw error;
+    }
+    await Admin.audit("reorder", "works", "bulk", { count: updates.length });
+  };
+
+  const refresh = async (doFetch = true) => {
     try {
-      setMsg("Enregistrement…");
-
-      if (!editingId) {
-        // Create first
-        const work = await createWorkBase({ title, status, sort_order, image_alt });
-
-        // Upload image if provided
-        if (file) {
-          const path = await uploadCover(work.id, file);
-          await updateWorkBase(work.id, { image_path: path, image_alt });
-        }
-
-      } else {
-        // Update base
-        const patch = {
-          title,
-          status,
-          sort_order,
-          image_alt,
-          slug: SB.slugify(title) || null,
-        };
-        await updateWorkBase(editingId, patch);
-
-        // Upload new image if provided
-        if (file) {
-          const path = await uploadCover(editingId, file);
-          await updateWorkBase(editingId, { image_path: path, image_alt });
-        }
-      }
-
-      resetForm();
-      await renderList();
-      setMsg("✅ Sauvegardé.");
-      setTimeout(() => setMsg(""), 1200);
-    } catch (err) {
-      console.error(err);
-      alert("Erreur: " + (err?.message || "unknown"));
-      setMsg("");
+      if (doFetch) await fetchWorks();
+      render();
+    } catch (e) {
+      console.error(e);
+      Admin.toast(Admin.errText(e), "err");
     }
-  }
+  };
 
-  async function onTogglePublish(id, currentStatus) {
-    const next = currentStatus === "published" ? "draft" : "published";
-    await updateWorkBase(id, { status: next });
-    await renderList();
-  }
-
-  async function onDelete(id) {
-    if (!confirm("Supprimer cette œuvre ? (image incluse)")) return;
-
-    // Get image_path
-    const { data, error } = await SB.db.from("works").select("image_path").eq("id", id).single();
-    if (error) throw error;
-
-    // Remove storage file
-    if (data?.image_path) {
-      await SB.storage.from(SB.cfg.bucket).remove([data.image_path]);
-    }
-
-    // Delete row
-    const { error: e2 } = await SB.db.from("works").delete().eq("id", id);
-    if (e2) throw e2;
-
-    await renderList();
-  }
-
-  function wireUI() {
-    const e = els();
-
-    e.newBtn?.addEventListener("click", () => resetForm());
-    e.cancel?.addEventListener("click", (ev) => {
-      ev.preventDefault();
-      resetForm();
-    });
-
-    e.form?.addEventListener("submit", onSave);
-
-    // Live preview when selecting file
-    e.file?.addEventListener("change", () => {
-      const file = e.file.files?.[0];
-      if (!file) return;
-      const url = URL.createObjectURL(file);
-      const alt = (e.alt?.value || "").trim();
-      renderPreview(url, alt);
-    });
-
-    // List actions (event delegation)
-    e.list?.addEventListener("click", async (ev) => {
-      const btn = ev.target.closest("button[data-action]");
-      if (!btn) return;
-
-      const action = btn.getAttribute("data-action");
-      const id = btn.getAttribute("data-id");
-
+  const bindForm = () => {
+    el.form.addEventListener("submit", async (evt) => {
+      evt.preventDefault();
       try {
-        if (action === "edit") {
-          await loadToForm(id);
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        } else if (action === "toggle") {
-          await onTogglePublish(id, btn.getAttribute("data-status"));
-        } else if (action === "delete") {
-          await onDelete(id);
+        const p = readForm();
+
+        // 1) insert/update work row (no image yet)
+        let w = await upsertWork(p);
+
+        // 2) upload image if provided
+        if (p.file) {
+          const path = await uploadCover(w.id, p.file);
+          const { error } = await Admin.sb.from("works").update({ image_path: path }).eq("id", w.id);
+          if (error) throw error;
+          w.image_path = path;
         }
-      } catch (err) {
-        console.error(err);
-        alert("Erreur: " + (err?.message || "unknown"));
+
+        await Admin.audit(p.id ? "update" : "create", "works", w.id, { title: w.title });
+
+        Admin.toast(p.id ? "Œuvre mise à jour." : "Œuvre créée.", "ok");
+        clearForm();
+        await refresh(true);
+      } catch (e) {
+        console.error(e);
+        Admin.toast(Admin.errText(e), "err");
       }
     });
-  }
 
-  async function init() {
-    resetForm();
-    wireUI();
-    await renderList();
-  }
+    if (el.resetBtn) {
+      el.resetBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        clearForm();
+      });
+    }
+  };
 
-  window.AdminWorks = { init };
+  const mkBtn = (label, onClick) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = label;
+    b.style.padding = "8px 10px";
+    b.style.borderRadius = "10px";
+    b.style.border = "1px solid rgba(255,255,255,.15)";
+    b.style.background = "rgba(255,255,255,.06)";
+    b.style.color = "inherit";
+    b.style.cursor = "pointer";
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      try {
+        await onClick();
+      } finally {
+        b.disabled = false;
+      }
+    });
+    return b;
+  };
+
+  const escapeHtml = (s) =>
+    String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+
+  // Public init
+  Admin.initWorksAdmin = async () => {
+    const ok = cacheEls();
+    if (!ok) {
+      console.warn("[ADMIN] works: éléments HTML manquants (#worksList / #workForm)");
+      return;
+    }
+    bindForm();
+    await refresh(true);
+  };
 })();
