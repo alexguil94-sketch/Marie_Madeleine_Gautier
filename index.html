@@ -22,7 +22,6 @@
 </head>
 
 <body>
-  <!-- Injecté par layout.js -->
   <div id="siteHeader"></div>
 
   <header class="hero hero--welcome">
@@ -32,7 +31,6 @@
         <span class="drop d2">mondes</span>
         <span class="hero-welcome__sigle drop d3">MMG</span>
       </h1>
-
       <p class="muted" style="margin-top:18px; max-width:820px; margin-inline:auto">
         Sculptures, textes et expositions — une signature où la matière rencontre l’utopie.
       </p>
@@ -50,7 +48,6 @@
           <p class="muted" style="max-width:860px">
             Retrouvez les prochaines dates, lieux et événements — et les archives des expositions passées.
           </p>
-
           <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:14px">
             <a class="btn" href="agenda.html">Voir l’agenda</a>
             <a class="btn ghost" href="gallery.html">Explorer la galerie</a>
@@ -65,10 +62,8 @@
           <div class="kicker">Actualités</div>
           <h2 style="margin:10px 0 0">Vidéos, images et petites nouvelles</h2>
           <p class="muted" style="max-width:860px">
-            Une vitrine vivante : publications, coulisses et annonces.
-            Les commentaires sont réservés aux personnes connectées.
+            Une vitrine vivante : publications, coulisses et annonces. Les commentaires sont réservés aux personnes connectées.
           </p>
-
           <div class="hr"></div>
           <div id="newsRoot" class="news-grid"></div>
         </div>
@@ -76,76 +71,24 @@
     </section>
   </main>
 
-  <!-- PROFIL: Modale pseudo/avatar -->
-  <section id="pfModal" class="pf-modal" hidden>
-    <div class="pf-card" role="dialog" aria-modal="true" aria-labelledby="pfTitle">
-      <div class="pf-head">
-        <div>
-          <div class="pf-kicker">Mon profil</div>
-          <h2 id="pfTitle" class="pf-title">Choisis ton pseudo et ton avatar</h2>
-        </div>
-        <button id="pfClose" class="pf-x" type="button" aria-label="Fermer">×</button>
-      </div>
-
-      <div id="pfSignedOut" class="pf-muted" hidden>
-        Tu dois être connecté pour choisir ton pseudo et ton avatar.
-        <div style="margin-top:10px">
-          <a id="pfLoginLink" class="pf-btn pf-primary" href="./login.html">Se connecter</a>
-        </div>
-      </div>
-
-      <div id="pfSignedIn" hidden>
-        <div class="pf-row" style="align-items:center">
-          <div class="pf-avatar">
-            <img id="pfAvatarPreview" alt="" style="display:none" />
-          </div>
-
-          <div style="flex:1;min-width:0">
-            <div class="pf-muted">Compte</div>
-            <div id="pfEmail" class="pf-email"></div>
-          </div>
-
-          <button id="pfLogout" class="pf-btn" type="button">Se déconnecter</button>
-        </div>
-
-        <div class="pf-field">
-          <label class="pf-label" for="pfName">Pseudo</label>
-          <input id="pfName" class="pf-input" placeholder="Ton pseudo" maxlength="32" />
-        </div>
-
-        <div class="pf-field">
-          <label class="pf-label" for="pfAvatar">Avatar</label>
-          <input id="pfAvatar" class="pf-input" type="file" accept="image/*" />
-          <div class="pf-row" style="margin-top:10px">
-            <button id="pfRemoveAvatar" class="pf-btn" type="button">Retirer l’avatar</button>
-            <button id="pfSave" class="pf-btn pf-primary" type="button">Enregistrer</button>
-          </div>
-        </div>
-
-        <div id="pfMsg" class="pf-muted" style="margin-top:10px;min-height:18px"></div>
-      </div>
-    </div>
-  </section>
-
-  <button id="pfOpen" class="pf-fab" type="button" aria-label="Mon profil" hidden>Profil</button>
-
   <div id="siteFooter"></div>
 
-  <!-- Scripts: ordre SAFE -->
-  <script src="js/layout.js?v=1"></script>
+  <!-- 1) Inject header/footer -->
+  <script defer src="js/layout.js?v=1"></script>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="js/supabase-config.js?v=1"></script>
-  <script src="js/supabase-client.js?v=1"></script>
+  <!-- 2) Supabase -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script defer src="js/supabase-config.js?v=1"></script>
+  <script defer src="js/supabase-client.js?v=1"></script>
 
-  <script src="js/profile-ui.js?v=2"></script>
+  <!-- 3) UI / data -->
+  <script defer src="js/profile-ui.js?v=1"></script>
+  <script defer src="js/news.js?v=2"></script>
 
-
-  <script src="js/news.js?v=2"></script>
-
-  <script src="js/theme.js?v=1"></script>
-  <script src="js/i18n.js?v=1"></script>
-  <script src="js/app.js?v=1"></script>
-  <script src="js/luxe.js?v=1"></script>
+  <!-- 4) rest -->
+  <script defer src="js/theme.js?v=1"></script>
+  <script defer src="js/i18n.js?v=1"></script>
+  <script defer src="js/app.js?v=1"></script>
+  <script defer src="js/luxe.js?v=1"></script>
 </body>
 </html>
