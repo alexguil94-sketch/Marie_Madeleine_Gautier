@@ -10,13 +10,16 @@
       <span></span><span></span><span></span>
     </button>
 
-    <a class="brand brand--center" href="index.html" aria-label="Marie-Madeleine Gautier">
-      <img class="brand-logo logo--light" src="assets/ui/logo-light.png" alt="" />
-      <img class="brand-logo logo--dark" src="assets/ui/logo-dark.png" alt="" />
+    <a class="brand brand--center" href="/index.html" aria-label="Marie-Madeleine Gautier">
+      <img class="brand-logo logo--light" src="/assets/ui/logo-light.png" alt="" />
+      <img class="brand-logo logo--dark" src="/assets/ui/logo-dark.png" alt="" />
       <span class="brand-text" data-i18n="brand.name">Marie-Madeleine Gautier</span>
     </a>
 
     <div class="nav-actions">
+      <!-- ✅ Profil toujours visible -->
+      <div id="mmgProfileSlot"></div>
+
       <button class="pill" type="button" data-theme-toggle title="Theme">
         <span class="icon" aria-hidden="true">☾</span>
       </button>
@@ -41,13 +44,10 @@
           </div>
         </div>
       </div>
-
-      <!-- ✅ Le profil DOIT être ici (toujours visible) -->
-      <div id="mmgProfileSlot"></div>
     </div>
   </div>
 
-  <!-- Drawer nav (left) -->
+  <!-- Drawer nav -->
   <nav class="nav-links nav-drawer" id="siteNav" data-nav aria-hidden="true" aria-label="Navigation">
     <div class="nav-drawer__head">
       <button class="nav-close" type="button" data-nav-close aria-label="Fermer">×</button>
@@ -55,9 +55,9 @@
       <div class="nav-carousel" data-nav-carousel aria-label="Aperçu">
         <div class="nav-carousel__viewport">
           <div class="nav-carousel__track">
-            <div class="nav-carousel__slide"><img src="assets/ui/hero-bg.webp" alt=""></div>
-            <div class="nav-carousel__slide"><img src="assets/artist/portrait-1.svg" alt=""></div>
-            <div class="nav-carousel__slide"><img src="assets/works/work-001.svg" alt=""></div>
+            <div class="nav-carousel__slide"><img src="/assets/ui/hero-bg.webp" alt=""></div>
+            <div class="nav-carousel__slide"><img src="/assets/artist/portrait-1.svg" alt=""></div>
+            <div class="nav-carousel__slide"><img src="/assets/works/work-001.svg" alt=""></div>
           </div>
         </div>
 
@@ -68,14 +68,14 @@
     </div>
 
     <div class="nav-drawer__links">
-      <a href="index.html" data-i18n="nav.home">Accueil</a>
-      <a href="index.html#actualites" data-i18n="nav.news">Actualités</a>
-      <a href="artiste.html" data-i18n="nav.artist">L’Artiste</a>
-      <a href="gallery.html" data-i18n="nav.gallery">Galerie</a>
-      <a href="agenda.html" data-i18n="nav.agenda">Agenda</a>
-      <a href="books.html" data-i18n="nav.books">Livres</a>
-      <a href="utopia.html" data-i18n="nav.utopia">Monde utopique</a>
-      <a href="contact.html" data-i18n="nav.contact">Contact</a>
+      <a href="/index.html" data-i18n="nav.home">Accueil</a>
+      <a href="/index.html#actualites" data-i18n="nav.news">Actualités</a>
+      <a href="/artiste.html" data-i18n="nav.artist">L’Artiste</a>
+      <a href="/gallery.html" data-i18n="nav.gallery">Galerie</a>
+      <a href="/agenda.html" data-i18n="nav.agenda">Agenda</a>
+      <a href="/books.html" data-i18n="nav.books">Livres</a>
+      <a href="/utopia.html" data-i18n="nav.utopia">Monde utopique</a>
+      <a href="/contact.html" data-i18n="nav.contact">Contact</a>
     </div>
   </nav>
 
