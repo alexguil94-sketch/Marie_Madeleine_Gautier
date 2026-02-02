@@ -65,6 +65,65 @@
       </div>
     </section>
   </main>
+  <!-- PROFILE ONBOARDING (index) -->
+<section id="pfModal" class="pf-modal" hidden>
+  <div class="pf-card" role="dialog" aria-modal="true" aria-labelledby="pfTitle">
+    <div class="pf-head">
+      <div>
+        <div class="pf-kicker">Mon profil</div>
+        <h2 id="pfTitle" class="pf-title">Choisis ton pseudo et ton avatar</h2>
+      </div>
+      <button id="pfClose" class="pf-x" type="button" aria-label="Fermer">×</button>
+    </div>
+
+    <div id="pfSignedOut" class="pf-muted" hidden>
+      Tu dois être connecté pour choisir ton pseudo et ton avatar.
+      <div style="margin-top:10px">
+        <a id="pfLoginLink" class="pf-btn pf-primary" href="./login.html">Se connecter</a>
+      </div>
+    </div>
+
+    <div id="pfSignedIn" hidden>
+      <div class="pf-row" style="align-items:center">
+        <div class="pf-avatar">
+          <img id="pfAvatarPreview" alt="" />
+        </div>
+
+        <div style="flex:1;min-width:0">
+          <div class="pf-muted">Compte</div>
+          <div id="pfEmail" class="pf-email"></div>
+        </div>
+
+        <button id="pfLogout" class="pf-btn" type="button">Se déconnecter</button>
+      </div>
+
+      <div class="pf-field">
+        <label class="pf-label" for="pfName">Pseudo</label>
+        <input id="pfName" class="pf-input" placeholder="Ton pseudo" maxlength="32" />
+      </div>
+
+      <div class="pf-field">
+        <label class="pf-label" for="pfAvatar">Avatar</label>
+        <input id="pfAvatar" class="pf-input" type="file" accept="image/*" />
+        <div class="pf-row" style="margin-top:10px">
+          <button id="pfRemoveAvatar" class="pf-btn" type="button">Retirer l’avatar</button>
+          <button id="pfSave" class="pf-btn pf-primary" type="button">Enregistrer</button>
+        </div>
+      </div>
+
+      <div id="pfMsg" class="pf-muted" style="margin-top:10px;min-height:18px"></div>
+    </div>
+  </div>
+</section>
+
+<!-- Petit bouton discret (optionnel) -->
+<button id="pfOpen" class="pf-fab" type="button" aria-label="Mon profil" hidden>
+  Profil
+</button>
+
+<!-- IMPORTANT: mets ce script après supabase-config + supabase-client -->
+<script defer src="js/profile-onboarding.js?v=1"></script>
+
 
   <div id="siteFooter"></div>
 
