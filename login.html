@@ -37,6 +37,24 @@
         <input class="input" name="password" type="password" autocomplete="current-password" required>
 
         <div style="height:14px"></div>
+        <section id="profileCard" class="card" hidden>
+  <h3>Mon profil</h3>
+
+  <div class="field">
+    <label>Pseudo</label>
+    <input id="pfName" class="input" placeholder="Ton pseudo">
+  </div>
+
+  <div class="field">
+    <label>Avatar</label>
+    <input id="pfAvatar" type="file" accept="image/*">
+    <img id="pfAvatarPreview" style="margin-top:10px;width:72px;height:72px;border-radius:18px;object-fit:cover;display:none;">
+  </div>
+
+  <button id="pfSave" class="btn" type="button">Enregistrer</button>
+  <div id="pfMsg" class="muted" style="margin-top:8px"></div>
+</section>
+
 
         <div class="row">
           <button class="btn primary" type="submit">Se connecter</button>

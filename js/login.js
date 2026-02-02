@@ -325,3 +325,84 @@
     }
   });
 })();
+(async () => {
+  const sb = window.mmgSupabase;
+  if (!sb) return;
+
+  const card = document.getElementById("profileCard");
+  const inName = document.getElementById("pfName");
+  const inAvatar = document.getElementById("pfAvatar");
+  const imgPrev = document.getElementById("pfAvatarPreview");
+  const btnSave = document.getElementById("pfSave");
+  const msg = document.getElementById("pfMsg");
+
+  if (!card || !inName || !inAvatar || !btnSave) return;
+
+  const setMsg = (t="") => { if (msg) msg.textContent = t; };
+
+  const { data: u } = await sb.auth.getUser();
+  const user = u?.user;
+  if (!user) return; // pas connecté
+
+  card.hidden = false;
+
+  // charge profile
+  const { data: проф } = await sb.from("profiles").select("display_name, avatar_url").eq("id", user.id).maybeSingle();
+  if (prof?.display_name) inName.value = prof.display_name;
+  if (prof?.avatar_url && imgPrev) {
+    imgPrev.src = prof.avatar_url;
+    imgPrev.style.display = "block";
+  }
+
+  // preview avatar
+  inAvatar.addEventListener("change", () => {
+    const f = inAvatar.files?.[0];
+    if (!f || !imgPrev) return;
+    imgPrev.src = URL.createObjectURL(f);
+    imgPrev.style.display = "block";
+  });
+
+  const publicUrl = (path) => {
+    const { data } = sb.storage.from("media").getPublicUrl(path);
+    return data?.publicUrl || "";
+  };
+
+  btnSave.addEventListener("click", async () => {
+    setMsg("");
+
+    const display_name = String(inName.value || "").trim();
+    if (!display_name) return setMsg("Choisis un pseudo.");
+
+    try {
+      let avatar_url = prof?.avatar_url || null;
+
+      // upload avatar si fourni
+      const file = inAvatar.files?.[0];
+      if (file) {
+        const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g,"") || "jpg";
+        const path = `avatars/${user.id}/avatar.${ext}`;
+
+        const { error: upErr } = await sb.storage.from("media").upload(path, file, {
+          upsert: true,
+          contentType: file.type || "image/jpeg",
+        });
+        if (upErr) throw upErr;
+
+        avatar_url = publicUrl(path);
+      }
+
+      // update profile
+      const { error: updErr } = await sb
+        .from("profiles")
+        .update({ display_name, avatar_url })
+        .eq("id", user.id);
+
+      if (updErr) throw updErr;
+
+      setMsg("Profil mis à jour ✅");
+    } catch (e) {
+      console.error(e);
+      setMsg(e?.message || "Erreur profil");
+    }
+  });
+})();
