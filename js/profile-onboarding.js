@@ -1,13 +1,11 @@
-// js/profile-onboarding.js (v2)
-// Ouvre automatiquement la modale profil sur index si pseudo/avatar manquants.
-// Dépend de MMGProfile (profile-ui.js) + Supabase client.
+// js/profile-onboarding.js
+// Sur index: force le choix pseudo/avatar si profil incomplet
 
 (() => {
   "use strict";
   if (window.__MMG_PROFILE_ONBOARD_INIT__) return;
   window.__MMG_PROFILE_ONBOARD_INIT__ = true;
 
-  const KEY = "mmg_profile_onboard_dismissed_v1";
   const getSB = () => window.mmgSupabase || window.mmg_supabase || null;
 
   async function getUser() {
@@ -19,35 +17,38 @@
 
   async function getProfile(userId) {
     const sb = getSB();
-    if (!sb) return null;
-    const { data } = await sb.from("profiles").select("display_name,avatar_url").eq("id", userId).maybeSingle();
+    const { data } = await sb
+      .from("profiles")
+      .select("display_name, avatar_url")
+      .eq("id", userId)
+      .maybeSingle();
     return data || null;
   }
 
-  async function maybeOpen() {
-    // uniquement sur index
-    const isIndex =
-      location.pathname.endsWith("/") ||
-      location.pathname.endsWith("/index.html") ||
-      location.pathname === "/";
-
-    if (!isIndex) return;
-    if (localStorage.getItem(KEY) === "1") return;
+  async function run() {
+    const sb = getSB();
+    if (!sb) return;
 
     const user = await getUser();
     if (!user) return;
 
-    const p = await getProfile(user.id);
-    const missingName = !p?.display_name || !String(p.display_name).trim();
-    const missingAvatar = !p?.avatar_url;
+    const key = `mmg_onboarding_done_${user.id}`;
+    if (localStorage.getItem(key) === "1") return;
 
-    if (missingName || missingAvatar) {
-      // petit délai pour laisser l’injection header se faire
-      setTimeout(() => window.MMGProfile?.open?.(), 250);
+    const profile = await getProfile(user.id);
+    const missingName = !profile?.display_name || !String(profile.display_name).trim();
+
+    // Tu peux aussi exiger l’avatar :
+    // const missingAvatar = !profile?.avatar_url;
+    // const must = missingName || missingAvatar;
+    const must = missingName;
+
+    if (must && window.MMGProfile?.open) {
+      window.MMGProfile.open();
+      localStorage.setItem(key, "1");
     }
   }
 
-  window.addEventListener("DOMContentLoaded", maybeOpen);
-
-  // option: si tu veux un bouton "plus tard", tu peux le gérer dans UI
+  window.addEventListener("DOMContentLoaded", run);
+  document.addEventListener("partials:loaded", run);
 })();

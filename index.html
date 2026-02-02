@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Marie-Madeleine Gautier — Accueil</title>
 
   <script>
@@ -12,13 +12,13 @@
     })();
   </script>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet"/>
 
-  <link rel="icon" href="/favicon.ico" />
-  <link rel="stylesheet" href="css/style.css?v=1" />
-  <link rel="stylesheet" href="css/luxe.css?v=1" />
+  <link rel="icon" href="/favicon.ico"/>
+  <link rel="stylesheet" href="/css/style.css?v=1"/>
+  <link rel="stylesheet" href="/css/luxe.css?v=1"/>
 </head>
 
 <body>
@@ -40,29 +40,14 @@
   <div class="hero-bridge" aria-hidden="true"></div>
 
   <main class="page">
-    <section class="section">
-      <div class="container">
-        <div class="card card-pad reveal">
-          <div class="kicker">Agenda</div>
-          <h2 style="margin:10px 0 0">Expositions & galeries</h2>
-          <p class="muted" style="max-width:860px">
-            Retrouvez les prochaines dates, lieux et événements — et les archives des expositions passées.
-          </p>
-          <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:14px">
-            <a class="btn" href="agenda.html">Voir l’agenda</a>
-            <a class="btn ghost" href="gallery.html">Explorer la galerie</a>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <section class="section" id="actualites">
       <div class="container">
         <div class="card card-pad reveal">
           <div class="kicker">Actualités</div>
           <h2 style="margin:10px 0 0">Vidéos, images et petites nouvelles</h2>
           <p class="muted" style="max-width:860px">
-            Une vitrine vivante : publications, coulisses et annonces. Les commentaires sont réservés aux personnes connectées.
+            Une vitrine vivante : publications, coulisses et annonces.
+            Les commentaires sont réservés aux personnes connectées.
           </p>
 
           <div class="hr"></div>
@@ -74,22 +59,25 @@
 
   <div id="siteFooter"></div>
 
-  <!-- Scripts: ordre important -->
+  <!-- Layout (inject header/footer) -->
+  <script defer src="/js/layout.js?v=1"></script>
+
+  <!-- Supabase -->
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script defer src="js/supabase-config.js?v=1"></script>
-  <script defer src="js/supabase-client.js?v=1"></script>
+  <script defer src="/js/supabase-config.js?v=1"></script>
+  <script defer src="/js/supabase-client.js?v=1"></script>
 
-  <script defer src="js/layout.js?v=1"></script>
+  <!-- Profil + onboarding -->
+  <script defer src="/js/profile-ui.js?v=1"></script>
+  <script defer src="/js/profile-onboarding.js?v=1"></script>
 
-  <!-- Profil (header + onboarding + modal) -->
-  <script defer src="js/profile-ui.js?v=1"></script>
+  <!-- News -->
+  <script defer src="/js/news.js?v=1"></script>
 
-  <!-- Actualités -->
-  <script defer src="js/news.js?v=1"></script>
-
-  <script defer src="js/theme.js?v=1"></script>
-  <script defer src="js/i18n.js?v=1"></script>
-  <script defer src="js/app.js?v=1"></script>
-  <script defer src="js/luxe.js?v=1"></script>
+  <!-- reste -->
+  <script defer src="/js/theme.js?v=1"></script>
+  <script defer src="/js/i18n.js?v=1"></script>
+  <script defer src="/js/app.js?v=1"></script>
+  <script defer src="/js/luxe.js?v=1"></script>
 </body>
 </html>
