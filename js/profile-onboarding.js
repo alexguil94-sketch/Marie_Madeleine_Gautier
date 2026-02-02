@@ -1,46 +1,52 @@
 // js/profile-onboarding.js
-// Ouvre la modale profil sur index si le pseudo n'est pas défini (une seule fois).
-
 (() => {
   "use strict";
-  if (window.__MMG_PROFILE_ONBOARD_INIT__) return;
-  window.__MMG_PROFILE_ONBOARD_INIT__ = true;
+  if (window.__MMG_PROFILE_ONBOARD__) return;
+  window.__MMG_PROFILE_ONBOARD__ = true;
 
-  const FLAG = "mmg_profile_onboard_done_v1";
+  const isIndex =
+    location.pathname === "/" ||
+    /\/index\.html$/i.test(location.pathname);
 
-  function getSB() {
-    return window.mmgSupabase || window.mmg_supabase || null;
-  }
+  if (!isIndex) return;
+
+  const waitProfileReady = () =>
+    new Promise((res) => {
+      if (window.MMGProfile) return res();
+      document.addEventListener("mmg:profile-ready", () => res(), { once: true });
+    });
 
   async function run() {
-    // On ne le fait que sur la home (optionnel)
-    const isHome = location.pathname.endsWith("/") || location.pathname.endsWith("/index.html");
-    if (!isHome) return;
+    await waitProfileReady();
 
-    if (localStorage.getItem(FLAG) === "1") return;
-
-    const sb = getSB();
+    // Si pas de supabase, on ne fait rien
+    const sb = window.mmgSupabase;
     if (!sb?.auth) return;
 
     const { data } = await sb.auth.getSession();
     const user = data?.session?.user || null;
-    if (!user) return;
 
-    // Profile row
-    const { data: p } = await sb
-      .from("profiles")
-      .select("display_name")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (p?.display_name && String(p.display_name).trim()) {
-      localStorage.setItem(FLAG, "1");
+    if (!user) {
+      // pas connecté => on laisse le header montrer "Se connecter"
       return;
     }
 
-    // Attend que MMGProfile existe
-    const tryOpen = () => window.MMGProfile?.open?.();
-    setTimeout(tryOpen, 250);
+    // regarde si pseudo/avatar sont set
+    const { data: prof } = await sb
+      .from("profiles")
+      .select("display_name,avatar_url")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const missing = !prof?.display_name || !prof?.avatar_url;
+    if (missing) {
+      // ouvre la modale directement
+      window.MMGProfile.open();
+    } else {
+      // profil ok => affiche le bouton discret
+      const fab = document.getElementById("pfOpen");
+      if (fab) fab.hidden = false;
+    }
   }
 
   window.addEventListener("DOMContentLoaded", run);

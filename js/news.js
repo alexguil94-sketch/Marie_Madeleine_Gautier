@@ -1,12 +1,10 @@
 // js/news.js (v3)
-// - Charge news_posts publiés
-// - Charge news_comments approuvés
-// - Récupère pseudo/avatar via view public.profiles_public (sans join FK)
-// - Ajout de commentaire si connecté (modération)
-
+// Posts: public.news_posts
+// Comments: public.news_comments (approved=true visible)
+// Profiles: public.profiles (display_name, avatar_url)
+// Robuste: ne dépend PAS des relations PostgREST (pas de select=profiles(...))
 (() => {
   "use strict";
-
   if (window.__MMG_NEWS_INIT__) return;
   window.__MMG_NEWS_INIT__ = true;
 
@@ -16,17 +14,20 @@
       id: "demo",
       date: "2026-01-28",
       title: "Actualités",
-      text: "Une fois Supabase configuré, vous pourrez publier des actus et gérer les images depuis /admin.",
-      media: { type: "image", src: "assets/ui/hero-bg.png", alt: "Fond accueil" },
+      text: "Une fois Supabase configuré, vous pourrez publier des actus et gérer les images depuis l’admin.",
+      media: { type: "image", src: "/assets/ui/hero-bg.png", alt: "Fond accueil" },
     },
   ];
 
   const qs = (s, r = document) => r.querySelector(s);
   const t = (k) => (window.__t ? window.__t(k) : k);
 
+  const getSB = () => window.mmgSupabase || null;
+  const getBucket = () => (window.MMG_SUPABASE?.bucket || window.SUPABASE_BUCKET || "media");
+
   const safeText = (s) => String(s ?? "").replace(/\s+/g, " ").trim();
 
-  function fmtDate(iso) {
+  const fmtDate = (iso) => {
     try {
       const d = new Date(iso);
       const lang = window.__lang?.() || "fr";
@@ -34,25 +35,43 @@
     } catch {
       return iso || "";
     }
-  }
+  };
 
-  function getSB() {
-    return window.mmgSupabase || window.mmg_supabase || null;
-  }
+  const waitForSB = async () => {
+    if (getSB()) return getSB();
+    await new Promise((res) => document.addEventListener("sb:ready", res, { once: true }));
+    return getSB();
+  };
+
+  const resolveUrl = (uOrPath) => {
+    const v = String(uOrPath || "").trim();
+    if (!v) return "";
+    if (v.startsWith("http://") || v.startsWith("https://") || v.startsWith("/")) return v;
+
+    const sb = getSB();
+    if (!sb?.storage) return v;
+    const { data } = sb.storage.from(getBucket()).getPublicUrl(v);
+    return data?.publicUrl || v;
+  };
 
   async function getUser() {
-    const sb = getSB();
+    const sb = await waitForSB();
     if (!sb?.auth) return null;
     const { data } = await sb.auth.getSession();
     return data?.session?.user || null;
   }
 
-  function normalizeMedia(row) {
-    const type = row.media_type || "";
-    if (type === "youtube" && row.youtube_id) return { type: "youtube", id: row.youtube_id };
-    if (type === "video" && row.media_url) return { type: "video", src: row.media_url, poster: row.media_poster || "" };
-    if (type === "image" && row.media_url) return { type: "image", src: row.media_url, alt: row.title || "" };
-    return null;
+  async function getMyProfile(user) {
+    const sb = await waitForSB();
+    if (!sb || !user) return null;
+
+    const { data } = await sb
+      .from("profiles")
+      .select("id,display_name,avatar_url,role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    return data || null;
   }
 
   function mediaEl(media) {
@@ -60,11 +79,11 @@
 
     if (media.type === "image") {
       const img = document.createElement("img");
-      img.className = "news-media";
-      img.src = media.src;
+      img.src = resolveUrl(media.src);
       img.alt = media.alt || "";
       img.loading = "lazy";
       img.decoding = "async";
+      img.className = "news-media";
       return img;
     }
 
@@ -73,9 +92,9 @@
       v.className = "news-media";
       v.controls = true;
       v.preload = "metadata";
-      if (media.poster) v.poster = media.poster;
+      if (media.poster) v.poster = resolveUrl(media.poster);
       const src = document.createElement("source");
-      src.src = media.src;
+      src.src = resolveUrl(media.src);
       src.type = "video/mp4";
       v.appendChild(src);
       return v;
@@ -99,13 +118,21 @@
     return null;
   }
 
+  function normalizeMedia(row) {
+    const type = row.media_type || "";
+    if (type === "youtube" && row.youtube_id) return { type: "youtube", id: row.youtube_id };
+    if (type === "video" && row.media_url) return { type: "video", src: row.media_url, poster: row.media_poster || "" };
+    if (type === "image" && row.media_url) return { type: "image", src: row.media_url, alt: row.title || "" };
+    return null;
+  }
+
   async function loadPostsSupabase() {
-    const sb = getSB();
+    const sb = await waitForSB();
     if (!sb) return null;
 
     const { data, error } = await sb
       .from("news_posts")
-      .select("id,published_at,title,body,media_type,media_url,media_poster,youtube_id")
+      .select("id,published_at,title,body,media_type,media_url,media_poster,youtube_id,is_published")
       .eq("is_published", true)
       .order("published_at", { ascending: false })
       .limit(12);
@@ -124,78 +151,76 @@
     }));
   }
 
-  async function loadApprovedComments(postIds) {
-    const sb = getSB();
-    if (!sb || !postIds?.length) return {};
+  async function loadCommentsSupabase(postIds) {
+    const sb = await waitForSB();
+    if (!sb || !postIds?.length) return { map: {}, profiles: {} };
 
-    const { data, error } = await sb
+    // 1) commentaires
+    const { data: comments, error: cErr } = await sb
       .from("news_comments")
-      .select("post_id,user_id,name,message,created_at")
+      .select("id,post_id,user_id,name,message,created_at,approved")
       .eq("approved", true)
       .in("post_id", postIds)
       .order("created_at", { ascending: true });
 
-    if (error) {
-      console.warn("[MMG] Supabase comments error", error);
-      return {};
+    if (cErr) {
+      console.warn("[MMG] Supabase comments error", cErr);
+      return { map: {}, profiles: {} };
+    }
+
+    const list = comments || [];
+    const userIds = Array.from(new Set(list.map((c) => c.user_id).filter(Boolean)));
+
+    // 2) profils (séparé => pas de join PostgREST => pas de 400)
+    let profilesById = {};
+    if (userIds.length) {
+      const { data: profs } = await sb
+        .from("profiles")
+        .select("id,display_name,avatar_url")
+        .in("id", userIds);
+
+      (profs || []).forEach((p) => (profilesById[p.id] = p));
     }
 
     const map = {};
-    (data || []).forEach((c) => {
-      (map[c.post_id] ||= []).push(c);
+    list.forEach((c) => {
+      const p = profilesById[c.user_id] || null;
+      (map[c.post_id] ||= []).push({
+        id: c.id,
+        post_id: c.post_id,
+        created_at: c.created_at,
+        message: c.message,
+        name: p?.display_name || c.name || "—",
+        avatar_url: p?.avatar_url || "",
+      });
     });
-    return map;
+
+    return { map, profiles: profilesById };
   }
 
-  async function loadPublicProfiles(userIds) {
-    const sb = getSB();
-    if (!sb || !userIds?.length) return {};
-
-    const uniq = Array.from(new Set(userIds.filter(Boolean)));
-    if (!uniq.length) return {};
-
-    const { data, error } = await sb
-      .from("profiles_public")
-      .select("id,display_name,avatar_url")
-      .in("id", uniq);
-
-    if (error) {
-      console.warn("[MMG] profiles_public error", error);
-      return {};
-    }
-
-    const map = {};
-    (data || []).forEach((p) => (map[p.id] = p));
-    return map;
-  }
-
-  async function addCommentSupabase(postId, user, message) {
-    const sb = getSB();
-    if (!sb) return { ok: false, msg: "Supabase non configuré." };
-    if (!user) return { ok: false, msg: t("home.commentLoginHint") || "Connecte-toi pour commenter." };
-
-    // On met le pseudo (display_name) dans "name" (colonne existante)
-    const { data: me } = await sb.from("profiles").select("display_name").eq("id", user.id).maybeSingle();
-    const displayName = safeText(me?.display_name || user.email || "Utilisateur");
+  async function addCommentSupabase(postId, user, myProfile, message) {
+    const sb = await waitForSB();
+    if (!sb) return { ok: false, msg: "Supabase non configuré" };
+    if (!user) return { ok: false, msg: t("home.commentLoginHint") || "Connectez-vous pour commenter." };
 
     const payload = {
       post_id: postId,
       user_id: user.id,
-      name: displayName,
-      message: safeText(message),
+      name: myProfile?.display_name || user.email || "Utilisateur",
+      message,
       approved: false,
     };
 
     const { error } = await sb.from("news_comments").insert(payload);
     if (error) {
       console.warn("[MMG] Supabase add comment error", error);
-      return { ok: false, msg: t("home.commentError") || "Erreur lors de l’envoi." };
+      return { ok: false, msg: error.message || (t("home.commentError") || "Erreur") };
     }
 
-    return { ok: true, msg: t("home.commentModeration") || "Merci ! Ton commentaire est en modération." };
+    return { ok: true, msg: t("home.commentModeration") || "Merci ! Votre commentaire est en modération." };
   }
 
-  function renderComments(root, postId, comments, profilesMap, user) {
+  function renderComments(root, postId, comments, user, myProfile) {
     root.innerHTML = "";
 
     const head = document.createElement("div");
@@ -203,51 +228,48 @@
     head.innerHTML = `<strong>${t("home.commentsTitle") || "Commentaires"}</strong>`;
     root.appendChild(head);
 
-    // Liste
     const list = document.createElement("div");
     list.className = "news-comments__list";
 
-    const arr = comments || [];
-    if (!arr.length) {
+    if (!comments?.length) {
       const empty = document.createElement("div");
       empty.className = "news-comments__empty";
       empty.textContent = t("home.noComments") || "Aucun commentaire pour le moment.";
       list.appendChild(empty);
     } else {
-      arr.forEach((c) => {
-        const p = c.user_id ? profilesMap[c.user_id] : null;
-        const who = safeText(p?.display_name || c.name || "—");
-        const avatar = p?.avatar_url || "";
+      comments.forEach((c) => {
+        const row = document.createElement("div");
+        row.className = "news-comment";
+
+        const who = safeText(c.name || "—");
         const when = fmtDate(c.created_at || "");
         const msg = safeText(c.message || "");
 
-        const item = document.createElement("div");
-        item.className = "news-comment";
-
-        item.innerHTML = `
+        row.innerHTML = `
           <div class="news-comment__row">
-            <div class="news-comment__avatar">${avatar ? `<img src="${avatar}" alt="">` : ""}</div>
+            <div class="news-comment__avatar">${c.avatar_url ? `<img src="${c.avatar_url}" alt="">` : ""}</div>
             <div class="news-comment__content">
               <div class="news-comment__meta">${who} • ${when}</div>
               <div class="news-comment__text"></div>
             </div>
           </div>
         `;
-        item.querySelector(".news-comment__text").textContent = msg;
-        list.appendChild(item);
+        row.querySelector(".news-comment__text").textContent = msg;
+        list.appendChild(row);
       });
     }
 
     root.appendChild(list);
 
-    // Form (gate: connecté)
+    // gate: si pas connecté => bouton login
     if (!user) {
       const box = document.createElement("div");
       box.className = "news-comments__login";
-      const back = encodeURIComponent(location.href);
       box.innerHTML = `
-        <p class="muted" style="margin:0 0 10px">${t("home.commentLoginHint") || "Connecte-toi pour commenter."}</p>
-        <a class="btn" href="login.html?redirect=${back}">${t("home.commentLogin") || "Se connecter"}</a>
+        <p class="muted" style="margin:10px 0 10px">${t("home.commentLoginHint") || "Connectez-vous pour commenter."}</p>
+        <a class="btn" href="/login.html?redirect=${encodeURIComponent(location.pathname + location.search)}">
+          ${t("home.commentLogin") || "Se connecter"}
+        </a>
       `;
       root.appendChild(box);
       return;
@@ -256,22 +278,31 @@
     const form = document.createElement("form");
     form.className = "news-comments__form";
     form.innerHTML = `
+      <div class="muted" style="margin:10px 0 8px">
+        ${t("home.commentSignedInAs") || "Connecté :"} <strong>${safeText(myProfile?.display_name || user.email || "")}</strong>
+        <button class="pill" type="button" data-signout style="margin-left:10px">${t("home.commentSignOut") || "Se déconnecter"}</button>
+      </div>
+
       <input class="input" name="msg" placeholder="${t("home.commentMessage") || "Écrire un commentaire…"}" maxlength="240" required>
       <button class="btn" type="submit">${t("home.commentSend") || "Publier"}</button>
       <div class="news-comments__hint">${t("home.commentModerationHint") || "Les commentaires passent en modération avant publication."}</div>
     `;
 
+    form.querySelector("[data-signout]")?.addEventListener("click", async () => {
+      try { await getSB()?.auth?.signOut?.(); } catch {}
+      render(); // refresh
+    });
+
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const fd = new FormData(form);
-      const msg = safeText(fd.get("msg"));
+      const msg = safeText(new FormData(form).get("msg"));
       if (!msg) return;
 
-      const res = await addCommentSupabase(postId, user, msg);
-      form.reset();
-
+      const res = await addCommentSupabase(postId, user, myProfile, msg);
       const hint = form.querySelector(".news-comments__hint");
       if (hint) hint.textContent = res.msg || "";
+
+      form.reset();
     });
 
     root.appendChild(form);
@@ -283,17 +314,15 @@
 
     root.innerHTML = "";
 
-    const items = (await loadPostsSupabase()) || FALLBACK_ITEMS;
-    const sbMode = !!getSB();
+    const sb = await waitForSB();
+    let items = sb ? await loadPostsSupabase() : null;
+    if (!items || !items.length) items = FALLBACK_ITEMS;
+
+    const user = await getUser();
+    const myProfile = user ? await getMyProfile(user) : null;
 
     const ids = items.map((x) => x.id);
-    const user = sbMode ? await getUser() : null;
-
-    const commentsMap = sbMode ? await loadApprovedComments(ids) : {};
-    const allUserIds = [];
-    Object.values(commentsMap).forEach((arr) => arr.forEach((c) => allUserIds.push(c.user_id)));
-
-    const profilesMap = sbMode ? await loadPublicProfiles(allUserIds) : {};
+    const { map: commentsMap } = sb ? await loadCommentsSupabase(ids) : { map: {} };
 
     items.forEach((item) => {
       const card = document.createElement("article");
@@ -324,7 +353,7 @@
 
       const comments = document.createElement("div");
       comments.className = "news-comments";
-      renderComments(comments, item.id, commentsMap[item.id] || [], profilesMap, user);
+      renderComments(comments, item.id, commentsMap[item.id] || [], user, myProfile);
       card.appendChild(comments);
 
       root.appendChild(card);

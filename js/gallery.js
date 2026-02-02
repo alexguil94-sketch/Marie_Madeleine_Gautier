@@ -1,151 +1,290 @@
-// js/gallery.js (v2 clean)
-// Charge works + works_images sans AbortController (évite AbortError)
-
+// js/gallery.js (v3)
+// Tables: works + work_images
 (() => {
   "use strict";
   if (window.__MMG_GALLERY_INIT__) return;
   window.__MMG_GALLERY_INIT__ = true;
 
   const qs = (s, r = document) => r.querySelector(s);
-  const getSB = () => window.mmgSupabase || window.mmg_supabase || null;
+
+  const getSB = () => window.mmgSupabase || null;
   const getBucket = () => (window.MMG_SUPABASE?.bucket || window.SUPABASE_BUCKET || "media");
 
-  let token = 0;
+  const waitForSB = async () => {
+    if (getSB()) return getSB();
+    await new Promise((res) => document.addEventListener("sb:ready", res, { once: true }));
+    return getSB();
+  };
 
-  async function waitSB(ms = 4000) {
-    const start = Date.now();
-    while (Date.now() - start < ms) {
-      const sb = getSB();
-      if (sb?.from) return sb;
-      await new Promise((r) => setTimeout(r, 80));
+  const resolveUrl = (uOrPath) => {
+    const v = String(uOrPath || "").trim();
+    if (!v) return "";
+    if (v.startsWith("http://") || v.startsWith("https://") || v.startsWith("/")) return v;
+
+    const sb = getSB();
+    if (!sb?.storage) return v;
+    const { data } = sb.storage.from(getBucket()).getPublicUrl(v);
+    return data?.publicUrl || v;
+  };
+
+  const state = {
+    page: 0,
+    pageSize: 24,
+    all: [],
+    view: [],
+    q: "",
+    cat: "all",
+    hasMore: true,
+    lightboxIndex: -1,
+    zoom: 1,
+    panX: 0,
+    panY: 0,
+  };
+
+  function normalizeImages(work, extraPaths = []) {
+    const out = [];
+
+    // cover/thumb
+    if (work.cover_url) out.push(resolveUrl(work.cover_url));
+    else if (work.thumb_url) out.push(resolveUrl(work.thumb_url));
+
+    // images jsonb (array)
+    const imgs = work.images;
+    if (Array.isArray(imgs)) {
+      imgs.forEach((it) => {
+        if (typeof it === "string") out.push(resolveUrl(it));
+        else if (it && typeof it === "object" && it.url) out.push(resolveUrl(it.url));
+      });
     }
-    return null;
+
+    // work_images paths
+    extraPaths.forEach((p) => out.push(resolveUrl(p)));
+
+    // unique
+    return Array.from(new Set(out.filter(Boolean)));
   }
 
-  function rootEl() {
-    return (
-      qs("#galleryRoot") ||
-      qs("[data-gallery-root]") ||
-      qs("#worksGrid") ||
-      qs("#galleryGrid")
-    );
+  function applyFilters() {
+    const q = state.q.toLowerCase();
+    const cat = state.cat;
+
+    state.view = state.all.filter((w) => {
+      const inCat = cat === "all" ? true : (String(w.category || "").trim() === cat);
+      if (!inCat) return false;
+
+      if (!q) return true;
+      const blob = `${w.title || ""} ${w.year || ""} ${w.category || ""}`.toLowerCase();
+      return blob.includes(q);
+    });
   }
 
-  function isHttp(u) {
-    return /^https?:\/\//i.test(String(u || ""));
+  function renderCategories() {
+    const sel = qs("#cat");
+    if (!sel) return;
+
+    const cats = Array.from(
+      new Set(state.all.map((w) => String(w.category || "").trim()).filter(Boolean))
+    ).sort((a, b) => a.localeCompare(b, "fr"));
+
+    const current = sel.value || "all";
+    sel.innerHTML = `<option value="all">Toutes les catégories</option>` +
+      cats.map((c) => `<option value="${c}">${c}</option>`).join("");
+
+    sel.value = cats.includes(current) ? current : "all";
   }
 
-  function publicUrl(sb, path) {
-    if (!path) return "";
-    if (isHttp(path)) return path;
-    const bucket = getBucket();
-    const { data } = sb.storage.from(bucket).getPublicUrl(path);
-    return data?.publicUrl || "";
+  function renderGrid() {
+    const grid = qs("#grid");
+    if (!grid) return;
+
+    grid.innerHTML = "";
+
+    if (!state.view.length) {
+      grid.innerHTML = `
+        <div class="muted" style="padding:14px 0">
+          Aucune œuvre publiée pour le moment.
+        </div>
+      `;
+      return;
+    }
+
+    state.view.forEach((w, idx) => {
+      const img = w._imgs?.[0] || "";
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "work-card";
+      card.style.textAlign = "left";
+
+      card.innerHTML = `
+        <div class="work-thumb">
+          ${img ? `<img loading="lazy" decoding="async" src="${img}" alt="">` : ""}
+        </div>
+        <div class="work-meta">
+          <div class="work-title">${w.title || "—"}</div>
+          <div class="work-sub muted">${[w.year, w.category].filter(Boolean).join(" • ")}</div>
+        </div>
+      `;
+
+      card.addEventListener("click", () => openLightbox(idx));
+      grid.appendChild(card);
+    });
+
+    const loadMore = qs("#loadMore");
+    if (loadMore) loadMore.disabled = !state.hasMore;
   }
 
-  async function loadWorks(sb) {
-    // adapte si tes colonnes diffèrent (mais ça reste safe)
-    const { data, error } = await sb
+  function setZoom(zoom) {
+    state.zoom = Math.max(1, Math.min(4, zoom));
+    const img = qs("#lbImg");
+    if (img) img.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.zoom})`;
+  }
+
+  function resetPanZoom() {
+    state.zoom = 1;
+    state.panX = 0;
+    state.panY = 0;
+    setZoom(1);
+  }
+
+  function renderLightbox() {
+    const lb = qs("#lightbox");
+    const img = qs("#lbImg");
+    const title = qs("#lbTitle");
+    const count = qs("#lbCount");
+    if (!lb || !img) return;
+
+    const w = state.view[state.lightboxIndex];
+    if (!w) return;
+
+    const src = w._imgs?.[0] || "";
+    img.src = src;
+    img.alt = w.title || "";
+
+    if (title) title.textContent = w.title || "—";
+    if (count) count.textContent = `${state.lightboxIndex + 1}/${state.view.length}`;
+
+    resetPanZoom();
+  }
+
+  function openLightbox(index) {
+    const lb = qs("#lightbox");
+    if (!lb) return;
+
+    state.lightboxIndex = index;
+    lb.hidden = false;
+    lb.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+    renderLightbox();
+  }
+
+  function closeLightbox() {
+    const lb = qs("#lightbox");
+    if (!lb) return;
+    lb.hidden = true;
+    lb.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+  }
+
+  function navLightbox(dir) {
+    if (!state.view.length) return;
+    state.lightboxIndex = (state.lightboxIndex + dir + state.view.length) % state.view.length;
+    renderLightbox();
+  }
+
+  async function fetchPage() {
+    const sb = await waitForSB();
+    if (!sb) return;
+
+    const from = state.page * state.pageSize;
+    const to = from + state.pageSize - 1;
+
+    const { data: works, error } = await sb
       .from("works")
-      .select("id,title,year,category,cover_url,image_path,is_published,sort,created_at")
+      .select("id,title,year,category,description,cover_url,thumb_url,images,sort,is_published,created_at")
       .eq("is_published", true)
-      .order("sort", { ascending: true })
+      .order("sort", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false })
-      .limit(200);
+      .range(from, to);
 
-    if (error) throw error;
-    return data || [];
-  }
-
-  async function loadWorkImages(sb, workIds) {
-    if (!workIds.length) return [];
-    const { data, error } = await sb
-      .from("works_images")
-      .select("work_id,path,sort_order,created_at")
-      .in("work_id", workIds)
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: true });
-
-    if (error) throw error;
-    return data || [];
-  }
-
-  function groupByWork(images) {
-    const map = new Map();
-    for (const img of images) {
-      const arr = map.get(img.work_id) || [];
-      arr.push(img);
-      map.set(img.work_id, arr);
+    if (error) {
+      console.warn("[gallery] load error:", error);
+      return;
     }
-    return map;
-  }
 
-  function cardHTML({ cover, title, meta }) {
-    return `
-      <article class="work-card">
-        <div class="work-media">
-          ${cover ? `<img src="${cover}" alt="" loading="lazy" decoding="async">` : `<div class="work-empty"></div>`}
-        </div>
-        <div class="work-body">
-          <h3 class="work-title">${title || ""}</h3>
-          ${meta ? `<div class="work-meta">${meta}</div>` : ""}
-        </div>
-      </article>
-    `;
-  }
+    const list = works || [];
+    state.hasMore = list.length === state.pageSize;
+    state.page += 1;
 
-  async function render() {
-    const my = ++token;
-    const root = rootEl();
-    if (!root) return;
+    // charge work_images pour ces works
+    const ids = list.map((w) => w.id);
+    let imagesByWork = {};
+    if (ids.length) {
+      const { data: imgs } = await sb
+        .from("work_images")
+        .select("work_id,path,sort_order")
+        .in("work_id", ids)
+        .order("sort_order", { ascending: true });
 
-    root.innerHTML = `<div class="muted">Chargement…</div>`;
-
-    try {
-      const sb = await waitSB();
-      if (!sb) throw new Error("Supabase client introuvable");
-
-      const works = await loadWorks(sb);
-      if (my !== token) return;
-
-      const ids = works.map((w) => w.id).filter(Boolean);
-      const imgs = await loadWorkImages(sb, ids);
-      if (my !== token) return;
-
-      const byWork = groupByWork(imgs);
-
-      // build
-      root.innerHTML = "";
-      for (const w of works) {
-        const list = byWork.get(w.id) || [];
-
-        // priorité : cover_url, sinon image_path, sinon premier works_images.path
-        const cover =
-          (w.cover_url && (isHttp(w.cover_url) ? w.cover_url : publicUrl(sb, w.cover_url))) ||
-          (w.image_path ? publicUrl(sb, w.image_path) : "") ||
-          (list[0]?.path ? publicUrl(sb, list[0].path) : "");
-
-        const meta = [w.year, w.category].filter(Boolean).join(" • ");
-
-        const wrap = document.createElement("div");
-        wrap.innerHTML = cardHTML({ cover, title: w.title, meta });
-        const card = wrap.firstElementChild;
-
-        // Option : clique = ouvre lightbox (si tu veux après)
-        // card.addEventListener("click", () => openLightbox(list.map(x => publicUrl(sb, x.path)), cover));
-
-        root.appendChild(card);
-      }
-
-      if (!works.length) {
-        root.innerHTML = `<div class="muted">Aucune œuvre publiée.</div>`;
-      }
-    } catch (e) {
-      console.warn("[gallery] load error:", e);
-      root.innerHTML = `<div class="muted">Erreur de chargement galerie.</div>`;
+      (imgs || []).forEach((it) => {
+        (imagesByWork[it.work_id] ||= []).push(it.path);
+      });
     }
+
+    const normalized = list.map((w) => ({
+      ...w,
+      _imgs: normalizeImages(w, imagesByWork[w.id] || []),
+    }));
+
+    state.all = state.all.concat(normalized);
+
+    renderCategories();
+    applyFilters();
+    renderGrid();
   }
 
-  window.addEventListener("DOMContentLoaded", render);
-  document.addEventListener("partials:loaded", render);
+  function bindUI() {
+    qs("#q")?.addEventListener("input", (e) => {
+      state.q = e.target.value || "";
+      applyFilters();
+      renderGrid();
+    });
+
+    qs("#cat")?.addEventListener("change", (e) => {
+      state.cat = e.target.value || "all";
+      applyFilters();
+      renderGrid();
+    });
+
+    qs("#loadMore")?.addEventListener("click", fetchPage);
+
+    // Lightbox
+    qs("[data-close]")?.addEventListener("click", closeLightbox);
+    qs("#lightbox")?.addEventListener("click", (e) => {
+      if (e.target && e.target.id === "lightbox") closeLightbox();
+    });
+
+    qs('[data-nav="prev"]')?.addEventListener("click", () => navLightbox(-1));
+    qs('[data-nav="next"]')?.addEventListener("click", () => navLightbox(+1));
+
+    qs('[data-zoom="in"]')?.addEventListener("click", () => setZoom(state.zoom + 0.25));
+    qs('[data-zoom="out"]')?.addEventListener("click", () => setZoom(state.zoom - 0.25));
+    qs('[data-zoom="reset"]')?.addEventListener("click", resetPanZoom);
+
+    window.addEventListener("keydown", (e) => {
+      if (qs("#lightbox")?.hidden) return;
+      if (e.key === "Escape") closeLightbox();
+      if (e.key === "ArrowLeft") navLightbox(-1);
+      if (e.key === "ArrowRight") navLightbox(+1);
+    });
+  }
+
+  async function init() {
+    // si pas sur la page galerie, stop
+    if (!qs("#grid")) return;
+
+    bindUI();
+    await fetchPage();
+  }
+
+  window.addEventListener("DOMContentLoaded", init);
 })();
