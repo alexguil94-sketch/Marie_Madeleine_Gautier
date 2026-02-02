@@ -406,3 +406,185 @@
     }
   });
 })();
+// ======================================================
+// PROFIL: pseudo + avatar (Supabase profiles)
+// ======================================================
+(async () => {
+  const sb = window.mmgSupabase;
+  if (!sb) return;
+
+  const card = document.getElementById("profileCard");
+  const inName = document.getElementById("pfName");
+  const inAvatar = document.getElementById("pfAvatar");
+  const imgPrev = document.getElementById("pfAvatarPreview");
+  const btnSave = document.getElementById("pfSave");
+  const btnRemove = document.getElementById("pfRemoveAvatar");
+  const msg = document.getElementById("pfMsg");
+
+  if (!card || !inName || !inAvatar || !btnSave) return;
+
+  const setMsg = (t = "") => { if (msg) msg.textContent = t; };
+
+  const bucket = (window.MMG_SUPABASE?.bucket) || window.SUPABASE_BUCKET || "media";
+
+  const getPublicUrl = (path) => {
+    const { data } = sb.storage.from(bucket).getPublicUrl(path);
+    return data?.publicUrl || "";
+  };
+
+  const refreshProfileUI = (profile, user) => {
+    card.hidden = false;
+
+    const displayName = profile?.display_name || "";
+    const avatarUrl = profile?.avatar_url || "";
+
+    inName.value = displayName || "";
+
+    if (avatarUrl && imgPrev) {
+      imgPrev.src = avatarUrl;
+      imgPrev.style.display = "block";
+      if (btnRemove) btnRemove.style.display = "inline-flex";
+    } else {
+      if (imgPrev) imgPrev.style.display = "none";
+      if (btnRemove) btnRemove.style.display = "none";
+    }
+
+    // Si pas de pseudo -> propose un défaut
+    if (!displayName && user?.email) {
+      inName.value = user.email.split("@")[0].slice(0, 32);
+    }
+  };
+
+  const loadMyProfile = async (userId) => {
+    // read
+    const { data, error } = await sb
+      .from("profiles")
+      .select("id,display_name,avatar_url,role")
+      .eq("id", userId)
+      .maybeSingle();
+
+    // Si pas de ligne profile (selon ton setup), on la crée
+    if (!data && !error) {
+      const { error: insErr } = await sb
+        .from("profiles")
+        .insert({ id: userId, role: "user" });
+      if (insErr) console.warn("profiles insert:", insErr);
+
+      const again = await sb
+        .from("profiles")
+        .select("id,display_name,avatar_url,role")
+        .eq("id", userId)
+        .maybeSingle();
+      return again.data || null;
+    }
+
+    if (error) {
+      console.warn("profiles load:", error);
+      return null;
+    }
+    return data || null;
+  };
+
+  const bootProfileIfLogged = async () => {
+    const { data } = await sb.auth.getUser();
+    const user = data?.user;
+    if (!user) return;
+
+    const profile = await loadMyProfile(user.id);
+    refreshProfileUI(profile, user);
+  };
+
+  // Preview avatar
+  inAvatar.addEventListener("change", () => {
+    const f = inAvatar.files?.[0];
+    if (!f || !imgPrev) return;
+    imgPrev.src = URL.createObjectURL(f);
+    imgPrev.style.display = "block";
+    if (btnRemove) btnRemove.style.display = "inline-flex";
+  });
+
+  // Remove avatar (DB only)
+  if (btnRemove) {
+    btnRemove.addEventListener("click", async () => {
+      try {
+        const { data } = await sb.auth.getUser();
+        const user = data?.user;
+        if (!user) return;
+
+        const { error } = await sb
+          .from("profiles")
+          .update({ avatar_url: null })
+          .eq("id", user.id);
+        if (error) throw error;
+
+        if (imgPrev) imgPrev.style.display = "none";
+        btnRemove.style.display = "none";
+        setMsg("Avatar retiré ✅");
+      } catch (e) {
+        console.error(e);
+        setMsg(e?.message || "Erreur avatar");
+      }
+    });
+  }
+
+  // Save profile
+  btnSave.addEventListener("click", async () => {
+    setMsg("");
+
+    const { data } = await sb.auth.getUser();
+    const user = data?.user;
+    if (!user) return setMsg("Connecte-toi d’abord.");
+
+    const display_name = String(inName.value || "").trim().slice(0, 32);
+    if (!display_name) return setMsg("Choisis un pseudo.");
+
+    try {
+      let avatar_url = null;
+
+      // Upload avatar if provided
+      const file = inAvatar.files?.[0];
+      if (file) {
+        const ext = (file.name.split(".").pop() || "jpg")
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "") || "jpg";
+
+        const path = `avatars/${user.id}/avatar.${ext}`;
+
+        const { error: upErr } = await sb.storage
+          .from(bucket)
+          .upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
+
+        if (upErr) throw upErr;
+
+        avatar_url = getPublicUrl(path);
+      }
+
+      // If no new avatar, keep existing if any
+      const current = await loadMyProfile(user.id);
+      const nextAvatar = avatar_url ?? current?.avatar_url ?? null;
+
+      // Update profiles
+      const { error: updErr } = await sb
+        .from("profiles")
+        .update({ display_name, avatar_url: nextAvatar })
+        .eq("id", user.id);
+
+      if (updErr) throw updErr;
+
+      setMsg("Profil mis à jour ✅");
+    } catch (e) {
+      console.error(e);
+      setMsg(e?.message || "Erreur profil");
+    }
+  });
+
+  // Run once if already logged
+  await bootProfileIfLogged();
+
+  // Also react to auth state changes (OAuth redirect)
+  sb.auth.onAuthStateChange(async (_event, session) => {
+    if (session?.user) {
+      await bootProfileIfLogged();
+    }
+  });
+})();
