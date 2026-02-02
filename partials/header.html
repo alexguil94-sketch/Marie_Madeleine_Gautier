@@ -1,12 +1,17 @@
 <header class="site-header">
   <div class="container navbar">
-    <button class="burger burger--left" type="button" data-burger aria-label="Menu"
-            aria-controls="siteNav" aria-expanded="false">
+    <button
+      class="burger burger--left"
+      type="button"
+      data-burger
+      aria-label="Menu"
+      aria-controls="siteNav"
+      aria-expanded="false"
+    >
       <span></span><span></span><span></span>
     </button>
 
     <a class="brand brand--center" href="index.html" aria-label="Marie-Madeleine Gautier">
-      <!-- Replace these files with your real logos: assets/ui/logo-light.png + assets/ui/logo-dark.png -->
       <img class="brand-logo logo--light" src="assets/ui/logo-light.png" alt="" />
       <img class="brand-logo logo--dark" src="assets/ui/logo-dark.png" alt="" />
       <span class="brand-text" data-i18n="brand.name">Marie-Madeleine Gautier</span>
@@ -18,24 +23,33 @@
       </button>
 
       <div class="lang" data-lang-wrap>
-        <button class="pill" type="button" data-lang-toggle aria-label="Language" aria-haspopup="menu" aria-expanded="false">
+        <button
+          class="pill"
+          type="button"
+          data-lang-toggle
+          aria-label="Language"
+          aria-haspopup="menu"
+          aria-expanded="false"
+        >
           <span class="icon" aria-hidden="true">🌐</span>
           <span class="label" data-lang-label>FR</span>
         </button>
+
         <div class="lang-menu" data-lang-menu role="menu" aria-label="Language">
           <div class="lang-grid">
             <button class="lang-btn" data-lang="fr" role="menuitemradio" aria-checked="false">FR</button>
             <button class="lang-btn" data-lang="en" role="menuitemradio" aria-checked="false">EN</button>
             <button class="lang-btn" data-lang="zh-Hant" role="menuitemradio" aria-checked="false">中文</button>
-          <div id="mmgProfileSlot"></div>
-
           </div>
         </div>
       </div>
+
+      <!-- ✅ Profil visible tout le temps -->
+      <div id="mmgProfileSlot"></div>
     </div>
   </div>
 
-  <!-- Drawer nav (left) -->
+  <!-- Drawer nav -->
   <nav class="nav-links nav-drawer" id="siteNav" data-nav aria-hidden="true" aria-label="Navigation">
     <div class="nav-drawer__head">
       <button class="nav-close" type="button" data-nav-close aria-label="Fermer">×</button>
@@ -43,9 +57,9 @@
       <div class="nav-carousel" data-nav-carousel aria-label="Aperçu">
         <div class="nav-carousel__viewport">
           <div class="nav-carousel__track">
-            <div class="nav-carousel__slide"><img src="assets/ui/hero-bg.webp" alt=""></div>
-            <div class="nav-carousel__slide"><img src="assets/artist/portrait-1.svg" alt=""></div>
-            <div class="nav-carousel__slide"><img src="assets/works/work-001.svg" alt=""></div>
+            <div class="nav-carousel__slide"><img src="assets/ui/hero-bg.webp" alt="" /></div>
+            <div class="nav-carousel__slide"><img src="assets/artist/portrait-1.svg" alt="" /></div>
+            <div class="nav-carousel__slide"><img src="assets/works/work-001.svg" alt="" /></div>
           </div>
         </div>
 
