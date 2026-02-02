@@ -1,55 +1,50 @@
 // js/news.js (v3)
-// News + commentaires Supabase (modération)
-// Tables attendues:
-// - news_posts(id, published_at, title, body, media_type, media_url, media_poster, youtube_id, is_published)
-// - news_comments(id, post_id, user_id, name, message, approved, created_at)
-// - profiles(id, display_name, avatar_url)
+// - Charge news_posts publiés
+// - Charge news_comments approuvés
+// - Récupère pseudo/avatar via view public.profiles_public (sans join FK)
+// - Ajout de commentaire si connecté (modération)
 
 (() => {
   "use strict";
+
   if (window.__MMG_NEWS_INIT__) return;
   window.__MMG_NEWS_INIT__ = true;
 
   const ROOT_ID = "newsRoot";
-  const qs = (s, r = document) => r.querySelector(s);
+  const FALLBACK_ITEMS = [
+    {
+      id: "demo",
+      date: "2026-01-28",
+      title: "Actualités",
+      text: "Une fois Supabase configuré, vous pourrez publier des actus et gérer les images depuis /admin.",
+      media: { type: "image", src: "assets/ui/hero-bg.png", alt: "Fond accueil" },
+    },
+  ];
 
+  const qs = (s, r = document) => r.querySelector(s);
   const t = (k) => (window.__t ? window.__t(k) : k);
 
   const safeText = (s) => String(s ?? "").replace(/\s+/g, " ").trim();
 
-  const fmtDate = (iso) => {
+  function fmtDate(iso) {
     try {
       const d = new Date(iso);
-      const lang = (window.__lang?.() || "fr");
+      const lang = window.__lang?.() || "fr";
       return d.toLocaleDateString(lang, { year: "numeric", month: "short", day: "2-digit" });
     } catch {
       return iso || "";
     }
-  };
+  }
 
-  const getSB = () => window.mmgSupabase || window.mmg_supabase || null;
+  function getSB() {
+    return window.mmgSupabase || window.mmg_supabase || null;
+  }
 
   async function getUser() {
     const sb = getSB();
     if (!sb?.auth) return null;
     const { data } = await sb.auth.getSession();
     return data?.session?.user || null;
-  }
-
-  async function ensureProfileRow(user) {
-    const sb = getSB();
-    if (!sb || !user) return null;
-    const fallbackName = user.user_metadata?.name || (user.email ? user.email.split("@")[0] : null) || null;
-
-    await sb.from("profiles").upsert({ id: user.id, display_name: fallbackName, avatar_url: null }, { onConflict: "id" });
-
-    const { data } = await sb
-      .from("profiles")
-      .select("id,display_name,avatar_url")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    return data || null;
   }
 
   function normalizeMedia(row) {
@@ -104,9 +99,9 @@
     return null;
   }
 
-  async function loadPosts() {
+  async function loadPostsSupabase() {
     const sb = getSB();
-    if (!sb) return [];
+    if (!sb) return null;
 
     const { data, error } = await sb
       .from("news_posts")
@@ -117,7 +112,7 @@
 
     if (error) {
       console.warn("[MMG] Supabase news error", error);
-      return [];
+      return null;
     }
 
     return (data || []).map((x) => ({
@@ -129,16 +124,13 @@
     }));
   }
 
-  async function loadComments(postIds) {
+  async function loadApprovedComments(postIds) {
     const sb = getSB();
     if (!sb || !postIds?.length) return {};
 
-    // ✅ IMPORTANT : FK forcée ici
     const { data, error } = await sb
       .from("news_comments")
-      .select(
-        "post_id,message,created_at,name,user_id,profiles:profiles!news_comments_user_id_fkey(display_name,avatar_url)"
-      )
+      .select("post_id,user_id,name,message,created_at")
       .eq("approved", true)
       .in("post_id", postIds)
       .order("created_at", { ascending: true });
@@ -155,19 +147,41 @@
     return map;
   }
 
-  async function addComment(postId, user, message) {
+  async function loadPublicProfiles(userIds) {
+    const sb = getSB();
+    if (!sb || !userIds?.length) return {};
+
+    const uniq = Array.from(new Set(userIds.filter(Boolean)));
+    if (!uniq.length) return {};
+
+    const { data, error } = await sb
+      .from("profiles_public")
+      .select("id,display_name,avatar_url")
+      .in("id", uniq);
+
+    if (error) {
+      console.warn("[MMG] profiles_public error", error);
+      return {};
+    }
+
+    const map = {};
+    (data || []).forEach((p) => (map[p.id] = p));
+    return map;
+  }
+
+  async function addCommentSupabase(postId, user, message) {
     const sb = getSB();
     if (!sb) return { ok: false, msg: "Supabase non configuré." };
-    if (!user) return { ok: false, msg: "Connecte-toi pour commenter." };
+    if (!user) return { ok: false, msg: t("home.commentLoginHint") || "Connecte-toi pour commenter." };
 
-    // ✅ Assure la ligne profiles (sinon FK peut casser)
-    const profile = await ensureProfileRow(user);
-    const name = safeText(profile?.display_name || user.email?.split("@")[0] || "Utilisateur");
+    // On met le pseudo (display_name) dans "name" (colonne existante)
+    const { data: me } = await sb.from("profiles").select("display_name").eq("id", user.id).maybeSingle();
+    const displayName = safeText(me?.display_name || user.email || "Utilisateur");
 
     const payload = {
       post_id: postId,
       user_id: user.id,
-      name,
+      name: displayName,
       message: safeText(message),
       approved: false,
     };
@@ -175,22 +189,23 @@
     const { error } = await sb.from("news_comments").insert(payload);
     if (error) {
       console.warn("[MMG] Supabase add comment error", error);
-      return { ok: false, msg: "Erreur lors de l’envoi." };
+      return { ok: false, msg: t("home.commentError") || "Erreur lors de l’envoi." };
     }
-    return { ok: true, msg: "Merci ! Ton commentaire est en modération." };
+
+    return { ok: true, msg: t("home.commentModeration") || "Merci ! Ton commentaire est en modération." };
   }
 
-  function renderComments(container, postId, comments, user, profile) {
-    container.innerHTML = "";
+  function renderComments(root, postId, comments, profilesMap, user) {
+    root.innerHTML = "";
 
     const head = document.createElement("div");
     head.className = "news-comments__head";
     head.innerHTML = `<strong>${t("home.commentsTitle") || "Commentaires"}</strong>`;
-    container.appendChild(head);
+    root.appendChild(head);
 
+    // Liste
     const list = document.createElement("div");
     list.className = "news-comments__list";
-    container.appendChild(list);
 
     const arr = comments || [];
     if (!arr.length) {
@@ -200,17 +215,18 @@
       list.appendChild(empty);
     } else {
       arr.forEach((c) => {
-        const who = safeText(c?.profiles?.display_name || c.name || "—");
+        const p = c.user_id ? profilesMap[c.user_id] : null;
+        const who = safeText(p?.display_name || c.name || "—");
+        const avatar = p?.avatar_url || "";
         const when = fmtDate(c.created_at || "");
         const msg = safeText(c.message || "");
 
-        const avatarUrl = c?.profiles?.avatar_url || "";
-
         const item = document.createElement("div");
         item.className = "news-comment";
+
         item.innerHTML = `
           <div class="news-comment__row">
-            <div class="news-comment__avatar">${avatarUrl ? `<img src="${avatarUrl}" alt="">` : ""}</div>
+            <div class="news-comment__avatar">${avatar ? `<img src="${avatar}" alt="">` : ""}</div>
             <div class="news-comment__content">
               <div class="news-comment__meta">${who} • ${when}</div>
               <div class="news-comment__text"></div>
@@ -222,83 +238,68 @@
       });
     }
 
-    // Form
-    const box = document.createElement("div");
-    box.className = "news-comments__form";
-    container.appendChild(box);
+    root.appendChild(list);
 
+    // Form (gate: connecté)
     if (!user) {
-      const back = encodeURIComponent(location.pathname + location.search);
+      const box = document.createElement("div");
+      box.className = "news-comments__login";
+      const back = encodeURIComponent(location.href);
       box.innerHTML = `
-        <div class="news-comments__login">
-          <p class="muted" style="margin:0 0 10px">${t("home.commentLoginHint") || "Connectez-vous pour commenter."}</p>
-          <a class="btn" href="/login.html?redirect=${back}">${t("home.commentLogin") || "Se connecter"}</a>
-        </div>
+        <p class="muted" style="margin:0 0 10px">${t("home.commentLoginHint") || "Connecte-toi pour commenter."}</p>
+        <a class="btn" href="login.html?redirect=${back}">${t("home.commentLogin") || "Se connecter"}</a>
       `;
+      root.appendChild(box);
       return;
     }
 
-    if (!profile?.display_name) {
-      box.innerHTML = `
-        <div class="news-comments__login">
-          <p class="muted" style="margin:0 0 10px">Choisis ton pseudo avant de commenter.</p>
-          <button class="btn" type="button" data-open-profile>Ouvrir mon profil</button>
-        </div>
-      `;
-      box.querySelector("[data-open-profile]")?.addEventListener("click", () => window.MMGProfile?.open?.());
-      return;
-    }
-
-    box.innerHTML = `
-      <form class="comment-form" data-form>
-        <input class="field" name="msg" placeholder="${t("home.commentMessage") || "Écrire un commentaire…"}" maxlength="240" required>
-        <button class="btn" type="submit">${t("home.commentSend") || "Envoyer"}</button>
-        <div class="news-comments__hint">${t("home.commentModerationHint") || "Les commentaires passent en modération avant publication."}</div>
-      </form>
+    const form = document.createElement("form");
+    form.className = "news-comments__form";
+    form.innerHTML = `
+      <input class="input" name="msg" placeholder="${t("home.commentMessage") || "Écrire un commentaire…"}" maxlength="240" required>
+      <button class="btn" type="submit">${t("home.commentSend") || "Publier"}</button>
+      <div class="news-comments__hint">${t("home.commentModerationHint") || "Les commentaires passent en modération avant publication."}</div>
     `;
 
-    const form = box.querySelector("[data-form]");
-    form?.addEventListener("submit", async (e) => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const fd = new FormData(form);
-      const msg = fd.get("msg");
+      const msg = safeText(fd.get("msg"));
       if (!msg) return;
 
-      const hint = box.querySelector(".news-comments__hint");
-      if (hint) hint.textContent = "Envoi…";
-
-      const res = await addComment(postId, user, msg);
-      if (hint) hint.textContent = res.msg;
-
+      const res = await addCommentSupabase(postId, user, msg);
       form.reset();
+
+      const hint = form.querySelector(".news-comments__hint");
+      if (hint) hint.textContent = res.msg || "";
     });
+
+    root.appendChild(form);
   }
 
-  let renderToken = 0;
-
   async function render() {
-    const root = qs("#" + ROOT_ID);
+    const root = document.getElementById(ROOT_ID);
     if (!root) return;
 
-    const token = ++renderToken;
-
     root.innerHTML = "";
-    const sb = getSB();
-    const user = sb ? await getUser() : null;
-    const profile = user ? await ensureProfileRow(user) : null;
 
-    const posts = await loadPosts();
-    if (token !== renderToken) return;
+    const items = (await loadPostsSupabase()) || FALLBACK_ITEMS;
+    const sbMode = !!getSB();
 
-    const ids = posts.map((p) => p.id);
-    const commentsMap = await loadComments(ids);
-    if (token !== renderToken) return;
+    const ids = items.map((x) => x.id);
+    const user = sbMode ? await getUser() : null;
 
-    posts.forEach((p) => {
+    const commentsMap = sbMode ? await loadApprovedComments(ids) : {};
+    const allUserIds = [];
+    Object.values(commentsMap).forEach((arr) => arr.forEach((c) => allUserIds.push(c.user_id)));
+
+    const profilesMap = sbMode ? await loadPublicProfiles(allUserIds) : {};
+
+    items.forEach((item) => {
       const card = document.createElement("article");
       card.className = "news-card";
 
-      const m = mediaEl(p.media);
+      const m = mediaEl(item.media);
       if (m) card.appendChild(m);
 
       const body = document.createElement("div");
@@ -306,24 +307,24 @@
 
       const meta = document.createElement("div");
       meta.className = "news-meta";
-      meta.textContent = fmtDate(p.date);
+      meta.textContent = fmtDate(item.date);
 
       const h = document.createElement("h3");
       h.className = "news-title";
-      h.textContent = p.title || "";
+      h.textContent = item.title || "";
 
-      const txt = document.createElement("p");
-      txt.className = "news-text";
-      txt.textContent = p.text || "";
+      const p = document.createElement("p");
+      p.className = "news-text";
+      p.textContent = item.text || "";
 
       body.appendChild(meta);
       body.appendChild(h);
-      body.appendChild(txt);
+      body.appendChild(p);
       card.appendChild(body);
 
       const comments = document.createElement("div");
       comments.className = "news-comments";
-      renderComments(comments, p.id, commentsMap[p.id] || [], user, profile);
+      renderComments(comments, item.id, commentsMap[item.id] || [], profilesMap, user);
       card.appendChild(comments);
 
       root.appendChild(card);

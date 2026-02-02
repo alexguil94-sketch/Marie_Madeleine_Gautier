@@ -1,54 +1,47 @@
 // js/profile-onboarding.js
-// Sur index: force le choix pseudo/avatar si profil incomplet
+// Ouvre la modale profil sur index si le pseudo n'est pas défini (une seule fois).
 
 (() => {
   "use strict";
   if (window.__MMG_PROFILE_ONBOARD_INIT__) return;
   window.__MMG_PROFILE_ONBOARD_INIT__ = true;
 
-  const getSB = () => window.mmgSupabase || window.mmg_supabase || null;
+  const FLAG = "mmg_profile_onboard_done_v1";
 
-  async function getUser() {
-    const sb = getSB();
-    if (!sb?.auth) return null;
-    const { data } = await sb.auth.getSession();
-    return data?.session?.user || null;
-  }
-
-  async function getProfile(userId) {
-    const sb = getSB();
-    const { data } = await sb
-      .from("profiles")
-      .select("display_name, avatar_url")
-      .eq("id", userId)
-      .maybeSingle();
-    return data || null;
+  function getSB() {
+    return window.mmgSupabase || window.mmg_supabase || null;
   }
 
   async function run() {
-    const sb = getSB();
-    if (!sb) return;
+    // On ne le fait que sur la home (optionnel)
+    const isHome = location.pathname.endsWith("/") || location.pathname.endsWith("/index.html");
+    if (!isHome) return;
 
-    const user = await getUser();
+    if (localStorage.getItem(FLAG) === "1") return;
+
+    const sb = getSB();
+    if (!sb?.auth) return;
+
+    const { data } = await sb.auth.getSession();
+    const user = data?.session?.user || null;
     if (!user) return;
 
-    const key = `mmg_onboarding_done_${user.id}`;
-    if (localStorage.getItem(key) === "1") return;
+    // Profile row
+    const { data: p } = await sb
+      .from("profiles")
+      .select("display_name")
+      .eq("id", user.id)
+      .maybeSingle();
 
-    const profile = await getProfile(user.id);
-    const missingName = !profile?.display_name || !String(profile.display_name).trim();
-
-    // Tu peux aussi exiger l’avatar :
-    // const missingAvatar = !profile?.avatar_url;
-    // const must = missingName || missingAvatar;
-    const must = missingName;
-
-    if (must && window.MMGProfile?.open) {
-      window.MMGProfile.open();
-      localStorage.setItem(key, "1");
+    if (p?.display_name && String(p.display_name).trim()) {
+      localStorage.setItem(FLAG, "1");
+      return;
     }
+
+    // Attend que MMGProfile existe
+    const tryOpen = () => window.MMGProfile?.open?.();
+    setTimeout(tryOpen, 250);
   }
 
   window.addEventListener("DOMContentLoaded", run);
-  document.addEventListener("partials:loaded", run);
 })();
