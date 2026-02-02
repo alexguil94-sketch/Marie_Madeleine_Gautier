@@ -7,6 +7,7 @@
   window.__MMG_PROFILE_UI_INIT__ = true;
 
   const qs = (s, r = document) => r.querySelector(s);
+  const isProfilePage = /\/profile\.html$/i.test(location.pathname);
 
   const getSB = () => window.mmgSupabase || null;
   const getBucket = () => (window.MMG_SUPABASE?.bucket || window.SUPABASE_BUCKET || "media");
@@ -58,11 +59,24 @@
     const sb = await waitForSB();
     if (!sb || !user) return null;
 
-    // upsert minimal
-    await sb.from("profiles").upsert(
-      { id: user.id, display_name: user.user_metadata?.name || null, avatar_url: null },
-      { onConflict: "id" }
-    );
+    // Read first (avoid overwriting user-defined fields)
+    const { data: existing } = await sb
+      .from("profiles")
+      .select("id,display_name,avatar_url,role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (existing) return existing;
+
+    // Create row if missing
+    const seed = { id: user.id };
+    const metaName = user.user_metadata?.name;
+    if (typeof metaName === "string" && metaName.trim()) seed.display_name = metaName.trim().slice(0, 32);
+
+    const { error: insErr } = await sb.from("profiles").insert(seed);
+    if (insErr) {
+      // Ignore if another client created it meanwhile or if RLS blocks inserts.
+    }
 
     const { data } = await sb
       .from("profiles")
@@ -74,6 +88,7 @@
   }
 
   function mountModalIfMissing() {
+    if (isProfilePage) return;
     if (qs("#pfModal")) return;
 
     const modal = document.createElement("section");
@@ -100,7 +115,7 @@
 
         <div id="pfSignedIn" hidden>
           <div class="pf-row" style="align-items:center">
-            <div class="pf-avatar">
+            <div class="pf-avatarbig">
               <img id="pfAvatarPreview" alt="" style="display:none" />
             </div>
 
@@ -158,6 +173,17 @@
     return "/login.html?redirect=" + encodeURIComponent(location.pathname + location.search);
   }
 
+  const resolveUrl = (uOrPath) => {
+    const v = String(uOrPath || "").trim();
+    if (!v) return "";
+    if (v.startsWith("http://") || v.startsWith("https://") || v.startsWith("/")) return v;
+
+    const sb = getSB();
+    if (!sb?.storage) return v;
+    const { data } = sb.storage.from(getBucket()).getPublicUrl(v);
+    return data?.publicUrl || v;
+  };
+
   async function uploadAvatar(userId, file) {
     const sb = await waitForSB();
     const bucket = getBucket();
@@ -165,7 +191,7 @@
     const ext =
       (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
 
-    const path = `avatars/${userId}.${ext}`;
+    const path = `avatars/${userId}/avatar.${ext}`;
 
     const { error } = await sb.storage.from(bucket).upload(path, file, {
       upsert: true,
@@ -195,17 +221,17 @@
 
     const profile = await ensureProfileRow(user);
     const name = profile?.display_name || "Mon profil";
-    const avatar = profile?.avatar_url || "";
+    const avatar = resolveUrl(profile?.avatar_url || "");
 
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "mmg-profbtn";
-    btn.innerHTML = `
+    const a = document.createElement("a");
+    a.className = "mmg-profbtn";
+    a.href = "/profile.html";
+    a.setAttribute("aria-label", "Mon profil");
+    a.innerHTML = `
       <span class="mmg-profavatar">${avatar ? `<img src="${avatar}" alt="">` : ""}</span>
       <span class="mmg-profname">${name}</span>
     `;
-    btn.addEventListener("click", () => window.MMGProfile.open());
-    slot.appendChild(btn);
+    slot.appendChild(a);
   }
 
   async function fillModal() {
@@ -242,7 +268,7 @@
     const removeBtn = qs("#pfRemoveAvatar");
     const input = qs("#pfAvatar");
 
-    const avatarUrl = profile?.avatar_url || "";
+    const avatarUrl = resolveUrl(profile?.avatar_url || "");
 
     if (img) {
       if (avatarUrl) {
@@ -358,6 +384,7 @@
 
       // Header injecté ? => refresh
       document.addEventListener("partials:loaded", () => renderHeader());
+      document.addEventListener("mmg:profile-updated", () => renderHeader());
 
       // Session change => refresh
       (await waitForSB())?.auth?.onAuthStateChange?.(() => renderHeader());
@@ -369,7 +396,10 @@
 
     async open() {
       const modal = qs("#pfModal");
-      if (!modal) return;
+      if (!modal) {
+        location.href = "/profile.html";
+        return;
+      }
       modal.hidden = false;
       document.body.style.overflow = "hidden";
       setInert(true);
