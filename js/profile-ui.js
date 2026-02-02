@@ -23,8 +23,28 @@
 
   const waitForSB = async () => {
     if (getSB()) return getSB();
-    await new Promise((res) => document.addEventListener("sb:ready", res, { once: true }));
-    return getSB();
+
+    // If Supabase init already finished (success or failure), don't wait.
+    const status = window.__MMG_SB_STATUS__;
+    if (status && status !== "loading") return null;
+
+    return await new Promise((resolve) => {
+      let done = false;
+      const onReady = () => {
+        if (done) return;
+        done = true;
+        resolve(getSB());
+      };
+
+      document.addEventListener("sb:ready", onReady, { once: true });
+
+      setTimeout(() => {
+        if (done) return;
+        done = true;
+        document.removeEventListener("sb:ready", onReady);
+        resolve(getSB());
+      }, 6000);
+    });
   };
 
   async function getUser() {
@@ -196,7 +216,12 @@
     const signedInBox = qs("#pfSignedIn");
     const loginLink = qs("#pfLoginLink");
 
-    if (!sb) return;
+    if (!sb?.auth) {
+      if (signedOutBox) signedOutBox.hidden = false;
+      if (signedInBox) signedInBox.hidden = true;
+      if (loginLink) loginLink.href = resolveLoginRedirect();
+      return;
+    }
 
     if (!user) {
       if (signedOutBox) signedOutBox.hidden = false;

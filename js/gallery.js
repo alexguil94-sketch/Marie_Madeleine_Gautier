@@ -10,10 +10,30 @@
   const getSB = () => window.mmgSupabase || null;
   const getBucket = () => (window.MMG_SUPABASE?.bucket || window.SUPABASE_BUCKET || "media");
 
-  const waitForSB = async () => {
+  const waitForSB = async (timeoutMs = 6000) => {
     if (getSB()) return getSB();
-    await new Promise((res) => document.addEventListener("sb:ready", res, { once: true }));
-    return getSB();
+
+    // If Supabase init already finished (success or failure), don't wait.
+    const status = window.__MMG_SB_STATUS__;
+    if (status && status !== "loading") return null;
+
+    return await new Promise((resolve) => {
+      let done = false;
+      const onReady = () => {
+        if (done) return;
+        done = true;
+        resolve(getSB());
+      };
+
+      document.addEventListener("sb:ready", onReady, { once: true });
+
+      setTimeout(() => {
+        if (done) return;
+        done = true;
+        document.removeEventListener("sb:ready", onReady);
+        resolve(getSB());
+      }, timeoutMs);
+    });
   };
 
   const resolveUrl = (uOrPath) => {
@@ -35,6 +55,8 @@
     q: "",
     cat: "all",
     hasMore: true,
+    loading: false,
+    error: "",
     lightboxIndex: -1,
     zoom: 1,
     panX: 0,
@@ -99,6 +121,27 @@
 
     grid.innerHTML = "";
 
+    const loadMore = qs("#loadMore");
+    if (loadMore) loadMore.disabled = state.loading || !state.hasMore;
+
+    if (state.error) {
+      grid.innerHTML = `
+        <div class="muted" style="padding:14px 0">
+          ${state.error}
+        </div>
+      `;
+      return;
+    }
+
+    if (state.loading && !state.all.length) {
+      grid.innerHTML = `
+        <div class="muted" style="padding:14px 0">
+          Chargement…
+        </div>
+      `;
+      return;
+    }
+
     if (!state.view.length) {
       grid.innerHTML = `
         <div class="muted" style="padding:14px 0">
@@ -129,8 +172,7 @@
       grid.appendChild(card);
     });
 
-    const loadMore = qs("#loadMore");
-    if (loadMore) loadMore.disabled = !state.hasMore;
+    // loadMore disabled handled above
   }
 
   function setZoom(zoom) {
@@ -192,8 +234,20 @@
   }
 
   async function fetchPage() {
+    if (state.loading || !state.hasMore) return;
+
+    state.loading = true;
+    state.error = "";
+    renderGrid();
+
     const sb = await waitForSB();
-    if (!sb) return;
+    if (!sb) {
+      state.loading = false;
+      state.hasMore = false;
+      state.error = "Connexion indisponible. Impossible de charger la galerie.";
+      renderGrid();
+      return;
+    }
 
     const from = state.page * state.pageSize;
     const to = from + state.pageSize - 1;
@@ -208,6 +262,9 @@
 
     if (error) {
       console.warn("[gallery] load error:", error);
+      state.loading = false;
+      state.error = error.message || "Erreur de chargement.";
+      renderGrid();
       return;
     }
 
@@ -219,12 +276,13 @@
     const ids = list.map((w) => w.id);
     let imagesByWork = {};
     if (ids.length) {
-      const { data: imgs } = await sb
+      const { data: imgs, error: imgsErr } = await sb
         .from("work_images")
         .select("work_id,path,sort_order")
         .in("work_id", ids)
         .order("sort_order", { ascending: true });
 
+      if (imgsErr) console.warn("[gallery] work_images error:", imgsErr);
       (imgs || []).forEach((it) => {
         (imagesByWork[it.work_id] ||= []).push(it.path);
       });
@@ -239,6 +297,7 @@
 
     renderCategories();
     applyFilters();
+    state.loading = false;
     renderGrid();
   }
 
