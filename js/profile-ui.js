@@ -1,344 +1,333 @@
-/* js/profile-ui.js
-   Header widget + profile modal (pseudo + avatar)
-   Needs: window.mmgSupabase (supabase-client.js) + profiles table
-*/
+// js/profile-ui.js
+// Affiche "avatar + pseudo" dans le header + permet d’éditer (modal)
+// Requiert: supabase.js + supabase-config.js + supabase-client.js
 
 (() => {
   "use strict";
 
-  // Anti double init
-  if (window.__MMG_PROFILE_UI_INITED__) return;
-  window.__MMG_PROFILE_UI_INITED__ = true;
+  if (window.__MMG_PROFILE_UI_INIT__) return;
+  window.__MMG_PROFILE_UI_INIT__ = true;
 
-  const sb = window.mmgSupabase;
-  if (!sb) {
-    console.warn("[PROFILE] window.mmgSupabase introuvable (supabase-client.js).");
-    return;
-  }
+  const qs = (s, r = document) => r.querySelector(s);
 
-  const bucket = window.MMG_SUPABASE?.bucket || window.SUPABASE_BUCKET || "media";
-
-  const $ = (sel, root = document) => root.querySelector(sel);
-
-  const getPublicUrl = (path) => {
-    const { data } = sb.storage.from(bucket).getPublicUrl(path);
-    return data?.publicUrl || "";
+  const toast = (msg) => {
+    const el = document.createElement("div");
+    el.textContent = msg;
+    el.style.cssText =
+      "position:fixed;left:50%;bottom:16px;transform:translateX(-50%);padding:10px 12px;border-radius:12px;" +
+      "background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.12);color:#fff;z-index:99999;font:14px system-ui";
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2200);
   };
 
-  const svgFallback =
-    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56'%3E%3Crect width='56' height='56' rx='18' fill='%23222'/%3E%3C/svg%3E";
+  const getSB = () => window.mmgSupabase || window.mmg_supabase || null;
 
-  // -----------------------
-  // Inject modal once
-  // -----------------------
-  function ensureModal() {
-    if ($("#pfModal")) return;
+  const getBucket = () => {
+    const c = window.MMG_SUPABASE || {};
+    return c.bucket || window.SUPABASE_BUCKET || "media";
+  };
 
-    const html = `
-<section id="pfModal" class="pf-modal" hidden>
-  <div class="pf-card" role="dialog" aria-modal="true" aria-labelledby="pfTitle">
-    <div class="pf-head">
-      <div>
-        <div class="pf-kicker">Mon profil</div>
-        <h2 id="pfTitle" class="pf-title">Pseudo & avatar</h2>
-      </div>
-      <button id="pfClose" class="pf-x" type="button" aria-label="Fermer">×</button>
-    </div>
-
-    <div id="pfSignedOut" class="pf-muted" hidden>
-      Tu dois être connecté pour choisir ton pseudo et ton avatar.
-      <div style="margin-top:10px">
-        <a id="pfLoginLink" class="pf-btn pf-primary" href="./login.html">Se connecter</a>
-      </div>
-    </div>
-
-    <div id="pfSignedIn" hidden>
-      <div class="pf-row" style="align-items:center;margin-top:12px">
-        <div class="pf-avatarbig"><img id="pfAvatarPreview" alt="" /></div>
-        <div style="flex:1;min-width:0">
-          <div class="pf-muted">Compte</div>
-          <div id="pfEmail" style="font-weight:600;word-break:break-word"></div>
-        </div>
-        <button id="pfLogout" class="pf-btn" type="button">Se déconnecter</button>
-      </div>
-
-      <div class="pf-field">
-        <label class="pf-label" for="pfName">Pseudo</label>
-        <input id="pfName" class="pf-input" placeholder="Ton pseudo" maxlength="32" />
-      </div>
-
-      <div class="pf-field">
-        <label class="pf-label" for="pfAvatar">Avatar</label>
-        <input id="pfAvatar" class="pf-input" type="file" accept="image/*" />
-        <div class="pf-row" style="margin-top:10px">
-          <button id="pfRemoveAvatar" class="pf-btn" type="button">Retirer</button>
-          <button id="pfSave" class="pf-btn pf-primary" type="button">Enregistrer</button>
-        </div>
-      </div>
-
-      <div id="pfMsg" class="pf-muted" style="margin-top:10px;min-height:18px"></div>
-    </div>
-  </div>
-</section>
-`;
-    document.body.insertAdjacentHTML("beforeend", html);
-
-    // close handlers
-    const modal = $("#pfModal");
-    $("#pfClose")?.addEventListener("click", () => (modal.hidden = true));
-    modal?.addEventListener("click", (e) => {
-      if (e.target === modal) modal.hidden = true;
-    });
-  }
-
-  // -----------------------
-  // Profile access
-  // -----------------------
   async function getUser() {
-    const { data } = await sb.auth.getUser();
-    return data?.user || null;
+    const sb = getSB();
+    if (!sb?.auth) return null;
+    const { data } = await sb.auth.getSession();
+    return data?.session?.user || null;
   }
 
-  async function loadProfile(uid) {
-    const { data, error } = await sb
+  async function ensureProfileRow(user) {
+    const sb = getSB();
+    if (!sb || !user) return null;
+
+    // Upsert minimal (id = auth.uid)
+    await sb.from("profiles").upsert(
+      { id: user.id, display_name: user.user_metadata?.name || null, avatar_url: null },
+      { onConflict: "id" }
+    );
+
+    const { data } = await sb
       .from("profiles")
       .select("id,display_name,avatar_url,role")
-      .eq("id", uid)
+      .eq("id", user.id)
       .maybeSingle();
 
-    if (error) {
-      console.warn("[PROFILE] load profile error:", error);
-      return null;
-    }
-
-    // if missing row, try create (requires insert policy)
-    if (!data) {
-      const { error: insErr } = await sb.from("profiles").insert({ id: uid, role: "user" });
-      if (insErr) console.warn("[PROFILE] create profile error:", insErr);
-
-      const again = await sb
-        .from("profiles")
-        .select("id,display_name,avatar_url,role")
-        .eq("id", uid)
-        .maybeSingle();
-      return again.data || null;
-    }
-
-    return data;
+    return data || null;
   }
 
-  // -----------------------
-  // Header widget
-  // -----------------------
-  const slot = document.getElementById("mmgProfileSlot");
-  let headerBtn = null;
+  function mountModal() {
+    if (qs("#pfModal")) return;
 
-  function setHeaderLoggedOut() {
-    if (!slot) return;
-    slot.innerHTML = "";
+    const modal = document.createElement("div");
+    modal.id = "pfModal";
+    modal.className = "pf-modal";
+    modal.hidden = true;
 
-    headerBtn = document.createElement("button");
-    headerBtn.type = "button";
-    headerBtn.className = "mmg-profbtn";
-    headerBtn.innerHTML = `
-      <span class="mmg-profsmall">Se connecter</span>
+    modal.innerHTML = `
+      <div class="pf-card" role="dialog" aria-modal="true" aria-labelledby="pfTitle">
+        <div class="pf-head">
+          <div>
+            <div class="pf-kicker">Profil</div>
+            <h2 id="pfTitle" class="pf-title">Choisis ton pseudo & ton avatar</h2>
+            <div class="pf-row" style="margin-top:8px">
+              <div class="pf-avatarbig" id="pfAvatarBox"><img id="pfAvatarImg" alt="" /></div>
+              <div>
+                <div class="pf-muted">Connecté :</div>
+                <div class="pf-email" id="pfEmail"></div>
+              </div>
+            </div>
+          </div>
+          <button class="pf-x" type="button" id="pfClose" aria-label="Fermer">×</button>
+        </div>
+
+        <div class="pf-field">
+          <label class="pf-label">Pseudo</label>
+          <input class="pf-input" id="pfName" maxlength="32" placeholder="Ton pseudo" />
+        </div>
+
+        <div class="pf-field">
+          <label class="pf-label">Avatar</label>
+          <input class="pf-input" id="pfAvatar" type="file" accept="image/*" />
+          <div class="pf-muted" style="margin-top:8px">PNG/JPG — carré conseillé</div>
+          <button class="pf-btn" type="button" id="pfRemoveAvatar" style="margin-top:10px;display:none">Retirer l’avatar</button>
+        </div>
+
+        <div class="pf-row" style="margin-top:14px">
+          <button class="pf-btn pf-primary" type="button" id="pfSave">Enregistrer</button>
+          <button class="pf-btn" type="button" id="pfSignOut">Se déconnecter</button>
+        </div>
+
+        <div class="pf-muted" id="pfMsg" style="margin-top:10px"></div>
+      </div>
     `;
-    headerBtn.addEventListener("click", () => {
-      const back = encodeURIComponent(location.pathname || "/");
-      location.href = `./login.html?redirect=${back}`;
+
+    document.body.appendChild(modal);
+
+    // Close by backdrop click
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) window.MMGProfile.close();
     });
-
-    slot.appendChild(headerBtn);
   }
 
-  function setHeaderLoggedIn(user, profile) {
-    if (!slot) return;
-    slot.innerHTML = "";
-
-    const name =
-      (profile?.display_name && profile.display_name.trim()) ||
-      (user?.email ? user.email.split("@")[0] : "Compte");
-
-    const avatar = profile?.avatar_url || svgFallback;
-
-    headerBtn = document.createElement("button");
-    headerBtn.type = "button";
-    headerBtn.className = "mmg-profbtn";
-    headerBtn.innerHTML = `
-      <span class="mmg-profavatar"><img alt="" src="${avatar}"></span>
-      <span class="mmg-profname">${escapeHtml(name)}</span>
-    `;
-    headerBtn.addEventListener("click", () => openModal(true));
-    slot.appendChild(headerBtn);
+  function setInert(isOn) {
+    // Empêche les warnings aria-hidden en bloquant le focus derrière
+    const modal = qs("#pfModal");
+    const children = Array.from(document.body.children).filter((x) => x !== modal);
+    children.forEach((el) => {
+      try {
+        el.inert = isOn;
+      } catch {
+        // inert pas supporté partout: pas grave
+      }
+    });
   }
 
-  function escapeHtml(s) {
-    return String(s || "").replace(/[&<>"']/g, (m) => ({
-      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
-    }[m]));
+  async function uploadAvatar(userId, file) {
+    const sb = getSB();
+    const bucket = getBucket();
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+    const path = `avatars/${userId}.${ext}`;
+
+    const { error: upErr } = await sb.storage.from(bucket).upload(path, file, {
+      upsert: true,
+      contentType: file.type || "image/jpeg",
+    });
+    if (upErr) throw upErr;
+
+    const { data } = sb.storage.from(bucket).getPublicUrl(path);
+    return data?.publicUrl || "";
   }
 
-  // -----------------------
-  // Modal logic
-  // -----------------------
-  function openModal(allowAutoOpen = false) {
-    ensureModal();
-    const modal = $("#pfModal");
-    if (!modal) return;
-    modal.hidden = false;
-    if (allowAutoOpen) refreshModalUI({ autoOpenIfMissing: false });
-  }
-
-  function closeModal() {
-    const modal = $("#pfModal");
-    if (modal) modal.hidden = true;
-  }
-
-  async function refreshModalUI({ autoOpenIfMissing = false } = {}) {
-    ensureModal();
-
-    const modal = $("#pfModal");
-    const signedOut = $("#pfSignedOut");
-    const signedIn = $("#pfSignedIn");
-
-    const loginLink = $("#pfLoginLink");
-    const elEmail = $("#pfEmail");
-    const inName = $("#pfName");
-    const inAvatar = $("#pfAvatar");
-    const imgPrev = $("#pfAvatarPreview");
-    const btnSave = $("#pfSave");
-    const btnRemove = $("#pfRemoveAvatar");
-    const btnLogout = $("#pfLogout");
-    const msg = $("#pfMsg");
-
-    const setMsg = (t = "") => { if (msg) msg.textContent = t; };
+  async function renderHeader() {
+    const slot = qs("#mmgProfileSlot");
+    if (!slot) return; // hook manquant
 
     const user = await getUser();
+    slot.innerHTML = "";
+
+    // Pas connecté => bouton login
     if (!user) {
-      signedOut.hidden = false;
-      signedIn.hidden = true;
-
-      const back = encodeURIComponent(location.pathname || "/");
-      if (loginLink) loginLink.href = `./login.html?redirect=${back}`;
-
+      const a = document.createElement("a");
+      a.className = "pill";
+      a.href = "login.html?redirect=" + encodeURIComponent(location.pathname);
+      a.textContent = "Se connecter";
+      slot.appendChild(a);
       return;
     }
 
-    const profile = await loadProfile(user.id);
+    const profile = await ensureProfileRow(user);
+    const name = profile?.display_name || "Mon profil";
+    const avatar = profile?.avatar_url || "";
 
-    signedOut.hidden = true;
-    signedIn.hidden = false;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "mmg-profbtn";
+    btn.innerHTML = `
+      <span class="mmg-profavatar">${avatar ? `<img src="${avatar}" alt="">` : ""}</span>
+      <span class="mmg-profname">${name}</span>
+    `;
+    btn.addEventListener("click", () => window.MMGProfile.open());
 
-    if (elEmail) elEmail.textContent = user.email || "";
-    if (inName) {
-      const proposed = (user.email || "").split("@")[0].slice(0, 32);
-      inName.value = (profile?.display_name || proposed || "").slice(0, 32);
-    }
-    if (imgPrev) imgPrev.src = profile?.avatar_url || svgFallback;
-
-    // auto open if missing pseudo
-    if (autoOpenIfMissing && modal && (!profile?.display_name || !profile.display_name.trim())) {
-      modal.hidden = false;
-      setMsg("Choisis un pseudo pour terminer ton profil 🙂");
-    }
-
-    // preview local
-    inAvatar?.addEventListener("change", () => {
-      const f = inAvatar.files?.[0];
-      if (!f || !imgPrev) return;
-      imgPrev.src = URL.createObjectURL(f);
-    }, { once: true });
-
-    btnLogout?.addEventListener("click", async () => {
-      try { await sb.auth.signOut(); } catch {}
-      closeModal();
-      await refreshAll();
-    }, { once: true });
-
-    btnRemove?.addEventListener("click", async () => {
-      setMsg("");
-      const u = await getUser();
-      if (!u) return;
-
-      const { error } = await sb.from("profiles").update({ avatar_url: null }).eq("id", u.id);
-      if (error) return setMsg(error.message || "Erreur avatar");
-
-      if (imgPrev) imgPrev.src = svgFallback;
-      setMsg("Avatar retiré ✅");
-      await refreshAll();
-    }, { once: true });
-
-    btnSave?.addEventListener("click", async () => {
-      setMsg("");
-
-      const u = await getUser();
-      if (!u) return setMsg("Connecte-toi d’abord.");
-
-      const display_name = String(inName?.value || "").trim().slice(0, 32);
-      if (!display_name) return setMsg("Choisis un pseudo.");
-
-      try {
-        const current = await loadProfile(u.id);
-        let avatar_url = current?.avatar_url || null;
-
-        const file = inAvatar?.files?.[0];
-        if (file) {
-          const ext = (file.name.split(".").pop() || "jpg")
-            .toLowerCase()
-            .replace(/[^a-z0-9]/g, "") || "jpg";
-          const path = `avatars/${u.id}/avatar.${ext}`;
-
-          const { error: upErr } = await sb.storage.from(bucket).upload(path, file, {
-            upsert: true,
-            contentType: file.type || "image/jpeg",
-          });
-          if (upErr) throw upErr;
-
-          avatar_url = getPublicUrl(path);
-        }
-
-        const { error } = await sb.from("profiles")
-          .update({ display_name, avatar_url })
-          .eq("id", u.id);
-
-        if (error) throw error;
-
-        setMsg("Profil mis à jour ✅");
-        closeModal();
-        await refreshAll();
-      } catch (e) {
-        console.error(e);
-        setMsg(e?.message || "Erreur profil");
-      }
-    }, { once: true });
+    slot.appendChild(btn);
   }
 
-  // -----------------------
-  // Main refresh
-  // -----------------------
-  async function refreshHeader() {
-    if (!slot) return;
-
+  async function fillModal() {
+    const sb = getSB();
+    const modal = qs("#pfModal");
     const user = await getUser();
-    if (!user) return setHeaderLoggedOut();
+    if (!sb || !modal || !user) return;
 
-    const profile = await loadProfile(user.id);
-    setHeaderLoggedIn(user, profile);
+    const profile = await ensureProfileRow(user);
+
+    qs("#pfEmail").textContent = user.email || "";
+    const name = profile?.display_name || "";
+    qs("#pfName").value = name;
+
+    const img = qs("#pfAvatarImg");
+    const box = qs("#pfAvatarBox");
+    const removeBtn = qs("#pfRemoveAvatar");
+
+    if (profile?.avatar_url) {
+      img.src = profile.avatar_url;
+      img.style.display = "block";
+      removeBtn.style.display = "inline-block";
+      box.style.opacity = "1";
+    } else {
+      img.removeAttribute("src");
+      img.style.display = "none";
+      removeBtn.style.display = "none";
+      box.style.opacity = ".85";
+    }
+
+    // Preview immédiat
+    const input = qs("#pfAvatar");
+    input.onchange = () => {
+      const f = input.files?.[0];
+      if (!f) return;
+      img.src = URL.createObjectURL(f);
+      img.style.display = "block";
+      removeBtn.style.display = "inline-block";
+    };
   }
 
-  async function refreshAll() {
-    await refreshHeader();
-    await refreshModalUI();
+  async function saveProfile() {
+    const sb = getSB();
+    const user = await getUser();
+    if (!sb || !user) return;
+
+    const msg = qs("#pfMsg");
+    msg.textContent = "Enregistrement…";
+
+    const displayName = (qs("#pfName").value || "").trim();
+    const file = qs("#pfAvatar").files?.[0] || null;
+
+    if (!displayName) {
+      msg.textContent = "Pseudo obligatoire.";
+      return;
+    }
+
+    try {
+      let avatarUrl = null;
+
+      // si on a déjà un avatar en DB, on le garde si pas de nouveau fichier
+      const { data: existing } = await sb.from("profiles").select("avatar_url").eq("id", user.id).maybeSingle();
+      avatarUrl = existing?.avatar_url || null;
+
+      if (file) {
+        avatarUrl = await uploadAvatar(user.id, file);
+      }
+
+      const { error } = await sb.from("profiles").update({
+        display_name: displayName,
+        avatar_url: avatarUrl,
+      }).eq("id", user.id);
+
+      if (error) throw error;
+
+      msg.textContent = "Profil mis à jour ✅";
+      toast("Profil mis à jour ✅");
+      await renderHeader();
+    } catch (e) {
+      console.error(e);
+      msg.textContent = e?.message || "Erreur sauvegarde";
+    }
   }
 
-  // Auth change (OAuth redirect / logout)
-  sb.auth.onAuthStateChange(async () => {
-    await refreshAll();
-  });
+  async function removeAvatar() {
+    const sb = getSB();
+    const user = await getUser();
+    if (!sb || !user) return;
 
-  window.addEventListener("DOMContentLoaded", async () => {
-    await refreshHeader();
-    await refreshModalUI({ autoOpenIfMissing: true });
-  });
+    const msg = qs("#pfMsg");
+    msg.textContent = "Suppression…";
 
+    try {
+      const { error } = await sb.from("profiles").update({ avatar_url: null }).eq("id", user.id);
+      if (error) throw error;
+
+      qs("#pfAvatarImg").style.display = "none";
+      qs("#pfRemoveAvatar").style.display = "none";
+      qs("#pfAvatar").value = "";
+      msg.textContent = "Avatar retiré ✅";
+      await renderHeader();
+    } catch (e) {
+      console.error(e);
+      msg.textContent = e?.message || "Erreur";
+    }
+  }
+
+  async function signOut() {
+    const sb = getSB();
+    await sb?.auth?.signOut?.();
+    toast("Déconnecté");
+    window.MMGProfile.close();
+    await renderHeader();
+  }
+
+  // API globale
+  window.MMGProfile = {
+    async init() {
+      mountModal();
+      await renderHeader();
+
+      const modal = qs("#pfModal");
+      if (!modal) return;
+
+      qs("#pfClose").onclick = () => this.close();
+      qs("#pfSave").onclick = () => saveProfile();
+      qs("#pfRemoveAvatar").onclick = () => removeAvatar();
+      qs("#pfSignOut").onclick = () => signOut();
+
+      // Re-render header quand session change
+      const sb = getSB();
+      sb?.auth?.onAuthStateChange?.(() => renderHeader());
+    },
+
+    async open() {
+      const modal = qs("#pfModal");
+      if (!modal) return;
+
+      modal.hidden = false;
+      document.body.style.overflow = "hidden";
+      setInert(true);
+
+      await fillModal();
+
+      // focus dans la modale
+      setTimeout(() => qs("#pfName")?.focus(), 0);
+    },
+
+    close() {
+      const modal = qs("#pfModal");
+      if (!modal) return;
+
+      modal.hidden = true;
+      document.body.style.overflow = "";
+      setInert(false);
+    },
+
+    async refresh() {
+      await renderHeader();
+    },
+  };
+
+  window.addEventListener("DOMContentLoaded", () => window.MMGProfile.init());
 })();
