@@ -1,31 +1,39 @@
-// js/news.js
-// MMG News + Comments (Supabase)
-// - Loads published posts
-// - Loads approved comments
-// - Inserts comment (pending moderation)
-// NOTE: No PostgREST join to profiles (avoids schema-cache FK issues)
+// js/news.js (v3)
+// News + commentaires (Supabase) + fallback localStorage
+// - Robuste (anti double init, anti multi-render, pas d'AbortError bloquant)
+// - Join explicite vers profiles via FK: profiles!news_comments_user_id_fkey
+// Requiert: supabase.js + supabase-config.js + supabase-client.js
 
 (() => {
   "use strict";
-
   if (window.__MMG_NEWS_INIT__) return;
   window.__MMG_NEWS_INIT__ = true;
 
   const ROOT_ID = "newsRoot";
-  const POSTS_LIMIT = 12;
+  const KEY_PREFIX = "mmg_news_comments_"; // fallback localStorage
+  const PAGE_SIZE = 12;
+
+  const FALLBACK_ITEMS = [
+    {
+      id: "n1",
+      date: "2026-01-28",
+      title: "Actualités",
+      text: "Une fois Supabase configuré, vous pourrez publier des actus et gérer les images depuis /admin.",
+      media: { type: "image", src: "assets/ui/hero-bg.png", alt: "Fond accueil" },
+    },
+  ];
 
   const qs = (s, r = document) => r.querySelector(s);
-
   const t = (k) => (window.__t ? window.__t(k) : k);
 
-  function safeText(s) {
-    return String(s ?? "").replace(/\s+/g, " ").trim();
+  function safeText(v) {
+    return String(v ?? "").replace(/\s+/g, " ").trim();
   }
 
   function fmtDate(iso) {
     try {
       const d = new Date(iso);
-      const lang = (window.__lang && window.__lang()) || "fr";
+      const lang = window.__lang?.() || "fr";
       return d.toLocaleDateString(lang, { year: "numeric", month: "short", day: "2-digit" });
     } catch {
       return iso || "";
@@ -43,37 +51,18 @@
     return data?.session?.user || null;
   }
 
-  // -----------------------
-  // Load posts
-  // -----------------------
-  async function loadPostsSupabase() {
-    const sb = getSB();
-    if (!sb) return null;
-
+  function lsKey(postId) {
+    return `${KEY_PREFIX}${postId}`;
+  }
+  function lsLoad(postId) {
     try {
-      const { data, error } = await sb
-        .from("news_posts")
-        .select("id,published_at,title,body,media_type,media_url,media_poster,youtube_id")
-        .eq("is_published", true)
-        .order("published_at", { ascending: false })
-        .limit(POSTS_LIMIT);
-
-      if (error) {
-        console.warn("[MMG] Supabase posts error", error);
-        return null;
-      }
-
-      return (data || []).map((x) => ({
-        id: x.id,
-        date: x.published_at,
-        title: x.title,
-        text: x.body || "",
-        media: normalizeMedia(x),
-      }));
-    } catch (e) {
-      console.warn("[MMG] Supabase posts exception", e);
-      return null;
+      return JSON.parse(localStorage.getItem(lsKey(postId)) || "[]");
+    } catch {
+      return [];
     }
+  }
+  function lsSave(postId, arr) {
+    localStorage.setItem(lsKey(postId), JSON.stringify(arr || []));
   }
 
   function normalizeMedia(row) {
@@ -84,92 +73,6 @@
     return null;
   }
 
-  // -----------------------
-  // Load comments (approved) - NO JOIN
-  // -----------------------
-  async function loadCommentsSupabase(postIds) {
-    const sb = getSB();
-    if (!sb || !postIds?.length) return {};
-
-    try {
-      const { data, error } = await sb
-        .from("news_comments")
-        .select("post_id,user_id,message,created_at")
-        .eq("approved", true)
-        .in("post_id", postIds)
-        .order("created_at", { ascending: true });
-
-      if (error) {
-        console.warn("[MMG] Supabase comments error", error);
-        return {};
-      }
-
-      const rows = data || [];
-      const userIds = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean)));
-
-      // Load profiles for these users (if table/RLS allows select)
-      let profilesMap = {};
-      if (userIds.length) {
-        const { data: profs, error: pErr } = await sb
-          .from("profiles")
-          .select("id,display_name,avatar_url")
-          .in("id", userIds);
-
-        if (!pErr && Array.isArray(profs)) {
-          profilesMap = Object.fromEntries(profs.map((p) => [p.id, p]));
-        }
-      }
-
-      const map = {};
-      for (const c of rows) {
-        const prof = profilesMap[c.user_id] || null;
-        (map[c.post_id] ||= []).push({
-          user_id: c.user_id,
-          name: prof?.display_name || "Utilisateur",
-          avatar_url: prof?.avatar_url || "",
-          message: c.message,
-          created_at: c.created_at,
-        });
-      }
-      return map;
-    } catch (e) {
-      console.warn("[MMG] Supabase comments exception", e);
-      return {};
-    }
-  }
-
-  // -----------------------
-  // Add comment (pending)
-  // -----------------------
-  async function addCommentSupabase(postId, user, message) {
-    const sb = getSB();
-    if (!sb) return { ok: false, msg: "Supabase non configuré" };
-    if (!user) return { ok: false, msg: t("home.commentLoginHint") || "Connectez-vous pour commenter." };
-
-    const payload = {
-      post_id: postId,
-      user_id: user.id,
-      message: safeText(message),
-      approved: false,
-    };
-
-    try {
-      const { error } = await sb.from("news_comments").insert(payload);
-      if (error) {
-        console.warn("[MMG] Supabase add comment error", error);
-        // message utile
-        return { ok: false, msg: error.message || "Erreur ajout commentaire" };
-      }
-      return { ok: true, msg: t("home.commentModeration") || "Merci ! Votre commentaire est en modération." };
-    } catch (e) {
-      console.warn("[MMG] Supabase add comment exception", e);
-      return { ok: false, msg: e?.message || "Erreur ajout commentaire" };
-    }
-  }
-
-  // -----------------------
-  // UI helpers
-  // -----------------------
   function mediaEl(media) {
     if (!media) return null;
 
@@ -214,79 +117,171 @@
     return null;
   }
 
-  function renderComments(container, postId, comments, user) {
-    container.innerHTML = "";
+  // ---------------------------
+  // SUPABASE LOADERS
+  // ---------------------------
+  async function loadPostsSupabase() {
+    const sb = getSB();
+    if (!sb) return null;
+
+    const { data, error } = await sb
+      .from("news_posts")
+      .select("id,published_at,title,body,media_type,media_url,media_poster,youtube_id")
+      .eq("is_published", true)
+      .order("published_at", { ascending: false })
+      .limit(PAGE_SIZE);
+
+    if (error) {
+      console.warn("[MMG] Supabase news error", error);
+      return null;
+    }
+
+    return (data || []).map((x) => ({
+      id: x.id,
+      date: x.published_at,
+      title: x.title,
+      text: x.body || "",
+      media: normalizeMedia(x),
+    }));
+  }
+
+  async function loadCommentsSupabase(postIds) {
+    const sb = getSB();
+    if (!sb || !postIds?.length) return {};
+
+    // ✅ Join explicite vers profiles via le nom de FK
+    const { data, error } = await sb
+      .from("news_comments")
+      .select("post_id,message,created_at,name,user_id,profiles!news_comments_user_id_fkey(display_name,avatar_url)")
+      .eq("approved", true)
+      .in("post_id", postIds)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.warn("[MMG] Supabase comments error", error);
+      return {};
+    }
+
+    const map = {};
+    (data || []).forEach((c) => {
+      const prof = c.profiles || null;
+      const display = safeText(prof?.display_name || c.name || "—");
+      const avatar = safeText(prof?.avatar_url || "");
+      (map[c.post_id] ||= []).push({
+        name: display,
+        avatar_url: avatar,
+        message: c.message,
+        created_at: c.created_at,
+      });
+    });
+
+    return map;
+  }
+
+  async function getMyProfileForName(user) {
+    const sb = getSB();
+    if (!sb || !user) return { display_name: "", avatar_url: "" };
+
+    const { data } = await sb.from("profiles").select("display_name,avatar_url").eq("id", user.id).maybeSingle();
+    return {
+      display_name: safeText(data?.display_name || ""),
+      avatar_url: safeText(data?.avatar_url || ""),
+    };
+  }
+
+  async function addCommentSupabase(postId, user, message) {
+    const sb = getSB();
+    if (!sb) return { ok: false, msg: "Supabase non configuré." };
+    if (!user) return { ok: false, msg: t("home.commentLoginHint") || "Connectez-vous pour commenter." };
+
+    const prof = await getMyProfileForName(user);
+    const fallbackName = prof.display_name || user.email || "—";
+
+    const payload = {
+      post_id: postId,
+      user_id: user.id,
+      name: fallbackName, // snapshot (utile même si profile change)
+      message,
+      approved: false,
+    };
+
+    const { error } = await sb.from("news_comments").insert(payload);
+    if (error) {
+      console.warn("[MMG] Supabase add comment error", error);
+      return { ok: false, msg: t("home.commentError") || "Erreur lors de l’envoi." };
+    }
+    return { ok: true, msg: t("home.commentModeration") || "Merci ! Votre commentaire est en modération." };
+  }
+
+  // ---------------------------
+  // UI RENDER
+  // ---------------------------
+  function renderComments(root, postId, comments, mode, user) {
+    root.innerHTML = "";
 
     const head = document.createElement("div");
     head.className = "news-comments__head";
-
-    const title = document.createElement("strong");
-    title.textContent = t("home.commentsTitle") || "Commentaires";
-    head.appendChild(title);
-
-    const meta = document.createElement("div");
-    meta.className = "news-comments__meta";
-
-    if (user) {
-      meta.innerHTML = `
-        <span class="muted small">${t("home.commentSignedInAs") || "Connecté :"} ${user.email || ""}</span>
-        <a class="pill" href="login.html?redirect=${encodeURIComponent(location.pathname)}">Compte</a>
-      `;
-    } else {
-      meta.innerHTML = `<a class="pill" href="login.html?redirect=${encodeURIComponent(location.pathname)}">Se connecter</a>`;
-    }
-
-    head.appendChild(meta);
-    container.appendChild(head);
+    head.innerHTML = `<strong>${t("home.commentsTitle") || "Commentaires"}</strong>`;
+    root.appendChild(head);
 
     const list = document.createElement("div");
     list.className = "news-comments__list";
 
-    if (!comments?.length) {
+    const arr = comments || [];
+    if (!arr.length) {
       const empty = document.createElement("div");
       empty.className = "news-comments__empty";
       empty.textContent = t("home.noComments") || "Aucun commentaire pour le moment.";
       list.appendChild(empty);
     } else {
-      for (const c of comments) {
+      arr.forEach((c) => {
         const item = document.createElement("div");
         item.className = "news-comment";
 
-        // avatar + content
+        const who = safeText(c.name || "—");
+        const when = fmtDate(c.created_at || "");
+        const msg = safeText(c.message || "");
+
         item.innerHTML = `
           <div class="news-comment__row">
             <div class="news-comment__avatar">${c.avatar_url ? `<img src="${c.avatar_url}" alt="">` : ""}</div>
             <div class="news-comment__content">
-              <div class="news-comment__meta">${safeText(c.name)} • ${fmtDate(c.created_at)}</div>
+              <div class="news-comment__meta">${who} • ${when}</div>
               <div class="news-comment__text"></div>
             </div>
           </div>
         `;
-
-        item.querySelector(".news-comment__text").textContent = safeText(c.message);
+        item.querySelector(".news-comment__text").textContent = msg;
         list.appendChild(item);
-      }
+      });
     }
 
-    container.appendChild(list);
+    root.appendChild(list);
 
-    // Form (only if logged)
-    if (!user) {
+    // Auth gate
+    if (mode === "supabase" && !user) {
       const box = document.createElement("div");
       box.className = "news-comments__login";
+      const back = encodeURIComponent(location.pathname + location.search);
       box.innerHTML = `
-        <p class="muted" style="margin:10px 0 0">${t("home.commentLoginHint") || "Connectez-vous pour commenter."}</p>
+        <p class="muted" style="margin:0 0 10px">${t("home.commentLoginHint") || "Connectez-vous pour commenter."}</p>
+        <a class="btn" href="login.html?redirect=${back}">${t("home.commentLogin") || "Se connecter"}</a>
       `;
-      container.appendChild(box);
+      root.appendChild(box);
       return;
     }
 
     const form = document.createElement("form");
     form.className = "news-comments__form";
+
     form.innerHTML = `
       <input class="input" name="msg" placeholder="${t("home.commentMessage") || "Écrire un commentaire…"}" maxlength="240" required>
-      <button class="btn" type="submit">${t("home.commentSend") || "Publier"}</button>
-      <div class="news-comments__hint">${t("home.commentModerationHint") || "Les commentaires passent en modération avant publication."}</div>
+      <button class="btn" type="submit">${t("home.commentSend") || "Envoyer"}</button>
+      <div class="news-comments__hint">${
+        mode === "supabase"
+          ? t("home.commentModerationHint") || "Les commentaires passent en modération avant publication."
+          : t("home.commentNote") || "Note : les commentaires sont enregistrés sur votre appareil (démo)."
+      }</div>
     `;
 
     form.addEventListener("submit", async (e) => {
@@ -295,63 +290,70 @@
       const msg = safeText(fd.get("msg"));
       if (!msg) return;
 
-      const hint = form.querySelector(".news-comments__hint");
-      hint.textContent = "Envoi…";
+      if (mode === "supabase") {
+        const res = await addCommentSupabase(postId, user, msg);
+        form.reset();
+        const hint = form.querySelector(".news-comments__hint");
+        if (hint) hint.textContent = res.msg || "";
+        return;
+      }
 
-      const res = await addCommentSupabase(postId, user, msg);
-      hint.textContent = res.msg || "";
-      if (res.ok) form.reset();
+      const cur = lsLoad(postId);
+      cur.push({ name: "Local", message: msg, created_at: new Date().toISOString(), avatar_url: "" });
+      lsSave(postId, cur);
+      renderComments(root, postId, lsLoad(postId), "local", null);
+      form.reset();
     });
 
-    container.appendChild(form);
+    root.appendChild(form);
   }
 
-  // -----------------------
-  // Render
-  // -----------------------
+  let renderToken = 0;
+
   async function render() {
+    const token = ++renderToken;
     const root = document.getElementById(ROOT_ID);
     if (!root) return;
 
     root.innerHTML = "";
 
-    const sb = getSB();
-    if (!sb) {
-      root.innerHTML = `<div class="muted">Supabase non configuré.</div>`;
-      return;
-    }
+    let items = await loadPostsSupabase();
+    const mode = items ? "supabase" : "local";
+    const user = mode === "supabase" ? await getUser() : null;
+    if (!items) items = FALLBACK_ITEMS;
 
-    const posts = await loadPostsSupabase();
-    if (!posts || !posts.length) {
-      root.innerHTML = `<div class="muted">Aucune actualité.</div>`;
-      return;
-    }
+    if (token !== renderToken) return;
 
-    const user = await getUser();
-    const ids = posts.map((p) => p.id);
-    const commentsMap = await loadCommentsSupabase(ids);
+    const ids = items.map((x) => x.id);
 
-    for (const post of posts) {
+    const commentsMap =
+      mode === "supabase"
+        ? await loadCommentsSupabase(ids)
+        : Object.fromEntries(ids.map((id) => [id, lsLoad(id)]));
+
+    if (token !== renderToken) return;
+
+    items.forEach((item) => {
       const card = document.createElement("article");
       card.className = "news-card";
 
-      const media = mediaEl(post.media);
-      if (media) card.appendChild(media);
+      const m = mediaEl(item.media);
+      if (m) card.appendChild(m);
 
       const body = document.createElement("div");
       body.className = "news-body";
 
       const meta = document.createElement("div");
       meta.className = "news-meta";
-      meta.textContent = fmtDate(post.date);
+      meta.textContent = fmtDate(item.date);
 
       const h = document.createElement("h3");
       h.className = "news-title";
-      h.textContent = post.title || "";
+      h.textContent = item.title || "";
 
       const p = document.createElement("p");
       p.className = "news-text";
-      p.textContent = post.text || "";
+      p.textContent = item.text || "";
 
       body.appendChild(meta);
       body.appendChild(h);
@@ -360,16 +362,15 @@
 
       const comments = document.createElement("div");
       comments.className = "news-comments";
-      renderComments(comments, post.id, commentsMap[post.id] || [], user);
+      renderComments(comments, item.id, commentsMap[item.id] || [], mode, user);
       card.appendChild(comments);
 
       root.appendChild(card);
-    }
+    });
   }
 
   window.addEventListener("DOMContentLoaded", render);
-  window.addEventListener("i18n:changed", render);
-
-  // If partials are injected (layout.js), rerender after header/footer injection
   document.addEventListener("partials:loaded", render);
+  window.addEventListener("i18n:changed", render);
+  getSB()?.auth?.onAuthStateChange?.(() => render());
 })();
