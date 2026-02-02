@@ -725,3 +725,69 @@ html[data-theme="light"] .field{background:rgba(255,255,255,.70)}
   background:rgba(0,0,0,.35);
   color:#fff;cursor:pointer;
 }
+/* ===== Header profile (avatar + pseudo) ===== */
+#mmgProfileSlot{display:flex;justify-content:flex-end}
+.mmg-profbtn{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(0,0,0,.22);
+  color:#fff;cursor:pointer;
+}
+.mmg-profbtn:hover{border-color:rgba(212,175,55,.35)}
+.mmg-profavatar{
+  width:32px;height:32px;border-radius:12px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);
+  overflow:hidden;flex:0 0 auto;
+}
+.mmg-profavatar img{width:100%;height:100%;object-fit:cover;display:block}
+.mmg-profname{font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mmg-profsmall{opacity:.75;font-size:13px}
+
+/* ===== Modal profil (pseudo + avatar) ===== */
+[hidden]{display:none !important;}
+.pf-modal{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.62);display:grid;place-items:center;padding:18px}
+.pf-card{
+  width:min(640px,100%);
+  background:rgba(20,20,22,.92);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:20px;
+  padding:16px;
+  box-shadow:0 20px 60px rgba(0,0,0,.45);
+  backdrop-filter: blur(10px);
+}
+.pf-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.pf-kicker{font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.7}
+.pf-title{margin:2px 0 0;font-family:"Cinzel",serif;letter-spacing:.02em}
+.pf-x{
+  width:40px;height:40px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.15);
+  background:rgba(255,255,255,.06);
+  color:#fff;cursor:pointer;font-size:22px;line-height:1;
+}
+.pf-row{display:flex;gap:10px;flex-wrap:wrap}
+.pf-muted{opacity:.75}
+.pf-field{margin-top:12px}
+.pf-label{display:block;font-size:13px;opacity:.8;margin:0 0 6px}
+.pf-input{
+  width:100%;
+  padding:12px 14px;border-radius:12px;
+  border:1px solid rgba(255,255,255,.15);
+  background:rgba(0,0,0,.25);color:#fff;
+  box-sizing:border-box;
+}
+.pf-btn{
+  padding:12px 14px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(255,255,255,.08);
+  color:#fff;cursor:pointer;
+}
+.pf-primary{background:rgba(212,175,55,.14);border-color:rgba(212,175,55,.28)}
+.pf-avatarbig{
+  width:56px;height:56px;border-radius:18px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);
+  overflow:hidden;flex:0 0 auto;
+}
+.pf-avatarbig img{width:100%;height:100%;object-fit:cover;display:block}
