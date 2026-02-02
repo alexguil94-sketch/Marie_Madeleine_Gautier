@@ -1,47 +1,38 @@
-(() => {
-  const url = window.SUPABASE_URL;
-  const key = window.SUPABASE_ANON_KEY; // ici c'est ta sb_publishable_...
+// js/supabase-client.js (v2 clean)
+// Crée window.mmgSupabase sans wrapper fetch / AbortController
 
-  if (!url || !key) {
-    console.warn("[SB] Missing SUPABASE_URL or SUPABASE_ANON_KEY");
+(() => {
+  "use strict";
+
+  if (window.mmgSupabase || window.mmg_supabase) {
+    console.log("[SB] client already exists");
     return;
   }
 
-  // Custom fetch: supprime Authorization si c'est une API key (sb_...) et pas un JWT
-  const fetchNoApiKeyBearer = async (input, init = {}) => {
-    const headers = new Headers(init.headers || {});
-    const auth = headers.get("authorization") || headers.get("Authorization");
+  const cfg = window.MMG_SUPABASE || {};
+  const url = cfg.url || window.SUPABASE_URL;
+  const anonKey = cfg.anonKey || window.SUPABASE_ANON_KEY;
 
-    if (auth) {
-      const m = auth.match(/^Bearer\s+(.+)$/i);
-      if (m) {
-        const token = m[1].trim();
-        const looksLikeJwt = token.split(".").length === 3;
-        const looksLikeApiKey =
-          token.startsWith("sb_publishable_") || token.startsWith("sb_secret_");
+  if (!url || !anonKey) {
+    console.error("[SB] Missing config. Check js/supabase-config.js (url + anonKey)");
+    return;
+  }
+  if (!window.supabase?.createClient) {
+    console.error("[SB] supabase-js missing. Include CDN @supabase/supabase-js@2");
+    return;
+  }
 
-        // Si c'est une API key (pas un JWT), on supprime Authorization
-        if (looksLikeApiKey && !looksLikeJwt) {
-          headers.delete("authorization");
-          headers.delete("Authorization");
-        }
-      }
-    }
-
-    return fetch(input, { ...init, headers });
-  };
-
-  // ⚠️ important: ton code utilise window.mmgSupabase
-  window.mmgSupabase = supabase.createClient(url, key, {
+  const sb = window.supabase.createClient(url, anonKey, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
     },
-    global: {
-      fetch: fetchNoApiKeyBearer,
-    },
   });
 
-  console.log("[SB] client ready", { keyPrefix: key.slice(0, 16), keyLength: key.length });
+  window.mmgSupabase = sb;
+  window.mmg_supabase = sb;
+
+  console.log("[SB] client ready", { keyPrefix: String(anonKey).slice(0, 12), url });
+  document.dispatchEvent(new CustomEvent("sb:ready"));
 })();
