@@ -1,6 +1,5 @@
-// js/profile-ui.js (v2)
-// Affiche avatar+pseudo dans le header + modale édition (pseudo/avatar)
-// Robuste: ne crash pas si la page n'a pas la modale
+// js/profile-ui.js (v3)
+// Header: avatar+pseudo + modale profil + onboarding index + lien Admin
 // Requiert: supabase.js + supabase-config.js + supabase-client.js
 
 (() => {
@@ -9,19 +8,59 @@
   window.__MMG_PROFILE_UI_INIT__ = true;
 
   const qs = (s, r = document) => r.querySelector(s);
+  const ONBOARD_KEY = "mmg_profile_onboarded_v1";
 
   const toast = (msg) => {
     const el = document.createElement("div");
     el.textContent = msg;
     el.style.cssText =
       "position:fixed;left:50%;bottom:16px;transform:translateX(-50%);padding:10px 12px;border-radius:12px;" +
-      "background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.12);color:#fff;z-index:99999;font:14px system-ui";
+      "background:rgba(0,0,0,.78);border:1px solid rgba(255,255,255,.14);color:#fff;z-index:99999;font:14px system-ui";
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 2200);
   };
 
   const getSB = () => window.mmgSupabase || window.mmg_supabase || null;
   const getBucket = () => (window.MMG_SUPABASE?.bucket || window.SUPABASE_BUCKET || "media");
+
+  const isIndex = () => {
+    const p = location.pathname.replace(/\/+$/, "");
+    return p === "" || p.endsWith("/index.html");
+  };
+
+  const waitFor = (fn, ms = 3000) =>
+    new Promise((resolve) => {
+      const t0 = Date.now();
+      const tick = () => {
+        const v = fn();
+        if (v) return resolve(v);
+        if (Date.now() - t0 > ms) return resolve(null);
+        requestAnimationFrame(tick);
+      };
+      tick();
+    });
+
+  const waitForSlot = async () => {
+    // header injecté async → on attend le hook
+    const slot = await waitFor(() => qs("#mmgProfileSlot"), 6000);
+    if (slot) return slot;
+
+    // fallback: observe le DOM (cas où l’injection arrive après)
+    return new Promise((resolve) => {
+      const obs = new MutationObserver(() => {
+        const s = qs("#mmgProfileSlot");
+        if (s) {
+          obs.disconnect();
+          resolve(s);
+        }
+      });
+      obs.observe(document.documentElement, { childList: true, subtree: true });
+      setTimeout(() => {
+        obs.disconnect();
+        resolve(null);
+      }, 7000);
+    });
+  };
 
   async function getUser() {
     const sb = getSB();
@@ -34,6 +73,7 @@
     const sb = getSB();
     if (!sb || !user) return null;
 
+    // important: upsert nécessite une policy INSERT sur profiles (own)
     await sb.from("profiles").upsert(
       { id: user.id, display_name: user.user_metadata?.name || null, avatar_url: null },
       { onConflict: "id" }
@@ -46,15 +86,6 @@
       .maybeSingle();
 
     return data || null;
-  }
-
-  function setInert(isOn) {
-    const modal = qs("#pfModal");
-    if (!modal) return;
-    const children = Array.from(document.body.children).filter((x) => x !== modal);
-    children.forEach((el) => {
-      try { el.inert = isOn; } catch {}
-    });
   }
 
   function mountModalIfMissing() {
@@ -78,7 +109,7 @@
         <div id="pfSignedOut" class="pf-muted" hidden>
           Tu dois être connecté pour choisir ton pseudo et ton avatar.
           <div style="margin-top:10px">
-            <a id="pfLoginLink" class="pf-btn pf-primary" href="./login.html">Se connecter</a>
+            <a id="pfLoginLink" class="pf-btn pf-primary" href="login.html">Se connecter</a>
           </div>
         </div>
 
@@ -130,14 +161,20 @@
     });
   }
 
+  function setInert(isOn) {
+    const modal = qs("#pfModal");
+    if (!modal) return;
+    const kids = Array.from(document.body.children).filter((x) => x !== modal);
+    kids.forEach((el) => {
+      try { el.inert = isOn; } catch {}
+    });
+  }
+
   async function uploadAvatar(userId, file) {
     const sb = getSB();
     const bucket = getBucket();
 
-    const ext = (file.name.split(".").pop() || "jpg")
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "") || "jpg";
-
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
     const path = `avatars/${userId}.${ext}`;
 
     const { error } = await sb.storage.from(bucket).upload(path, file, {
@@ -151,22 +188,34 @@
   }
 
   async function renderHeader() {
-    const slot = qs("#mmgProfileSlot");
+    const slot = await waitForSlot();
     if (!slot) return;
 
+    const sb = getSB();
     const user = await getUser();
+
     slot.innerHTML = "";
 
+    // Pas connecté
     if (!user) {
       const a = document.createElement("a");
       a.className = "pill";
       a.href = "login.html?redirect=" + encodeURIComponent(location.pathname + location.search);
       a.textContent = "Se connecter";
       slot.appendChild(a);
+
+      // cache admin link si présent
+      const adminLink = qs("#mmgAdminLink");
+      if (adminLink) adminLink.hidden = true;
       return;
     }
 
     const profile = await ensureProfileRow(user);
+
+    // Admin link
+    const adminLink = qs("#mmgAdminLink");
+    if (adminLink) adminLink.hidden = profile?.role !== "admin";
+
     const name = profile?.display_name || "Mon profil";
     const avatar = profile?.avatar_url || "";
 
@@ -179,17 +228,20 @@
     `;
     btn.addEventListener("click", () => window.MMGProfile.open());
     slot.appendChild(btn);
+
+    // bouton profil flottant (optionnel)
+    const fab = qs("#pfOpen");
+    if (fab) fab.hidden = false;
   }
 
   async function fillModal() {
     const sb = getSB();
     const user = await getUser();
+    if (!sb) return;
 
     const signedOutBox = qs("#pfSignedOut");
     const signedInBox = qs("#pfSignedIn");
     const loginLink = qs("#pfLoginLink");
-
-    if (!sb) return;
 
     if (!user) {
       if (signedOutBox) signedOutBox.hidden = false;
@@ -203,15 +255,16 @@
 
     const profile = await ensureProfileRow(user);
 
-    qs("#pfEmail") && (qs("#pfEmail").textContent = user.email || "");
-    qs("#pfName") && (qs("#pfName").value = profile?.display_name || "");
+    const emailEl = qs("#pfEmail");
+    const nameEl = qs("#pfName");
+    if (emailEl) emailEl.textContent = user.email || "";
+    if (nameEl) nameEl.value = profile?.display_name || "";
 
     const img = qs("#pfAvatarPreview");
     const removeBtn = qs("#pfRemoveAvatar");
     const input = qs("#pfAvatar");
 
     const avatarUrl = profile?.avatar_url || "";
-
     if (img) {
       if (avatarUrl) {
         img.src = avatarUrl;
@@ -221,7 +274,6 @@
         img.style.display = "none";
       }
     }
-
     if (removeBtn) removeBtn.style.display = avatarUrl ? "inline-flex" : "none";
 
     if (input && img && removeBtn) {
@@ -266,8 +318,10 @@
 
       if (error) throw error;
 
+      localStorage.setItem(ONBOARD_KEY, "1");
       if (msg) msg.textContent = "Profil mis à jour ✅";
       toast("Profil mis à jour ✅");
+
       await renderHeader();
       await fillModal();
     } catch (e) {
@@ -322,10 +376,25 @@
       qs("#pfLogout")?.addEventListener("click", signOut);
       qs("#pfOpen")?.addEventListener("click", () => this.open());
 
+      // quand le header est injecté
       document.addEventListener("partials:loaded", () => renderHeader());
-      getSB()?.auth?.onAuthStateChange?.(() => renderHeader());
+
+      // quand la session change
+      const sb = getSB();
+      sb?.auth?.onAuthStateChange?.(() => renderHeader());
 
       await renderHeader();
+
+      // onboarding automatique sur index
+      if (isIndex()) {
+        const user = await getUser();
+        if (user) {
+          const profile = await ensureProfileRow(user);
+          const needs = !profile?.display_name || !profile?.avatar_url;
+          const done = localStorage.getItem(ONBOARD_KEY) === "1";
+          if (needs && !done) await this.open();
+        }
+      }
     },
 
     async open() {
@@ -344,8 +413,12 @@
       modal.hidden = true;
       document.body.style.overflow = "";
       setInert(false);
-    },
+    }
   };
 
-  window.addEventListener("DOMContentLoaded", () => window.MMGProfile.init());
+  window.addEventListener("DOMContentLoaded", async () => {
+    // attend supabase client si besoin (cas rare)
+    await waitFor(() => getSB()?.auth, 6000);
+    window.MMGProfile.init();
+  });
 })();
