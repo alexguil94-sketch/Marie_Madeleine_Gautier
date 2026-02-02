@@ -1,15 +1,18 @@
 /* admin/admin-app.js
-   MMG Admin (core + auth + works + UI)
-   - DB works: id, title, year, category, description, cover_url, thumb_url
-   - Storage bucket: media
+   MMG Admin (core + auth + works)
+   DB works:
+   id (uuid), title, year, category, description,
+   cover_url (text), thumb_url (text), images (jsonb array),
+   sort (int4), is_published (bool), status (text), created_at
+   Storage bucket: media
 */
 
 (() => {
   "use strict";
 
-  // ---------------------------
+  // =========================================================
   // CORE
-  // ---------------------------
+  // =========================================================
   const Admin = (window.Admin = window.Admin || {});
   const qs = (sel, root = document) => root.querySelector(sel);
 
@@ -49,8 +52,12 @@
 
   const assertConfigured = () => {
     const { url, anonKey } = Admin.cfg;
-    if (!url || !anonKey) throw new Error("Supabase non configuré. Vérifie ../js/supabase-config.js (url + anonKey).");
-    if (!window.supabase?.createClient) throw new Error("supabase-js manquant (CDN @supabase/supabase-js@2).");
+    if (!url || !anonKey) {
+      throw new Error("Supabase non configuré. Vérifie ../js/supabase-config.js (url + anonKey).");
+    }
+    if (!window.supabase?.createClient) {
+      throw new Error("supabase-js manquant (CDN @supabase/supabase-js@2).");
+    }
   };
 
   const initClient = () => {
@@ -72,9 +79,9 @@
 
   console.log("[ADMIN] core ready", { url: Admin.cfg.url, bucket: Admin.cfg.bucket });
 
-  // ---------------------------
+  // =========================================================
   // AUTH (admin via profiles.role)
-  // ---------------------------
+  // =========================================================
   const getUser = async () => {
     const { data, error } = await sb.auth.getUser();
     if (error) return { user: null, error };
@@ -97,9 +104,9 @@
     return { ok: true, user };
   };
 
-  // ---------------------------
+  // =========================================================
   // UI (login <-> dash)
-  // ---------------------------
+  // =========================================================
   const loginCard = qs("#loginCard");
   const dash = qs("#dash");
   const adminUser = qs("#adminUser");
@@ -155,9 +162,9 @@
     });
   }
 
-  // ---------------------------
-  // WORKS (TON schéma: cover_url / thumb_url)
-  // ---------------------------
+  // =========================================================
+  // WORKS
+  // =========================================================
   const Works = {
     form: qs("#workForm"),
     list: qs("#worksList"),
@@ -178,10 +185,14 @@
     return e.replace(/[^a-z0-9]/g, "") || "jpg";
   };
 
+  // ----- Dropzone + previews
   const renderPreviews = () => {
     if (!Works.preview) return;
     Works.preview.innerHTML = "";
-    if (Works.dropMeta) Works.dropMeta.textContent = Works.files.length ? `${Works.files.length} fichier(s)` : "";
+
+    if (Works.dropMeta) {
+      Works.dropMeta.textContent = Works.files.length ? `${Works.files.length} fichier(s) sélectionné(s)` : "";
+    }
 
     Works.files.forEach((f, idx) => {
       const card = document.createElement("div");
@@ -243,6 +254,7 @@
     });
   }
 
+  // ----- Storage upload
   const uploadOne = async (path, file) => {
     const { error } = await sb.storage.from(Admin.cfg.bucket).upload(path, file, {
       upsert: true,
@@ -251,10 +263,12 @@
     if (error) throw error;
   };
 
+  // ----- DB list
   const fetchWorks = async () => {
     const { data, error } = await sb
       .from("works")
-      .select("id,title,year,category,description,cover_url,thumb_url,created_at")
+      .select("id,title,year,category,description,cover_url,thumb_url,images,sort,is_published,status,created_at")
+      .order("sort", { ascending: true })
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -277,6 +291,7 @@
       const left = document.createElement("div");
       left.style.display = "flex";
       left.style.gap = "12px";
+      left.style.alignItems = "center";
 
       const thumb = document.createElement("img");
       thumb.style.width = "64px";
@@ -287,18 +302,44 @@
       thumb.src = w.thumb_url || w.cover_url || "";
       if (!thumb.src) thumb.style.background = "rgba(255,255,255,.06)";
 
-      const txt = document.createElement("div");
-      txt.innerHTML = `
-        <div class="admin-item__meta">${w.year ?? ""} • ${w.category ?? ""}</div>
+      const meta = document.createElement("div");
+      const pub = w.is_published ? "publié" : "brouillon";
+      meta.innerHTML = `
+        <div class="admin-item__meta">${pub} • sort=${w.sort ?? 1000} • ${w.year ?? ""} ${w.category ? "• " + w.category : ""}</div>
         <strong>${w.title || "(sans titre)"}</strong>
       `;
 
       left.appendChild(thumb);
-      left.appendChild(txt);
+      left.appendChild(meta);
 
       const actions = document.createElement("div");
       actions.className = "admin-actions";
 
+      // publish toggle
+      const btnPub = document.createElement("button");
+      btnPub.className = "btn";
+      btnPub.type = "button";
+      btnPub.textContent = w.is_published ? "Dépublier" : "Publier";
+      btnPub.addEventListener("click", async () => {
+        btnPub.disabled = true;
+        try {
+          const next = !w.is_published;
+          const { error } = await sb
+            .from("works")
+            .update({ is_published: next, status: next ? "published" : "draft" })
+            .eq("id", w.id);
+          if (error) throw error;
+          toast("Statut mis à jour ✅", "ok");
+          await Works.refresh();
+        } catch (e) {
+          console.error(e);
+          toast(errText(e), "err");
+        } finally {
+          btnPub.disabled = false;
+        }
+      });
+
+      // delete
       const btnDel = document.createElement("button");
       btnDel.className = "btn";
       btnDel.type = "button";
@@ -308,10 +349,9 @@
         if (!confirm(`Supprimer "${w.title}" ?`)) return;
         btnDel.disabled = true;
         try {
-          // optionnel : si tu veux aussi supprimer dans storage, on peut le faire si tu stockes le PATH
           const { error } = await sb.from("works").delete().eq("id", w.id);
           if (error) throw error;
-          toast("Œuvre supprimée.", "ok");
+          toast("Œuvre supprimée ✅", "ok");
           await Works.refresh();
         } catch (e) {
           console.error(e);
@@ -321,7 +361,9 @@
         }
       });
 
+      actions.appendChild(btnPub);
       actions.appendChild(btnDel);
+
       row.appendChild(left);
       row.appendChild(actions);
       Works.list.appendChild(row);
@@ -337,7 +379,7 @@
     }
   };
 
-  // Submit: create work + upload cover + update cover_url/thumb_url
+  // ----- Submit: create work + upload all images + update cover/thumb/images
   if (Works.form) {
     Works.form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -348,11 +390,13 @@
       const yearRaw = String(fd.get("year") || "").trim();
       const category = String(fd.get("category") || "").trim();
       const description = String(fd.get("description") || "").trim();
+      const published = !!fd.get("published");
 
       if (!title) return toast("Titre obligatoire.", "warn");
+      if (!Works.files.length) return toast("Ajoute au moins 1 image.", "warn");
 
       try {
-        // 1) create row
+        // 1) Create row (need id)
         const { data: w, error: e1 } = await sb
           .from("works")
           .insert({
@@ -360,29 +404,47 @@
             year: yearRaw ? Number(yearRaw) : null,
             category: category || null,
             description: description || null,
+            sort: 1000,
+            is_published: published,
+            status: published ? "published" : "draft",
           })
           .select("*")
           .single();
         if (e1) throw e1;
 
-        // 2) upload cover
-        if (Works.files.length) {
-          const cover = Works.files[0];
-          const coverPath = `works/${w.id}/cover.${extOf(cover.name)}`;
-
-          await uploadOne(coverPath, cover);
-
-          const coverUrl = Admin.getPublicUrl(coverPath);
-          // thumb = cover pour l’instant (tu peux faire une vraie miniature plus tard)
-          const thumbUrl = coverUrl;
-
-          const { error: e2 } = await sb.from("works").update({ cover_url: coverUrl, thumb_url: thumbUrl }).eq("id", w.id);
-          if (e2) throw e2;
+        // 2) Upload ALL images and collect public URLs
+        const urls = [];
+        for (let i = 0; i < Works.files.length; i++) {
+          const file = Works.files[i];
+          const path = `works/${w.id}/img_${String(i + 1).padStart(2, "0")}.${extOf(file.name)}`;
+          await uploadOne(path, file);
+          const url = Admin.getPublicUrl(path);
+          if (url) urls.push(url);
         }
 
+        if (!urls.length) {
+          throw new Error("Images uploadées mais URLs introuvables. Vérifie les policies SELECT du bucket media.");
+        }
+
+        // 3) Update row with cover/thumb + images array jsonb
+        const coverUrl = urls[0];
+        const thumbUrl = urls[0];
+
+        const { error: e2 } = await sb
+          .from("works")
+          .update({
+            cover_url: coverUrl,
+            thumb_url: thumbUrl,
+            images: urls, // jsonb array
+          })
+          .eq("id", w.id);
+        if (e2) throw e2;
+
+        // reset UI
         Works.files = [];
         renderPreviews();
         Works.form.reset();
+
         toast("Œuvre enregistrée ✅", "ok");
         await Works.refresh();
       } catch (err) {
@@ -394,9 +456,9 @@
     });
   }
 
-  // ---------------------------
+  // =========================================================
   // BOOT
-  // ---------------------------
+  // =========================================================
   const boot = async () => {
     if (!Works.list) {
       console.warn("[ADMIN] Ajoute <div id='worksList' class='admin-list'></div> après le form #workForm.");
