@@ -1,12 +1,13 @@
-// js/profile-onboarding.js
-// Ouvre automatiquement la modale profil sur index si profil incomplet
+// js/profile-onboarding.js (v2)
+// Ouvre automatiquement la modale profil sur index si pseudo/avatar manquants.
+// Dépend de MMGProfile (profile-ui.js) + Supabase client.
+
 (() => {
   "use strict";
   if (window.__MMG_PROFILE_ONBOARD_INIT__) return;
   window.__MMG_PROFILE_ONBOARD_INIT__ = true;
 
-  const KEY = "mmg_profile_onboard_done_v1";
-
+  const KEY = "mmg_profile_onboard_dismissed_v1";
   const getSB = () => window.mmgSupabase || window.mmg_supabase || null;
 
   async function getUser() {
@@ -23,29 +24,30 @@
     return data || null;
   }
 
-  async function run() {
-    // seulement sur la home
-    if (!location.pathname.endsWith("/") && !location.pathname.endsWith("/index.html") && !location.pathname.endsWith("index.html")) {
-      return;
-    }
+  async function maybeOpen() {
+    // uniquement sur index
+    const isIndex =
+      location.pathname.endsWith("/") ||
+      location.pathname.endsWith("/index.html") ||
+      location.pathname === "/";
 
-    // évite de spam
+    if (!isIndex) return;
     if (localStorage.getItem(KEY) === "1") return;
 
     const user = await getUser();
-    if (!user) return; // pas connecté -> on ne force pas
+    if (!user) return;
 
-    const profile = await getProfile(user.id);
-    const incomplete = !profile?.display_name || !profile?.avatar_url;
+    const p = await getProfile(user.id);
+    const missingName = !p?.display_name || !String(p.display_name).trim();
+    const missingAvatar = !p?.avatar_url;
 
-    if (incomplete && window.MMGProfile?.open) {
-      window.MMGProfile.open();
+    if (missingName || missingAvatar) {
+      // petit délai pour laisser l’injection header se faire
+      setTimeout(() => window.MMGProfile?.open?.(), 250);
     }
-
-    // on marque "fait" seulement si profil complet
-    if (!incomplete) localStorage.setItem(KEY, "1");
   }
 
-  window.addEventListener("DOMContentLoaded", run);
-  document.addEventListener("partials:loaded", run);
+  window.addEventListener("DOMContentLoaded", maybeOpen);
+
+  // option: si tu veux un bouton "plus tard", tu peux le gérer dans UI
 })();

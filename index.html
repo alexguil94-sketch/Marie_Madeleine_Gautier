@@ -70,14 +70,13 @@
           </p>
 
           <div class="hr"></div>
-
           <div id="newsRoot" class="news-grid"></div>
         </div>
       </div>
     </section>
   </main>
 
-  <!-- ✅ PROFIL: Modale pseudo/avatar (index) -->
+  <!-- PROFIL: Modale pseudo/avatar -->
   <section id="pfModal" class="pf-modal" hidden>
     <div class="pf-card" role="dialog" aria-modal="true" aria-labelledby="pfTitle">
       <div class="pf-head">
@@ -98,7 +97,7 @@
       <div id="pfSignedIn" hidden>
         <div class="pf-row" style="align-items:center">
           <div class="pf-avatar">
-            <img id="pfAvatarPreview" alt="" />
+            <img id="pfAvatarPreview" alt="" style="display:none" />
           </div>
 
           <div style="flex:1;min-width:0">
@@ -132,22 +131,21 @@
 
   <div id="siteFooter"></div>
 
-  <!-- ✅ Scripts (ordre clean) -->
-  <script defer src="js/layout.js?v=1"></script>
+  <!-- Scripts: ordre SAFE -->
+  <script src="js/layout.js?v=1"></script>
 
-  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script defer src="js/supabase-config.js?v=1"></script>
-  <script defer src="js/supabase-client.js?v=1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/supabase-config.js?v=1"></script>
+  <script src="js/supabase-client.js?v=1"></script>
 
-  <script defer src="js/profile-ui.js?v=1"></script>
-  
+  <script src="js/profile-ui.js?v=2"></script>
+  <script src="js/profile-onboarding.js?v=2"></script>
 
-  <script defer src="js/news.js?v=1"></script>
+  <script src="js/news.js?v=2"></script>
 
-  <script defer src="js/theme.js?v=1"></script>
-  <script defer src="js/i18n.js?v=1"></script>
-  <script defer src="js/app.js?v=1"></script>
-  <script defer src="js/luxe.js?v=1"></script>
-  <script defer src="js/profile-onboarding.js?v=1"></script>
+  <script src="js/theme.js?v=1"></script>
+  <script src="js/i18n.js?v=1"></script>
+  <script src="js/app.js?v=1"></script>
+  <script src="js/luxe.js?v=1"></script>
 </body>
 </html>
