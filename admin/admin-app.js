@@ -17,6 +17,11 @@
   const isAbort = (e) =>
     e?.name === "AbortError" || /aborted/i.test(String(e?.message || ""));
 
+  // supabase-js can surface AbortError as unhandled rejections (nav/unload/timeouts)
+  window.addEventListener("unhandledrejection", (ev) => {
+    if (isAbort(ev?.reason)) ev.preventDefault();
+  });
+
   const toast = (msg, type = "info") => {
     const el = document.createElement("div");
     el.textContent = msg;
@@ -45,10 +50,30 @@
     return null;
   }
 
-  function redirectLogin() {
-    // si admin dans /admin/, login est à la racine
-    const back = encodeURIComponent("/admin/admin.html");
-    location.replace(`/login.html?redirect=${back}`);
+  function showLogin(msg) {
+    const loginCard = qs("#loginCard");
+    const dash = qs("#dash");
+    if (loginCard) loginCard.hidden = false;
+    if (dash) dash.hidden = true;
+    const adminUser = qs("#adminUser");
+    if (adminUser) adminUser.textContent = "";
+    const btnSignOut = qs("#btnSignOut");
+    if (btnSignOut) btnSignOut.style.display = "none";
+    if (msg) {
+      const el = qs("#loginMsg");
+      if (el) el.textContent = msg;
+    }
+  }
+
+  function showDash() {
+    const loginCard = qs("#loginCard");
+    const dash = qs("#dash");
+    if (loginCard) loginCard.hidden = true;
+    if (dash) dash.hidden = false;
+    const el = qs("#loginMsg");
+    if (el) el.textContent = "";
+    const btnSignOut = qs("#btnSignOut");
+    if (btnSignOut) btnSignOut.style.display = "";
   }
 
   function hard404() {
@@ -132,47 +157,91 @@
 
     console.log("[ADMIN] core ready", { url: (window.MMG_SUPABASE || {}).url || window.SUPABASE_URL });
 
-    // 1) Guard AVANT le reste
+    // Bind local admin login form (fallback / avoids redirects)
+    const loginForm = qs("#loginForm");
+    loginForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msgEl = qs("#loginMsg");
+      if (msgEl) msgEl.textContent = "Connexion…";
+
+      const fd = new FormData(loginForm);
+      const email = String(fd.get("email") || "").trim();
+      const password = String(fd.get("password") || "");
+
+      try {
+        const { data, error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+
+        const res = await ensureAdmin(sb);
+        if (!res.ok) {
+          if (res.reason === "not_admin") {
+            await sb.auth.signOut();
+            showLogin("Accès refusé : ce compte n’est pas admin.");
+            return;
+          }
+          showLogin("Erreur d’auth: " + errText(res.error || res.reason));
+          return;
+        }
+
+        if (msgEl) msgEl.textContent = "";
+        toast("Connecté ✅", "ok");
+        await initAuthed(res);
+      } catch (err) {
+        if (isAbort(err)) return;
+        console.error(err);
+        if (msgEl) msgEl.textContent = "Erreur : " + errText(err);
+      }
+    });
+
+    async function initAuthed(res) {
+      showDash();
+
+      const adminUser = qs("#adminUser");
+      if (adminUser) adminUser.textContent = res.user.email || "";
+
+      const btnSignOut = qs("#btnSignOut") || qs("[data-logout]");
+      btnSignOut?.addEventListener("click", async () => {
+        try { await sb.auth.signOut(); } catch {}
+        toast("Déconnecté.", "ok");
+        showLogin();
+      });
+
+      try {
+        const works = await fetchWorks(sb);
+        renderWorks(qs("#worksList"), works);
+      } catch (e) {
+        if (isAbort(e)) return;
+        console.error(e);
+        toast(errText(e), "err");
+      }
+    }
+
+    // 1) Guard (no redirect; show login card)
     let res;
     try {
       res = await ensureAdmin(sb);
     } catch (e) {
       if (isAbort(e)) return; // navigation/unload
       console.error(e);
-      toast(errText(e), "err");
-      return hard404();
+      showLogin(errText(e));
+      return;
     }
 
     if (!res.ok) {
-      if (res.reason === "not_logged") return redirectLogin();
-      return hard404();
+      if (res.reason === "not_logged") {
+        showLogin();
+        return;
+      }
+      if (res.reason === "not_admin") {
+        try { await sb.auth.signOut(); } catch {}
+        showLogin("Accès refusé : ce compte n’est pas admin.");
+        return;
+      }
+      showLogin("Erreur d’auth: " + errText(res.error || res.reason));
+      return;
     }
 
-    // 2) UI
-    const dash = qs("#dash");
-    const loginCard = qs("#loginCard");
-    if (loginCard) loginCard.hidden = true;
-    if (dash) dash.hidden = false;
-
-    const adminUser = qs("#adminUser");
-    if (adminUser) adminUser.textContent = res.user.email || "";
-
-    const btnSignOut = qs("#btnSignOut") || qs("[data-logout]");
-    btnSignOut?.addEventListener("click", async () => {
-      await sb.auth.signOut();
-      toast("Déconnecté.", "ok");
-      redirectLogin();
-    });
-
-    // 3) Load works (après guard)
-    try {
-      const works = await fetchWorks(sb);
-      renderWorks(qs("#worksList"), works);
-    } catch (e) {
-      if (isAbort(e)) return;
-      console.error(e);
-      toast(errText(e), "err");
-    }
+    await initAuthed(res);
   }
 
   window.addEventListener("DOMContentLoaded", boot);
