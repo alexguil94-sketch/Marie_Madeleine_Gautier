@@ -26,6 +26,8 @@
   const getBucket = () => (window.MMG_SUPABASE?.bucket || window.SUPABASE_BUCKET || "media");
 
   const safeText = (s) => String(s ?? "").replace(/\s+/g, " ").trim();
+  const isAbort = (e) =>
+    e?.name === "AbortError" || /signal is aborted/i.test(String(e?.message || e || ""));
 
   const fmtDate = (iso) => {
     try {
@@ -380,6 +382,12 @@
     });
   }
 
-  window.addEventListener("DOMContentLoaded", render);
-  window.addEventListener("i18n:changed", render);
+  const safeRender = () =>
+    render().catch((err) => {
+      if (isAbort(err)) return;
+      console.error(err);
+    });
+
+  window.addEventListener("DOMContentLoaded", safeRender);
+  window.addEventListener("i18n:changed", safeRender);
 })();

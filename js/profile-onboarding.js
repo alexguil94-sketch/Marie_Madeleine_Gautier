@@ -4,6 +4,9 @@
   if (window.__MMG_PROFILE_ONBOARD__) return;
   window.__MMG_PROFILE_ONBOARD__ = true;
 
+  const isAbort = (e) =>
+    e?.name === "AbortError" || /signal is aborted/i.test(String(e?.message || e || ""));
+
   const isIndex =
     location.pathname === "/" ||
     /\/index\.html$/i.test(location.pathname);
@@ -49,5 +52,10 @@
     }
   }
 
-  window.addEventListener("DOMContentLoaded", run);
+  window.addEventListener("DOMContentLoaded", () => {
+    run().catch((err) => {
+      if (isAbort(err)) return;
+      console.error(err);
+    });
+  });
 })();

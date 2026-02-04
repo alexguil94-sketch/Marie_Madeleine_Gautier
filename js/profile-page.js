@@ -6,6 +6,8 @@
   window.__MMG_PROFILE_PAGE_INIT__ = true;
 
   const qs = (s, r = document) => r.querySelector(s);
+  const isAbort = (e) =>
+    e?.name === "AbortError" || /signal is aborted/i.test(String(e?.message || e || ""));
 
   const getSB = () => window.mmgSupabase || null;
   const getBucket = () => (window.MMG_SUPABASE?.bucket || window.SUPABASE_BUCKET || "media");
@@ -263,5 +265,10 @@
     await render();
   }
 
-  window.addEventListener("DOMContentLoaded", init);
+  window.addEventListener("DOMContentLoaded", () => {
+    init().catch((err) => {
+      if (isAbort(err)) return;
+      console.error(err);
+    });
+  });
 })();

@@ -385,31 +385,35 @@
   });
 
   // Auto init
-  window.addEventListener("DOMContentLoaded", async () => {
-    try {
-      await refreshUI();
-    } catch (err) {
-      if (!isAbort(err)) console.error(err);
-    }
+  window.addEventListener("DOMContentLoaded", () => {
+    (async () => {
+      try {
+        await refreshUI();
+      } catch (err) {
+        if (!isAbort(err)) console.error(err);
+      }
 
-    // Si un redirect est demandé explicitement, on applique la logique (ex: /studio.html)
-    let user = null;
-    try {
-      const { data } = await sb.auth.getSession();
-      user = data?.session?.user || null;
-    } catch (err) {
-      if (!isAbort(err)) console.error(err);
-    }
+      // Si un redirect est demandé explicitement, on applique la logique (ex: /studio.html)
+      let user = null;
+      try {
+        const { data } = await sb.auth.getSession();
+        user = data?.session?.user || null;
+      } catch (err) {
+        if (!isAbort(err)) console.error(err);
+      }
 
-    if (user) {
-      const redirect = getRedirect();
-      if (redirect) {
-        try {
-          await goAfterLogin(user);
-        } catch (err) {
-          if (!isAbort(err)) console.error(err);
+      if (user) {
+        const redirect = getRedirect();
+        if (redirect) {
+          try {
+            await goAfterLogin(user);
+          } catch (err) {
+            if (!isAbort(err)) console.error(err);
+          }
         }
       }
-    }
+    })().catch((err) => {
+      if (!isAbort(err)) console.error(err);
+    });
   });
 })();

@@ -859,6 +859,9 @@
     });
   }
 
+  const isAbort = (e) =>
+    e?.name === "AbortError" || /signal is aborted/i.test(String(e?.message || e || ""));
+
   async function init() {
     // si pas sur la page galerie, stop
     if (!qs("#grid")) return;
@@ -868,5 +871,10 @@
     await fetchPage();
   }
 
-  window.addEventListener("DOMContentLoaded", init);
+  window.addEventListener("DOMContentLoaded", () => {
+    init().catch((err) => {
+      if (isAbort(err)) return;
+      console.error(err);
+    });
+  });
 })();

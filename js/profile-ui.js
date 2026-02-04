@@ -9,6 +9,9 @@
   const qs = (s, r = document) => r.querySelector(s);
   const isProfilePage = /\/profile\.html$/i.test(location.pathname);
 
+  const isAbort = (e) =>
+    e?.name === "AbortError" || /signal is aborted/i.test(String(e?.message || e || ""));
+
   const getSB = () => window.mmgSupabase || null;
   const getBucket = () => (window.MMG_SUPABASE?.bucket || window.SUPABASE_BUCKET || "media");
 
@@ -416,5 +419,10 @@
     },
   };
 
-  window.addEventListener("DOMContentLoaded", () => window.MMGProfile.init());
+  window.addEventListener("DOMContentLoaded", () => {
+    window.MMGProfile.init().catch((err) => {
+      if (isAbort(err)) return;
+      console.error(err);
+    });
+  });
 })();

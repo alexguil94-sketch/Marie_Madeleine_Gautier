@@ -1,6 +1,9 @@
 (function(){
   const ROOT_ID = 'publicationsRoot';
 
+  const isAbort = (e) =>
+    e?.name === "AbortError" || /signal is aborted/i.test(String(e?.message || e || ""));
+
   // Fallback: keeps the site pretty even without Supabase
   const FALLBACK = [
     {
@@ -157,5 +160,10 @@
     render(items.length ? items : FALLBACK);
   }
 
-  window.addEventListener('DOMContentLoaded', init);
+  window.addEventListener('DOMContentLoaded', () => {
+    init().catch((err) => {
+      if (isAbort(err)) return;
+      console.error(err);
+    });
+  });
 })();

@@ -50,7 +50,7 @@ function updateLangButtons(){
 document.addEventListener('click', (e)=>{
   const btn = e.target.closest('[data-lang]');
   if(btn){
-    loadLang(btn.dataset.lang);
+    loadLang(btn.dataset.lang).catch((err) => console.error(err));
   }
 });
 
@@ -60,7 +60,9 @@ document.addEventListener('partials:loaded', ()=>{
   updateLangButtons();
 });
 
-window.addEventListener('DOMContentLoaded', ()=> loadLang(I18N.lang));
+window.addEventListener('DOMContentLoaded', ()=>{
+  loadLang(I18N.lang).catch((err) => console.error(err));
+});
 
 window.__t = t;
 window.__lang = ()=> I18N.lang;

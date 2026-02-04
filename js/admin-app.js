@@ -1575,5 +1575,10 @@
     await initAuthed(res);
   }
 
-  window.addEventListener("DOMContentLoaded", boot);
+  window.addEventListener("DOMContentLoaded", () => {
+    boot().catch((err) => {
+      if (isAbort(err)) return;
+      console.error(err);
+    });
+  });
 })();
