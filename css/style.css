@@ -5,9 +5,18 @@
 }
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;}
+body{margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
 a{text-decoration:none}
 img{max-width:100%; display:block}
+
+/* focus */
+.btn:focus-visible,
+.pill:focus-visible,
+.icon-btn:focus-visible,
+.work:focus-visible{
+  outline:2px solid rgba(197,160,89,.65);
+  outline-offset:3px;
+}
 
 .container{width:min(1180px, calc(100% - 56px)); margin:0 auto}
 @media (max-width:720px){ .container{width:calc(100% - 32px)} }

@@ -124,6 +124,15 @@
     const loadMore = qs("#loadMore");
     if (loadMore) loadMore.disabled = state.loading || !state.hasMore;
 
+    const count = qs("#workCount");
+    if (count) {
+      const shown = state.view.length;
+      const loaded = state.all.length;
+      count.textContent = state.loading
+        ? "Chargement…"
+        : `${shown} œuvre${shown > 1 ? "s" : ""} affichée${shown > 1 ? "s" : ""} • ${loaded} chargée${loaded > 1 ? "s" : ""}`;
+    }
+
     if (state.error) {
       grid.innerHTML = `
         <div class="muted" style="padding:14px 0">
@@ -153,18 +162,17 @@
 
     state.view.forEach((w, idx) => {
       const img = w._imgs?.[0] || "";
+      const sub = [w.year, w.category].filter(Boolean).join(" • ");
       const card = document.createElement("button");
       card.type = "button";
-      card.className = "work-card";
-      card.style.textAlign = "left";
+      card.className = "work work--gallery";
+      card.setAttribute("aria-label", w.title || "Œuvre");
 
       card.innerHTML = `
-        <div class="work-thumb">
-          ${img ? `<img loading="lazy" decoding="async" src="${img}" alt="">` : ""}
-        </div>
-        <div class="work-meta">
-          <div class="work-title">${w.title || "—"}</div>
-          <div class="work-sub muted">${[w.year, w.category].filter(Boolean).join(" • ")}</div>
+        ${img ? `<img loading="lazy" decoding="async" src="${img}" alt="">` : ""}
+        <div class="meta">
+          <div style="font-weight:700">${w.title || "—"}</div>
+          ${sub ? `<div class="muted" style="font-size:12px">${sub}</div>` : ""}
         </div>
       `;
 
@@ -178,7 +186,7 @@
   function setZoom(zoom) {
     state.zoom = Math.max(1, Math.min(4, zoom));
     const img = qs("#lbImg");
-    if (img) img.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.zoom})`;
+    if (img) img.style.transform = `translate(-50%, -50%) translate(${state.panX}px, ${state.panY}px) scale(${state.zoom})`;
   }
 
   function resetPanZoom() {
@@ -214,6 +222,7 @@
 
     state.lightboxIndex = index;
     lb.hidden = false;
+    lb.classList.add("is-open");
     lb.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
     renderLightbox();
@@ -223,6 +232,7 @@
     const lb = qs("#lightbox");
     if (!lb) return;
     lb.hidden = true;
+    lb.classList.remove("is-open");
     lb.setAttribute("aria-hidden", "true");
     document.body.style.overflow = "";
   }
@@ -231,6 +241,38 @@
     if (!state.view.length) return;
     state.lightboxIndex = (state.lightboxIndex + dir + state.view.length) % state.view.length;
     renderLightbox();
+  }
+
+  async function loadFallbackWorks() {
+    try {
+      const res = await fetch("data/works.json", { cache: "no-store" });
+      if (!res.ok) return [];
+      const data = await res.json();
+      if (!Array.isArray(data)) return [];
+
+      return data.map((x, i) => {
+        const src = String(x?.src || x?.thumb || "").trim();
+        const thumb = String(x?.thumb || x?.src || "").trim();
+        const imgs = Array.from(new Set([src, thumb].filter(Boolean))).map(resolveUrl);
+
+        return {
+          id: `demo-${i}`,
+          title: x?.title || `Œuvre ${String(i + 1).padStart(3, "0")}`,
+          year: x?.year || "",
+          category: x?.category || "",
+          description: "",
+          cover_url: src,
+          thumb_url: thumb,
+          images: [],
+          sort: i,
+          is_published: true,
+          created_at: "",
+          _imgs: imgs,
+        };
+      });
+    } catch {
+      return [];
+    }
   }
 
   async function fetchPage() {
@@ -242,6 +284,20 @@
 
     const sb = await waitForSB();
     if (!sb) {
+      if (state.page === 0 && !state.all.length) {
+        const fallback = await loadFallbackWorks();
+        if (fallback.length) {
+          state.all = fallback;
+          state.hasMore = false;
+          state.page = 1;
+          renderCategories();
+          applyFilters();
+          state.loading = false;
+          renderGrid();
+          return;
+        }
+      }
+
       state.loading = false;
       state.hasMore = false;
       state.error = "Connexion indisponible. Impossible de charger la galerie.";
@@ -330,7 +386,8 @@
     qs('[data-zoom="reset"]')?.addEventListener("click", resetPanZoom);
 
     window.addEventListener("keydown", (e) => {
-      if (qs("#lightbox")?.hidden) return;
+      const lb = qs("#lightbox");
+      if (!lb || lb.hidden || !lb.classList.contains("is-open")) return;
       if (e.key === "Escape") closeLightbox();
       if (e.key === "ArrowLeft") navLightbox(-1);
       if (e.key === "ArrowRight") navLightbox(+1);

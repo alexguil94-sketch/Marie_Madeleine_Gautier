@@ -515,6 +515,14 @@ html[data-theme="light"] .lang-grid{background:rgba(0,0,0,.04)}
   padding:clamp(18px, 4vw, 48px);
   margin:0 auto;
 }
+.hero-ctas{
+  display:flex;
+  justify-content:center;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-top:22px;
+}
+.hero-ctas .btn{padding:12px 18px}
 .hero-welcome__title{margin:0; line-height:1.0}
 .hero-welcome__title .drop{
   display:block;
