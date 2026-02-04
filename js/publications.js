@@ -100,6 +100,8 @@
     const root = document.getElementById(ROOT_ID);
     if(!root) return;
 
+    root.classList.add('posts');
+
     root.innerHTML = '';
     (items || []).forEach(p=>{
       const art = document.createElement('article');

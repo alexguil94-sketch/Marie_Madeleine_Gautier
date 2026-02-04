@@ -716,6 +716,12 @@ html[data-theme="light"] .post{background:rgba(255,255,255,.72); border-color:rg
   border-radius:14px;
   border:1px solid rgba(255,255,255,.10);
 }
+.posts .post__media img{
+  height:auto;
+  object-fit:contain;
+  background: rgba(0,0,0,.18);
+}
+html[data-theme="light"] .posts .post__media img{background: rgba(0,0,0,.04)}
 .post__content h3{
   margin:0 0 8px;
   font-family:"Playfair Display", serif;
