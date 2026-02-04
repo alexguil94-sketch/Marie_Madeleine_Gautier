@@ -385,12 +385,19 @@
       qs("#pfLogout")?.addEventListener("click", signOut);
       qs("#pfOpen")?.addEventListener("click", () => this.open());
 
+      const safeRenderHeader = () => {
+        renderHeader().catch((err) => {
+          if (isAbort(err)) return;
+          console.error(err);
+        });
+      };
+
       // Header injecté ? => refresh
-      document.addEventListener("partials:loaded", () => renderHeader());
-      document.addEventListener("mmg:profile-updated", () => renderHeader());
+      document.addEventListener("partials:loaded", safeRenderHeader);
+      document.addEventListener("mmg:profile-updated", safeRenderHeader);
 
       // Session change => refresh
-      (await waitForSB())?.auth?.onAuthStateChange?.(() => renderHeader());
+      (await waitForSB())?.auth?.onAuthStateChange?.(() => safeRenderHeader());
 
       await renderHeader();
 

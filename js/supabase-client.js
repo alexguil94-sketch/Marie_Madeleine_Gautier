@@ -1,4 +1,4 @@
-// js/supabase-client.js (v3)
+// js/supabase-client.js (v4)
 (() => {
   "use strict";
 
@@ -10,9 +10,20 @@
 
   // supabase-js can surface AbortError as unhandled rejections (nav/unload/timeouts)
   // Avoid console noise + broken flows when the browser aborts pending requests.
-  window.addEventListener("unhandledrejection", (ev) => {
-    if (isAbort(ev?.reason)) ev.preventDefault();
-  });
+  const swallowAbort = (ev) => {
+    const r = ev?.reason || ev?.error || ev?.message;
+    if (!isAbort(r)) return;
+    try { ev.preventDefault?.(); } catch {}
+    try { ev.stopImmediatePropagation?.(); } catch {}
+  };
+
+  window.addEventListener("unhandledrejection", swallowAbort, { capture: true });
+  window.addEventListener("error", swallowAbort, { capture: true });
+  window.onunhandledrejection = (ev) => {
+    if (!isAbort(ev?.reason)) return;
+    try { ev.preventDefault?.(); } catch {}
+    return true;
+  };
 
   // Global state to avoid "wait forever" when Supabase isn't available
   // Status: "loading" | "ready" | "unavailable" | "error"
@@ -48,8 +59,6 @@
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        storageKey: "mmg_auth_v1",
-        storage: window.localStorage,
       },
     });
   } catch (e) {
@@ -63,6 +72,17 @@
 
   window.mmgSupabase = sb;
   window.__MMG_SB_STATUS__ = "ready";
+
+  // Reduce auth lock contention when multiple modules call getSession at once.
+  try {
+    const origGetSession = sb.auth.getSession.bind(sb.auth);
+    let inflight = null;
+    sb.auth.getSession = (...args) => {
+      if (inflight) return inflight;
+      inflight = origGetSession(...args).finally(() => (inflight = null));
+      return inflight;
+    };
+  } catch {}
 
   console.log("[SB] client ready", {
     url: cfg.url,

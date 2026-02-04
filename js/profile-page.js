@@ -261,7 +261,12 @@
       });
     });
 
-    sb.auth.onAuthStateChange(() => render());
+    sb.auth.onAuthStateChange(() => {
+      render().catch((err) => {
+        if (isAbort(err)) return;
+        console.error(err);
+      });
+    });
     await render();
   }
 
