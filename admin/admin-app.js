@@ -134,14 +134,22 @@
     const user = data?.session?.user || null;
     if (!user) return { ok: false, reason: "not_logged" };
 
-    const { data: prof, error: pErr } = await sb
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
+    // 1) Read profile role
+    const readRole = async () =>
+      await sb.from("profiles").select("role").eq("id", user.id).maybeSingle();
+
+    let { data: prof, error: pErr } = await readRole();
+
+    // 2) If missing row, seed it (policy: insert own) then re-read
+    if (!pErr && !prof) {
+      const { error: insErr } = await sb.from("profiles").insert({ id: user.id });
+      // Ignore insert errors: if RLS blocks, or row created elsewhere, we'll detect on re-read.
+      if (insErr) console.warn("[admin] profiles insert error", insErr);
+      ({ data: prof, error: pErr } = await readRole());
+    }
 
     if (pErr) return { ok: false, reason: "profile_error", error: pErr };
-    if (prof?.role !== "admin") return { ok: false, reason: "not_admin" };
+    if (prof?.role !== "admin") return { ok: false, reason: "not_admin", role: prof?.role || null };
 
     return { ok: true, user };
   }
@@ -255,7 +263,13 @@
 
   async function boot() {
     const sb = await waitSB();
-    if (!sb) return hard404();
+    if (!sb) {
+      showLogin("Supabase non chargé. Vérifie `js/supabase-config.js` + ta connexion.");
+      qs("#loginForm")
+        ?.querySelectorAll("input, button")
+        .forEach((el) => (el.disabled = true));
+      return;
+    }
 
     let worksCache = [];
     let selectedFiles = [];
@@ -1481,7 +1495,9 @@
         if (!res.ok) {
           if (res.reason === "not_admin") {
             await sb.auth.signOut();
-            showLogin("Accès refusé : ce compte n’est pas admin.");
+            showLogin(
+              "Accès refusé : ce compte n’est pas admin. Dans Supabase → Table Editor → profiles : mets `role=admin` pour ton user, puis reconnecte-toi."
+            );
             return;
           }
           showLogin("Erreur d’auth: " + errText(res.error || res.reason));
@@ -1547,7 +1563,9 @@
       }
       if (res.reason === "not_admin") {
         try { await sb.auth.signOut(); } catch {}
-        showLogin("Accès refusé : ce compte n’est pas admin.");
+        showLogin(
+          "Accès refusé : ce compte n’est pas admin. Dans Supabase → Table Editor → profiles : mets `role=admin` pour ton user, puis reconnecte-toi."
+        );
         return;
       }
       showLogin("Erreur d’auth: " + errText(res.error || res.reason));
