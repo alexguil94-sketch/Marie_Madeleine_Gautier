@@ -1,5 +1,7 @@
 (() => {
   const sb = window.mmgSupabase;
+  const isAbort = (e) =>
+    e?.name === "AbortError" || /signal is aborted/i.test(String(e?.message || e || ""));
 
   const form = document.getElementById("loginForm");
   const msg = document.getElementById("msg");
@@ -113,8 +115,17 @@
   async function renderIdentities() {
     if (!identitiesList) return;
 
-    const { data, error } = await sb.auth.getUserIdentities();
-    if (error) {
+    let data;
+    try {
+      const res = await sb.auth.getUserIdentities();
+      if (res.error) {
+        identitiesList.textContent = "Impossible de récupérer les identités.";
+        return;
+      }
+      data = res.data;
+    } catch (err) {
+      if (isAbort(err)) return;
+      console.error(err);
       identitiesList.textContent = "Impossible de récupérer les identités.";
       return;
     }
@@ -143,21 +154,27 @@
 
     identitiesList.querySelectorAll("[data-unlink]").forEach((b) => {
       b.addEventListener("click", async () => {
-        const provider = b.getAttribute("data-unlink");
-        const { data } = await sb.auth.getUserIdentities();
-        const identity = (data?.identities || []).find((x) => x.provider === provider);
+        try {
+          const provider = b.getAttribute("data-unlink");
+          const resIds = await sb.auth.getUserIdentities();
+          const identity = (resIds.data?.identities || []).find((x) => x.provider === provider);
 
-        if (!identity) return;
+          if (!identity) return;
 
-        setPwdMsg("Déliaison…");
-        const res = await sb.auth.unlinkIdentity(identity);
-        if (res.error) {
-          setPwdMsg("Erreur : " + (res.error.message || "impossible de délier"));
-          return;
+          setPwdMsg("Déliaison…");
+          const res = await sb.auth.unlinkIdentity(identity);
+          if (res.error) {
+            setPwdMsg("Erreur : " + (res.error.message || "impossible de délier"));
+            return;
+          }
+
+          setPwdMsg("Identité déliée ✅");
+          await renderIdentities();
+        } catch (err) {
+          if (isAbort(err)) return;
+          console.error(err);
+          setPwdMsg("Erreur : " + (err?.message || "impossible de délier"));
         }
-
-        setPwdMsg("Identité déliée ✅");
-        await renderIdentities();
       });
     });
   }
@@ -168,8 +185,16 @@
       return;
     }
 
-    const { data } = await sb.auth.getSession();
-    const user = data?.session?.user || null;
+    let user = null;
+    try {
+      const { data } = await sb.auth.getSession();
+      user = data?.session?.user || null;
+    } catch (err) {
+      if (isAbort(err)) return;
+      console.error(err);
+      setMsg("Erreur réseau. Réessaie.");
+      return;
+    }
 
     if (!user) {
       who.textContent = "";
@@ -211,15 +236,24 @@
     const email = String(fd.get("email") || "").trim();
     const password = String(fd.get("password") || "");
 
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) {
-      setMsg("Erreur : " + (error.message || "connexion impossible"));
-      return;
-    }
+    try {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) {
+        setMsg("Erreur : " + (error.message || "connexion impossible"));
+        return;
+      }
 
-    setMsg("");
-    await refreshUI();
-    await goAfterLogin(data.user);
+      setMsg("");
+      await refreshUI();
+      await goAfterLogin(data.user);
+    } catch (err) {
+      if (isAbort(err)) {
+        setMsg("Connexion interrompue (timeout). Réessaie.");
+        return;
+      }
+      console.error(err);
+      setMsg("Erreur : " + (err?.message || "connexion impossible"));
+    }
   });
 
   // Forgot password -> redirect to login page (recovery flow)
@@ -232,22 +266,34 @@
 
     setMsg("Envoi de l’email de récupération…");
 
-    const redirectTo = new URL("/login.html", location.origin).toString();
-    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
+    try {
+      const redirectTo = new URL("/login.html", location.origin).toString();
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
 
-    if (error) {
-      setMsg("Erreur : " + (error.message || "impossible d’envoyer l’email"));
-      return;
+      if (error) {
+        setMsg("Erreur : " + (error.message || "impossible d’envoyer l’email"));
+        return;
+      }
+      setMsg("Email envoyé ✅ Ouvre le lien dans ta boîte mail (rapidement).");
+    } catch (err) {
+      if (isAbort(err)) return;
+      console.error(err);
+      setMsg("Erreur : " + (err?.message || "impossible d’envoyer l’email"));
     }
-    setMsg("Email envoyé ✅ Ouvre le lien dans ta boîte mail (rapidement).");
   });
 
   // Sign out
   btnSignOut?.addEventListener("click", async () => {
-    await sb.auth.signOut();
-    setMsg("Déconnecté.");
-    setPwdMsg("");
-    await refreshUI();
+    try {
+      await sb.auth.signOut();
+      setMsg("Déconnecté.");
+      setPwdMsg("");
+      await refreshUI();
+    } catch (err) {
+      if (isAbort(err)) return;
+      console.error(err);
+      setMsg("Erreur : " + (err?.message || "impossible de se déconnecter"));
+    }
   });
 
   // ------------------------
@@ -257,11 +303,17 @@
     btn.addEventListener("click", async () => {
       const provider = btn.getAttribute("data-oauth");
       setMsg("Redirection " + provider + "…");
-      const { error } = await sb.auth.signInWithOAuth({
-        provider,
-        options: { redirectTo: buildSelfRedirectUrl() },
-      });
-      if (error) setMsg("Erreur : " + (error.message || "OAuth impossible"));
+      try {
+        const { error } = await sb.auth.signInWithOAuth({
+          provider,
+          options: { redirectTo: buildSelfRedirectUrl() },
+        });
+        if (error) setMsg("Erreur : " + (error.message || "OAuth impossible"));
+      } catch (err) {
+        if (isAbort(err)) return;
+        console.error(err);
+        setMsg("Erreur : " + (err?.message || "OAuth impossible"));
+      }
     });
   });
 
@@ -273,11 +325,17 @@
     btn.addEventListener("click", async () => {
       const provider = btn.getAttribute("data-link");
       setPwdMsg("Redirection pour lier " + provider + "…");
-      const { error } = await sb.auth.linkIdentity({
-        provider,
-        options: { redirectTo: buildSelfRedirectUrl() },
-      });
-      if (error) setPwdMsg("Erreur : " + (error.message || "link impossible"));
+      try {
+        const { error } = await sb.auth.linkIdentity({
+          provider,
+          options: { redirectTo: buildSelfRedirectUrl() },
+        });
+        if (error) setPwdMsg("Erreur : " + (error.message || "link impossible"));
+      } catch (err) {
+        if (isAbort(err)) return;
+        console.error(err);
+        setPwdMsg("Erreur : " + (err?.message || "link impossible"));
+      }
     });
   });
 
@@ -301,36 +359,57 @@
       return;
     }
 
-    setPwdMsg("Mise à jour…");
-    const { error } = await sb.auth.updateUser({ password: p1 });
+    try {
+      setPwdMsg("Mise à jour…");
+      const { error } = await sb.auth.updateUser({ password: p1 });
 
-    if (error) {
-      setPwdMsg("Erreur : " + (error.message || "impossible de mettre à jour"));
-      return;
-    }
+      if (error) {
+        setPwdMsg("Erreur : " + (error.message || "impossible de mettre à jour"));
+        return;
+      }
 
-    setPwdMsg("Mot de passe mis à jour ✅");
-    // En recovery, mieux de forcer une reconnexion propre
-    if (isRecoveryFlow()) {
-      await sb.auth.signOut();
-      setMsg("Mot de passe changé. Reconnecte-toi.");
-      // nettoie le hash (token) de l’URL
-      history.replaceState({}, document.title, location.pathname + location.search);
-      await refreshUI();
+      setPwdMsg("Mot de passe mis à jour ✅");
+      // En recovery, mieux de forcer une reconnexion propre
+      if (isRecoveryFlow()) {
+        await sb.auth.signOut();
+        setMsg("Mot de passe changé. Reconnecte-toi.");
+        // nettoie le hash (token) de l’URL
+        history.replaceState({}, document.title, location.pathname + location.search);
+        await refreshUI();
+      }
+    } catch (err) {
+      if (isAbort(err)) return;
+      console.error(err);
+      setPwdMsg("Erreur : " + (err?.message || "impossible de mettre à jour"));
     }
   });
 
   // Auto init
   window.addEventListener("DOMContentLoaded", async () => {
-    await refreshUI();
+    try {
+      await refreshUI();
+    } catch (err) {
+      if (!isAbort(err)) console.error(err);
+    }
 
     // Si un redirect est demandé explicitement, on applique la logique (ex: /studio.html)
-    const { data } = await sb.auth.getSession();
-    const user = data?.session?.user || null;
+    let user = null;
+    try {
+      const { data } = await sb.auth.getSession();
+      user = data?.session?.user || null;
+    } catch (err) {
+      if (!isAbort(err)) console.error(err);
+    }
 
     if (user) {
       const redirect = getRedirect();
-      if (redirect) await goAfterLogin(user);
+      if (redirect) {
+        try {
+          await goAfterLogin(user);
+        } catch (err) {
+          if (!isAbort(err)) console.error(err);
+        }
+      }
     }
   });
 })();

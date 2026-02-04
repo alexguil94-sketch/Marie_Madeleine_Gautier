@@ -5,6 +5,15 @@
   if (window.__MMG_SB_INIT__) return;
   window.__MMG_SB_INIT__ = true;
 
+  const isAbort = (e) =>
+    e?.name === "AbortError" || /signal is aborted/i.test(String(e?.message || e || ""));
+
+  // supabase-js can surface AbortError as unhandled rejections (nav/unload/timeouts)
+  // Avoid console noise + broken flows when the browser aborts pending requests.
+  window.addEventListener("unhandledrejection", (ev) => {
+    if (isAbort(ev?.reason)) ev.preventDefault();
+  });
+
   // Global state to avoid "wait forever" when Supabase isn't available
   // Status: "loading" | "ready" | "unavailable" | "error"
   window.__MMG_SB_STATUS__ = "loading";
