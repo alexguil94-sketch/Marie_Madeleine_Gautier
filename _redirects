@@ -1,4 +1,7 @@
-/admin   /admin/   301!
+/admin   /studio.html   301!
+/admin/  /studio.html   301
+/studio  /studio.html   200
+/studio/ /studio.html   200
 /gallery   /gallery.html   200
 /artiste   /artiste.html   200
 /utopia    /utopia.html    200
@@ -6,4 +9,3 @@
 /agenda    /agenda.html    200
 /contact   /contact.html   200
 /login     /login.html     200
-/admin     /admin/         301

@@ -6,13 +6,14 @@
   <meta name="robots" content="noindex,nofollow" />
   <title>Administration</title>
 
-  <link rel="stylesheet" href="../css/admin.css?v=1" />
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="/css/admin.css?v=1" />
 </head>
 
 <body>
   <div class="admin-wrap">
     <div class="admin-head">
-      <a class="admin-brand" href="../index.html"><strong>MMG</strong></a>
+      <a class="admin-brand" href="/index.html"><strong>MMG</strong></a>
 
       <div class="admin-login-row">
         <span id="adminUser" class="admin-user"></span>
@@ -37,8 +38,8 @@
 
         <div class="admin-login-row">
           <button class="btn" type="submit">Se connecter</button>
-          <a class="btn" href="../login.html?redirect=%2Fstudio.html">Connexion globale</a>
-          <a class="btn" href="./reset.html">Mot de passe oublié</a>
+          <a class="btn" href="/login.html?redirect=%2Fstudio.html">Connexion globale</a>
+          <a class="btn" href="/login.html">Mot de passe oublié</a>
         </div>
 
         <div id="loginMsg" class="muted" style="margin-top:10px"></div>
@@ -111,7 +112,6 @@
             <div id="workMsg" class="muted"></div>
           </form>
 
-          <!-- ✅ IMPORTANT : la liste manquait chez toi -->
           <div id="worksList" class="admin-list"></div>
         </section>
 
@@ -242,10 +242,9 @@
 
   <!-- ✅ Scripts (ordre clean) -->
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script defer src="../js/supabase-config.js?v=1"></script>
-  <script defer src="../js/supabase-client.js?v=4"></script>
+  <script defer src="/js/supabase-config.js?v=1"></script>
+  <script defer src="/js/supabase-client.js?v=4"></script>
 
-  <!-- ✅ Ton bundle admin -->
-  <script defer src="../js/admin-app.js?v=4"></script>
+  <script defer src="/js/admin-app.js?v=4"></script>
 </body>
 </html>

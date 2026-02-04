@@ -46,7 +46,7 @@
     return u.toString();
   };
 
-  const isAdminTarget = (path) => path.includes("/admin");
+  const isAdminTarget = (path) => path.includes("/admin") || path.includes("/studio");
 
   const isRecoveryFlow = () => {
     // Supabase met souvent type=recovery dans le hash
@@ -191,7 +191,7 @@
     // show "go admin" only if role=admin
     if (btnGoAdmin) {
       btnGoAdmin.style.display = profile?.role === "admin" ? "" : "none";
-      btnGoAdmin.onclick = () => (location.href = "admin/");
+      btnGoAdmin.onclick = () => (location.href = "/studio.html");
     }
 
     // Si on arrive via un lien recovery, on met l’accent sur le changement de mot de passe
@@ -324,7 +324,7 @@
   window.addEventListener("DOMContentLoaded", async () => {
     await refreshUI();
 
-    // Si un redirect est demandé explicitement, on applique la logique (ex: /admin/)
+    // Si un redirect est demandé explicitement, on applique la logique (ex: /studio.html)
     const { data } = await sb.auth.getSession();
     const user = data?.session?.user || null;
 

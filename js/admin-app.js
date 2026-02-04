@@ -1,4 +1,4 @@
-// admin/admin-app.js (v3)
+// js/admin-app.js (v4)
 // - Guard admin AVANT toute requête
 // - CRUD œuvres (titre/texte + publier + image cover)
 // - Best-effort cleanup Storage

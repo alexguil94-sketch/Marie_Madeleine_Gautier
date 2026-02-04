@@ -4,11 +4,11 @@
 Dans Supabase → **Authentication → Settings** :
 - Désactive **Allow new users to sign up** (invite only)
 - Ajoute les **Redirect URLs** :
-- `https://marie-madeleine-gautier.netlify.app/admin/`
+- `https://marie-madeleine-gautier.netlify.app/studio.html`
 - `https://marie-madeleine-gautier.netlify.app/login.html`
-- ton futur domaine : `https://marie-madeleine-gautier.fr/admin/` (exemple)
+- ton futur domaine : `https://marie-madeleine-gautier.fr/studio.html` (exemple)
 - ton futur domaine : `https://marie-madeleine-gautier.fr/login.html` (exemple)
-- (optionnel) `http://localhost:5500/login.html` + `http://localhost:5500/admin/` si tu testes en local
+- (optionnel) `http://localhost:5500/login.html` + `http://localhost:5500/studio.html` si tu testes en local
 
 💡 Si tu actives Google/Discord/Facebook, assure-toi aussi que ces URLs sont autorisées côté provider.
 
@@ -23,7 +23,7 @@ Ensuite :
 
 ## 4) Créer ton compte admin
 Option simple :
-1. Va sur `/admin/`
+1. Va sur `/studio.html`
 2. Connecte-toi avec ton email/mot de passe (user existant)
 3. Dans Supabase → **Table Editor → profiles** :
    - mets `role = admin` pour ton user (id = uuid du user auth)
