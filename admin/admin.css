@@ -413,3 +413,35 @@ hr{
   margin:14px 0;
 }
 
+/* Modal */
+.admin-modal{
+  position:fixed;
+  inset:0;
+  z-index:99999;
+  background:rgba(0,0,0,.62);
+  display:grid;
+  place-items:center;
+  padding:18px;
+}
+.admin-modal__card{width:min(860px, 100%)}
+.admin-modal__head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+.admin-modal__title{
+  margin:10px 0 0;
+  font-family:"Cinzel", serif;
+  letter-spacing:.04em;
+}
+.admin-modal__actions{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:4px;
+}
+.admin-modal__actionsRight{display:flex; gap:10px; flex-wrap:wrap}
+

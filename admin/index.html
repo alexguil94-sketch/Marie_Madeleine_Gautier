@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow" />
   <title>Administration</title>
 
-  <link rel="stylesheet" href="./admin.css?v=1" />
+  <link rel="stylesheet" href="./admin.css?v=2" />
 </head>
 
 <body>
@@ -51,6 +51,9 @@
         <div class="admin-kicker">Navigation</div>
         <nav class="admin-nav">
           <button class="admin-nav__btn is-active" type="button" data-view="works">Galerie</button>
+          <button class="admin-nav__btn" type="button" data-view="news">Actualités</button>
+          <button class="admin-nav__btn" type="button" data-view="publications">Publications</button>
+          <button class="admin-nav__btn" type="button" data-view="comments">Commentaires</button>
         </nav>
 
         <div class="admin-tip">
@@ -111,6 +114,128 @@
           <!-- ✅ IMPORTANT : la liste manquait chez toi -->
           <div id="worksList" class="admin-list"></div>
         </section>
+
+        <section id="view-news" hidden>
+          <div class="admin-view__head">
+            <h2 style="margin:0">Actualités</h2>
+          </div>
+
+          <form id="newsForm" class="admin-form">
+            <input type="hidden" name="id" />
+
+            <div class="field">
+              <span>Titre</span>
+              <input class="input" name="title" required />
+            </div>
+
+            <div class="field">
+              <span>Texte</span>
+              <textarea class="input" name="body" rows="5"></textarea>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <span>Date</span>
+                <input class="input" name="published_at" type="date" />
+              </div>
+              <div class="field">
+                <span>Publié</span>
+                <label class="admin-toggle">
+                  <input type="checkbox" name="is_published" checked />
+                  <span>oui</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <span>Média</span>
+                <select class="input" name="media_type">
+                  <option value="image">Image</option>
+                  <option value="youtube">YouTube</option>
+                </select>
+              </div>
+              <div class="field" data-news-youtube hidden>
+                <span>YouTube (ID ou URL)</span>
+                <input class="input" name="youtube" placeholder="https://youtu.be/..." />
+              </div>
+              <div class="field" data-news-image>
+                <span>Image</span>
+                <input id="newsImage" class="input" type="file" accept="image/*" />
+              </div>
+            </div>
+
+            <div id="newsPreview" class="dz-previews" style="grid-template-columns:repeat(3, 1fr)"></div>
+
+            <div class="admin-login-row">
+              <button class="btn" type="submit">Enregistrer</button>
+              <button id="newsCancel" class="btn" type="button" hidden>Annuler</button>
+            </div>
+            <div id="newsMsg" class="muted"></div>
+          </form>
+
+          <div id="newsList" class="admin-list"></div>
+        </section>
+
+        <section id="view-publications" hidden>
+          <div class="admin-view__head">
+            <h2 style="margin:0">Publications</h2>
+          </div>
+
+          <form id="pubForm" class="admin-form">
+            <input type="hidden" name="id" />
+
+            <div class="field">
+              <span>Titre</span>
+              <input class="input" name="title" required />
+            </div>
+
+            <div class="field">
+              <span>Texte</span>
+              <textarea class="input" name="body" rows="7"></textarea>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <span>Date</span>
+                <input class="input" name="published_at" type="date" />
+              </div>
+              <div class="field">
+                <span>Publié</span>
+                <label class="admin-toggle">
+                  <input type="checkbox" name="is_published" checked />
+                  <span>oui</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="field">
+              <span>Images (max 6)</span>
+              <input id="pubImages" class="input" type="file" accept="image/*" multiple />
+              <div id="pubPreview" class="dz-previews"></div>
+            </div>
+
+            <div class="admin-login-row">
+              <button class="btn" type="submit">Enregistrer</button>
+              <button id="pubCancel" class="btn" type="button" hidden>Annuler</button>
+            </div>
+            <div id="pubMsg" class="muted"></div>
+          </form>
+
+          <div id="pubList" class="admin-list"></div>
+        </section>
+
+        <section id="view-comments" hidden>
+          <div class="admin-view__head">
+            <h2 style="margin:0">Modération</h2>
+          </div>
+
+          <div class="admin-card">
+            <div class="muted" style="margin-bottom:10px">Commentaires en attente d’approbation.</div>
+            <div id="modMsg" class="muted"></div>
+            <div id="moderationList" class="admin-list"></div>
+          </div>
+        </section>
       </main>
     </section>
   </div>
@@ -121,6 +246,6 @@
   <script defer src="../js/supabase-client.js?v=4"></script>
 
   <!-- ✅ Ton bundle admin -->
-  <script defer src="./admin-app.js?v=2"></script>
+  <script defer src="./admin-app.js?v=3"></script>
 </body>
 </html>

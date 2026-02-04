@@ -819,6 +819,112 @@ html[data-theme="light"] .footer-bottom{border-top-color:rgba(0,0,0,.10)}
 }
 
 /* -----------------------------
+   Gallery: Admin quick menu + edit modal
+------------------------------*/
+.work-admin{
+  position:absolute;
+  top:10px;
+  right:10px;
+  z-index:6;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:8px;
+  opacity:0;
+  transform: translateY(-2px);
+  transition: opacity .18s ease, transform .18s ease;
+}
+.work--gallery:hover .work-admin,
+.work--gallery:focus-within .work-admin{
+  opacity:1;
+  transform:none;
+}
+.work-admin__btn{
+  width:38px;
+  height:38px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(0,0,0,.40);
+  color:var(--text);
+  cursor:pointer;
+  display:grid;
+  place-items:center;
+  font-size:22px;
+  line-height:1;
+  backdrop-filter: blur(10px);
+}
+html[data-theme="light"] .work-admin__btn{background:rgba(255,255,255,.78); border-color:rgba(0,0,0,.12)}
+.work-admin__btn:hover{border-color:rgba(197,160,89,.38); background:rgba(0,0,0,.52)}
+html[data-theme="light"] .work-admin__btn:hover{background:rgba(255,255,255,.92)}
+
+.work-admin__menu{
+  min-width:170px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(0,0,0,.55);
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow: var(--shadow);
+}
+html[data-theme="light"] .work-admin__menu{background:rgba(255,255,255,.92); border-color:rgba(0,0,0,.12)}
+.work-admin__menu button{
+  width:100%;
+  text-align:left;
+  padding:10px 12px;
+  background:transparent;
+  border:0;
+  border-bottom:1px solid rgba(255,255,255,.10);
+  color:inherit;
+  cursor:pointer;
+  font:inherit;
+}
+html[data-theme="light"] .work-admin__menu button{border-bottom-color:rgba(0,0,0,.08)}
+.work-admin__menu button:hover{background:rgba(197,160,89,.12)}
+.work-admin__menu button.danger:hover{background:rgba(220,70,70,.14)}
+.work-admin__menu button:last-child{border-bottom:0}
+
+/* Edit modal (shared look with luxe UI) */
+.mmg-modal{
+  position:fixed;
+  inset:0;
+  z-index:99998;
+  background:rgba(0,0,0,.62);
+  display:grid;
+  place-items:center;
+  padding:18px;
+}
+html[data-theme="light"] .mmg-modal{background:rgba(0,0,0,.42)}
+.mmg-card{
+  width:min(760px, 100%);
+  background:rgba(20,20,22,.92);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:20px;
+  padding:16px;
+  box-shadow:0 20px 60px rgba(0,0,0,.45);
+  backdrop-filter: blur(10px);
+}
+html[data-theme="light"] .mmg-card{
+  background:rgba(255,255,255,.94);
+  border-color:rgba(0,0,0,.12);
+}
+.mmg-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+.mmg-title{
+  font-family:"Cinzel","Playfair Display",Georgia,serif;
+  letter-spacing:.02em;
+}
+.mmg-form{display:grid; gap:12px}
+.mmg-label{display:block; font-size:13px; opacity:.85; margin:0 0 6px}
+.mmg-row{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap}
+.mmg-check{display:flex; align-items:center; gap:10px}
+.mmg-check input{width:18px;height:18px; accent-color: var(--gold)}
+.mmg-actions{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:4px}
+.mmg-actions__right{display:flex; gap:10px; flex-wrap:wrap}
+
+/* -----------------------------
    Profile (header slot + modal)
 ----------------------------- */
 #mmgProfileSlot{display:flex;justify-content:flex-end}

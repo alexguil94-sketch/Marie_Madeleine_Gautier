@@ -31,8 +31,48 @@
     return s.split(/\n+/).map(x=>x.trim()).filter(Boolean).slice(0, 8);
   }
 
+  const getSB = ()=> window.mmgSupabase || null;
+  const getBucket = ()=> (window.MMG_SUPABASE?.bucket || window.SUPABASE_BUCKET || "media");
+
+  const waitForSB = async () => {
+    if (getSB()) return getSB();
+
+    // If Supabase init already finished (success or failure), don't wait.
+    const status = window.__MMG_SB_STATUS__;
+    if (status && status !== "loading") return null;
+
+    return await new Promise((resolve) => {
+      let done = false;
+      const onReady = () => {
+        if (done) return;
+        done = true;
+        resolve(getSB());
+      };
+
+      document.addEventListener("sb:ready", onReady, { once: true });
+
+      setTimeout(() => {
+        if (done) return;
+        done = true;
+        document.removeEventListener("sb:ready", onReady);
+        resolve(getSB());
+      }, 6000);
+    });
+  };
+
+  const resolveUrl = (uOrPath) => {
+    const v = String(uOrPath || "").trim();
+    if (!v) return "";
+    if (v.startsWith("http://") || v.startsWith("https://") || v.startsWith("/")) return v;
+
+    const sb = getSB();
+    if (!sb?.storage) return v;
+    const { data } = sb.storage.from(getBucket()).getPublicUrl(v);
+    return data?.publicUrl || v;
+  };
+
   async function loadFromSupabase(){
-    const sb = window.mmgSupabase;
+    const sb = await waitForSB();
     if(!sb) return null;
 
     const { data, error } = await sb
@@ -72,7 +112,7 @@
       if(imgs.length){
         imgs.forEach(src=>{
           const img = document.createElement('img');
-          img.src = src;
+          img.src = resolveUrl(src);
           img.alt = p.title || '';
           img.loading = 'lazy';
           img.decoding = 'async';
