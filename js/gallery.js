@@ -1,4 +1,4 @@
-// js/gallery.js (v5)
+// js/gallery.js (v6)
 // Tables: works (+ optional work_images)
 (() => {
   "use strict";
@@ -677,6 +677,19 @@
 
     if (error) {
       console.warn("[gallery] load error:", error);
+      if (!state.isAdmin && state.page === 0 && !state.all.length) {
+        const fallback = await loadFallbackWorks();
+        if (fallback.length) {
+          state.all = fallback;
+          state.hasMore = false;
+          state.page = 1;
+          renderCategories();
+          applyFilters();
+          state.loading = false;
+          renderGrid();
+          return;
+        }
+      }
       state.loading = false;
       state.error = error.message || "Erreur de chargement.";
       renderGrid();

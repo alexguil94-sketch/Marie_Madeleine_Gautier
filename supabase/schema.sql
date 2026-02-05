@@ -365,7 +365,7 @@ drop policy if exists "media admin delete" on storage.objects;
 create policy "media public read"
 on storage.objects
 for select
-to anon
+to anon, authenticated
 using (bucket_id = 'media');
 
 create policy "media admin insert"
@@ -388,48 +388,3 @@ values ('80bf5061-15d7-4d5c-afdb-492c024fb320', 'admin', 'alexguil94@hotmail.fr'
 on conflict (id) do update
 set role = excluded.role,
     display_name = excluded.display_name;
--- Helper admin check (si pas déjà)
-create or replace function public.is_admin()
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists(
-    select 1 from public.profiles p
-    where p.id = auth.uid() and p.role = 'admin'
-  );
-$$;
-
--- NEWS POSTS write
-drop policy if exists "news admin write" on public.news_posts;
-create policy "news admin write"
-on public.news_posts
-for all
-to authenticated
-using (public.is_admin())
-with check (public.is_admin());
-
--- WORKS write
-drop policy if exists "works admin write" on public.works;
-create policy "works admin write"
-on public.works
-for all
-to authenticated
-using (public.is_admin())
-with check (public.is_admin());
-
--- Storage admin insert/delete
-drop policy if exists "media admin insert" on storage.objects;
-drop policy if exists "media admin delete" on storage.objects;
-
-create policy "media admin insert"
-on storage.objects for insert
-to authenticated
-with check (bucket_id = 'media' and public.is_admin());
-
-create policy "media admin delete"
-on storage.objects for delete
-to authenticated
-using (bucket_id = 'media' and public.is_admin());
