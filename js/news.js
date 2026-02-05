@@ -100,18 +100,24 @@
     if (!media) return null;
 
     if (media.type === "image") {
+      const wrap = document.createElement("div");
+      wrap.className = "news-media news-media--image";
+
       const img = document.createElement("img");
       img.src = resolveUrl(media.src);
       img.alt = media.alt || "";
       img.loading = "lazy";
       img.decoding = "async";
-      img.className = "news-media";
-      return img;
+
+      wrap.appendChild(img);
+      return wrap;
     }
 
     if (media.type === "video") {
+      const wrap = document.createElement("div");
+      wrap.className = "news-media news-media--frame";
+
       const v = document.createElement("video");
-      v.className = "news-media";
       v.controls = true;
       v.preload = "metadata";
       if (media.poster) v.poster = resolveUrl(media.poster);
@@ -119,12 +125,14 @@
       src.src = resolveUrl(media.src);
       src.type = "video/mp4";
       v.appendChild(src);
-      return v;
+
+      wrap.appendChild(v);
+      return wrap;
     }
 
     if (media.type === "youtube") {
       const wrap = document.createElement("div");
-      wrap.className = "news-yt";
+      wrap.className = "news-media news-media--frame";
       const iframe = document.createElement("iframe");
       iframe.src = `https://www.youtube-nocookie.com/embed/${media.id}`;
       iframe.title = "YouTube video";

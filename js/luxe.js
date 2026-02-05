@@ -100,19 +100,141 @@
     const carousel = document.querySelector('[data-nav-carousel]');
     if(carousel){
       const track = carousel.querySelector('.nav-carousel__track');
-      const slides = Array.from(carousel.querySelectorAll('.nav-carousel__slide'));
       const prev = carousel.querySelector('[data-carousel-prev]');
       const next = carousel.querySelector('[data-carousel-next]');
       const dotsWrap = carousel.querySelector('[data-carousel-dots]');
+      const countEl = carousel.querySelector('[data-carousel-count]');
+
+      const isAbort = (e)=>
+        e?.name === 'AbortError' || /signal is aborted/i.test(String(e?.message || e || ''));
+
+      const getSB = ()=> window.mmgSupabase || null;
+      const getBucket = ()=> (window.MMG_SUPABASE?.bucket || window.SUPABASE_BUCKET || 'media');
+
+      const waitForSB = async (timeoutMs = 6000)=>{
+        if(getSB()) return getSB();
+
+        const status = window.__MMG_SB_STATUS__;
+        if(status && status !== 'loading') return null;
+
+        return await new Promise((resolve)=>{
+          let done = false;
+          const onReady = ()=>{
+            if(done) return;
+            done = true;
+            resolve(getSB());
+          };
+
+          document.addEventListener('sb:ready', onReady, { once:true });
+
+          setTimeout(()=>{
+            if(done) return;
+            done = true;
+            document.removeEventListener('sb:ready', onReady);
+            resolve(getSB());
+          }, timeoutMs);
+        });
+      };
+
+      const resolveUrl = (uOrPath)=>{
+        const v = String(uOrPath || '').trim();
+        if(!v) return '';
+        if(v.startsWith('http://') || v.startsWith('https://') || v.startsWith('/')) return v;
+        if(v.startsWith('assets/')) return '/' + v;
+
+        const sb = getSB();
+        if(!sb?.storage) return v;
+        const { data } = sb.storage.from(getBucket()).getPublicUrl(v);
+        return data?.publicUrl || v;
+      };
+
+      const readLocalPhotos = async ()=>{
+        try{
+          const res = await fetch('data/site-photos.json', { cache:'no-store' });
+          if(!res.ok) return [];
+          const data = await res.json();
+          if(!Array.isArray(data)) return [];
+          return data
+            .map((x)=> String(x || '').trim())
+            .filter(Boolean);
+        } catch(e){
+          if(isAbort(e)) return [];
+          return [];
+        }
+      };
+
+      const addJsonImages = (set, v)=>{
+        if(!v) return;
+        if(typeof v === 'string'){ set.add(v); return; }
+        if(Array.isArray(v)){ v.forEach((x)=> addJsonImages(set, x)); return; }
+        if(typeof v === 'object' && v.url) set.add(v.url);
+      };
+
+      const readSupabasePhotos = async ()=>{
+        const sb = await waitForSB(3500);
+        if(!sb) return [];
+
+        const out = new Set();
+        const pageSize = 1000;
+
+        const fetchAll = async (table, select, build, onRow)=>{
+          let from = 0;
+          while(true){
+            const to = from + pageSize - 1;
+            const q = build ? build(sb.from(table).select(select).range(from, to)) : sb.from(table).select(select).range(from, to);
+            const { data, error } = await q;
+            if(error){
+              console.warn('[nav-carousel] fetch error', table, error);
+              break;
+            }
+            (data || []).forEach((row)=> onRow?.(row));
+            if(!data || data.length < pageSize) break;
+            from += pageSize;
+          }
+        };
+
+        // Works (cover + thumb + images)
+        await fetchAll('works', 'cover_url,thumb_url,images', null, (w)=>{
+          addJsonImages(out, w?.cover_url);
+          addJsonImages(out, w?.thumb_url);
+          addJsonImages(out, w?.images);
+        });
+
+        // Work images (optional: may not exist on all setups)
+        await fetchAll('work_images', 'path', null, (x)=> addJsonImages(out, x?.path));
+
+        // News (only images)
+        await fetchAll('news_posts', 'media_url', (q)=> q.eq('media_type', 'image'), (p)=>{
+          addJsonImages(out, p?.media_url);
+        });
+
+        // Publications (images array)
+        await fetchAll('publications', 'images', null, (p)=> addJsonImages(out, p?.images));
+
+        return Array.from(out).map(resolveUrl).filter(Boolean);
+      };
 
       let i = 0;
       let timer = null;
+      let slides = [];
+
+      const readSlides = ()=>{
+        slides = Array.from(carousel.querySelectorAll('.nav-carousel__slide'));
+      };
 
       const setIndex = (idx)=>{
-        if(!track || !slides.length) return;
+        if(!track) return;
+        if(!slides.length){
+          if(countEl) countEl.textContent = '';
+          return;
+        }
+
         i = (idx + slides.length) % slides.length;
         track.style.transform = `translateX(${-i * 100}%)`;
-        if(dotsWrap){
+
+        if(countEl) countEl.textContent = `${i + 1} / ${slides.length}`;
+
+        if(dotsWrap && !dotsWrap.hidden){
           Array.from(dotsWrap.children).forEach((d, di)=>{
             d.classList.toggle('is-active', di === i);
           });
@@ -121,7 +243,11 @@
 
       const buildDots = ()=>{
         if(!dotsWrap) return;
+        const show = slides.length > 1 && slides.length <= 12;
+        dotsWrap.hidden = !show;
         dotsWrap.innerHTML = '';
+        if(!show) return;
+
         slides.forEach((_, di)=>{
           const b = document.createElement('button');
           b.type = 'button';
@@ -133,18 +259,63 @@
 
       const restart = ()=>{
         if(timer) clearInterval(timer);
-        timer = setInterval(()=> setIndex(i+1), 4500);
+        timer = setInterval(()=> setIndex(i + 1), 4500);
       };
 
+      const mount = (urls)=>{
+        if(!track) return;
+
+        const uniq = [];
+        const seen = new Set();
+        urls.forEach((u)=>{
+          const v = String(u || '').trim();
+          if(!v || seen.has(v)) return;
+          seen.add(v);
+          uniq.push(v);
+        });
+
+        if(!uniq.length) return;
+
+        track.innerHTML = uniq
+          .map(
+            (u)=>
+              `<div class="nav-carousel__slide"><img src="${u}" alt="" loading="lazy" decoding="async"></div>`
+          )
+          .join('');
+
+        readSlides();
+        buildDots();
+        setIndex(0);
+        restart();
+      };
+
+      readSlides();
       buildDots();
       setIndex(0);
       restart();
 
-      prev?.addEventListener('click', ()=>{ setIndex(i-1); restart(); });
-      next?.addEventListener('click', ()=>{ setIndex(i+1); restart(); });
+      prev?.addEventListener('click', ()=>{ setIndex(i - 1); restart(); });
+      next?.addEventListener('click', ()=>{ setIndex(i + 1); restart(); });
 
       carousel.addEventListener('mouseenter', ()=> timer && clearInterval(timer));
       carousel.addEventListener('mouseleave', restart);
+
+      // Build the carousel with every local + Supabase photo we can access.
+      (async ()=>{
+        try{
+          const local = await readLocalPhotos();
+          if(local.length) mount(local);
+
+          const remote = await readSupabasePhotos();
+          if(remote.length){
+            const merged = local.concat(remote);
+            mount(merged);
+          }
+        } catch(e){
+          if(isAbort(e)) return;
+          console.warn('[nav-carousel] init error', e);
+        }
+      })();
     }
 
     // ----- Lang dropdown (clean)
