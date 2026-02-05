@@ -53,6 +53,7 @@
           <button class="admin-nav__btn is-active" type="button" data-view="works">Galerie</button>
           <button class="admin-nav__btn" type="button" data-view="news">Actualités</button>
           <button class="admin-nav__btn" type="button" data-view="publications">Publications</button>
+          <button class="admin-nav__btn" type="button" data-view="books">Livres</button>
           <button class="admin-nav__btn" type="button" data-view="photos">Photos</button>
           <button class="admin-nav__btn" type="button" data-view="comments">Commentaires</button>
         </nav>
@@ -226,6 +227,113 @@
           <div id="pubList" class="admin-list"></div>
         </section>
 
+        <section id="view-books" hidden>
+          <div class="admin-view__head">
+            <h2 style="margin:0">Livres / Presse / Sources</h2>
+          </div>
+
+          <form id="docsForm" class="admin-form">
+            <input type="hidden" name="id" />
+
+            <div class="row">
+              <div class="field">
+                <span>Type</span>
+                <select class="input" name="kind">
+                  <option value="book">Livre / catalogue</option>
+                  <option value="press">Presse</option>
+                </select>
+              </div>
+              <div class="field">
+                <span>Publié</span>
+                <label class="admin-toggle">
+                  <input type="checkbox" name="is_published" checked />
+                  <span>oui</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="field">
+              <span>Titre</span>
+              <input class="input" name="title" required />
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <span>Année</span>
+                <input class="input" name="year" inputmode="numeric" />
+              </div>
+              <div class="field">
+                <span>Couverture (option)</span>
+                <input id="docCover" class="input" type="file" accept="image/*" />
+              </div>
+            </div>
+
+            <div class="field">
+              <span>PDF</span>
+              <input id="docPdf" class="input" type="file" accept="application/pdf,.pdf" />
+              <div class="muted" style="margin-top:6px">En édition, laisse vide pour garder le PDF actuel.</div>
+            </div>
+
+            <div class="admin-login-row">
+              <button class="btn" type="submit">Enregistrer</button>
+              <button id="docsCancel" class="btn" type="button" hidden>Annuler</button>
+              <button id="docsReload" class="btn" type="button">Rafraichir</button>
+            </div>
+            <div id="docsMsg" class="muted"></div>
+          </form>
+
+          <div class="admin-card" style="margin-top:12px">
+            <h3 style="margin:0 0 10px">Livres & catalogues</h3>
+            <div id="docsBooksList" class="admin-list"></div>
+
+            <hr style="margin:18px 0; opacity:.25" />
+            <h3 style="margin:0 0 10px">Presse</h3>
+            <div id="docsPressList" class="admin-list"></div>
+          </div>
+
+          <hr style="margin:18px 0; opacity:.25" />
+
+          <form id="sourcesForm" class="admin-form">
+            <input type="hidden" name="id" />
+
+            <div class="field">
+              <span>Titre</span>
+              <input class="input" name="title" required />
+            </div>
+
+            <div class="field">
+              <span>URL</span>
+              <input class="input" name="url" placeholder="https://..." required />
+            </div>
+
+            <div class="field">
+              <span>Méta (option)</span>
+              <input class="input" name="meta" placeholder="Journal • 2024" />
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <span>Publié</span>
+                <label class="admin-toggle">
+                  <input type="checkbox" name="is_published" checked />
+                  <span>oui</span>
+                </label>
+              </div>
+              <div class="field">
+                <span>&nbsp;</span>
+                <div class="admin-login-row">
+                  <button class="btn" type="submit">Enregistrer</button>
+                  <button id="sourcesCancel" class="btn" type="button" hidden>Annuler</button>
+                  <button id="sourcesReload" class="btn" type="button">Rafraichir</button>
+                </div>
+              </div>
+            </div>
+            <div id="sourcesMsg" class="muted"></div>
+          </form>
+
+          <div id="sourcesAdminList" class="admin-list"></div>
+        </section>
+
         <section id="view-photos" hidden>
           <div class="admin-view__head">
             <h2 style="margin:0">Photos (carrousel)</h2>
@@ -272,6 +380,6 @@
   <script defer src="../js/supabase-client.js?v=6"></script>
 
   <!-- ✅ Ton bundle admin -->
-  <script defer src="../js/admin-app.js?v=6"></script>
+  <script defer src="../js/admin-app.js?v=7"></script>
 </body>
 </html>

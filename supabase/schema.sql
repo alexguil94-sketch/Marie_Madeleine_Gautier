@@ -280,7 +280,82 @@ using (public.is_admin())
 with check (public.is_admin());
 
 -- ============================================================
--- 7) STORAGE policies (bucket: media)
+-- 7) BOOKS / PRESS + SOURCES (page Livres)
+-- ============================================================
+create table if not exists public.site_documents (
+  id uuid primary key default gen_random_uuid(),
+  kind text not null default 'book', -- book | press
+  title text not null,
+  year text,
+  cover_path text,
+  pdf_path text not null,
+  sort int not null default 1000,
+  is_published boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+alter table public.site_documents enable row level security;
+
+drop policy if exists "site documents public read" on public.site_documents;
+drop policy if exists "site documents admin read all" on public.site_documents;
+drop policy if exists "site documents admin write" on public.site_documents;
+
+create policy "site documents public read"
+on public.site_documents
+for select
+to anon, authenticated
+using (is_published = true);
+
+create policy "site documents admin read all"
+on public.site_documents
+for select
+to authenticated
+using (public.is_admin());
+
+create policy "site documents admin write"
+on public.site_documents
+for all
+to authenticated
+using (public.is_admin())
+with check (public.is_admin());
+
+create table if not exists public.site_sources (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  url text not null,
+  meta text,
+  sort int not null default 1000,
+  is_published boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+alter table public.site_sources enable row level security;
+
+drop policy if exists "site sources public read" on public.site_sources;
+drop policy if exists "site sources admin read all" on public.site_sources;
+drop policy if exists "site sources admin write" on public.site_sources;
+
+create policy "site sources public read"
+on public.site_sources
+for select
+to anon, authenticated
+using (is_published = true);
+
+create policy "site sources admin read all"
+on public.site_sources
+for select
+to authenticated
+using (public.is_admin());
+
+create policy "site sources admin write"
+on public.site_sources
+for all
+to authenticated
+using (public.is_admin())
+with check (public.is_admin());
+
+-- ============================================================
+-- 8) STORAGE policies (bucket: media)
 -- IMPORTANT: crée le bucket "media" dans Storage → Buckets
 -- ============================================================
 drop policy if exists "media public read" on storage.objects;
@@ -306,7 +381,7 @@ to authenticated
 using (bucket_id = 'media' and public.is_admin());
 
 -- ============================================================
--- 8) Make your user admin
+-- 9) Make your user admin
 -- ============================================================
 insert into public.profiles (id, role, display_name)
 values ('80bf5061-15d7-4d5c-afdb-492c024fb320', 'admin', 'alexguil94@hotmail.fr')

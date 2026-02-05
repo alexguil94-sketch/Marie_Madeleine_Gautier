@@ -1,4 +1,4 @@
-// js/admin-app.js (v5)
+// js/admin-app.js (v7)
 // - Guard admin AVANT toute requête
 // - CRUD œuvres (titre/texte + publier + image cover)
 // - Best-effort cleanup Storage
@@ -277,8 +277,12 @@
       let newsCache = [];
       let pubsCache = [];
       let sitePhotosCache = [];
+      let docsCache = [];
+      let sourcesCache = [];
       let editingNews = null;
       let editingPub = null;
+      let editingDoc = null;
+      let editingSource = null;
 
     const inputFiles = qs("#workImages");
     const drop = qs("#workDrop");
@@ -291,7 +295,7 @@
     const listEl = qs("#worksList");
 
     const navBtns = Array.from(document.querySelectorAll(".admin-nav__btn"));
-    const VIEWS = ["works", "news", "publications", "photos", "comments"];
+    const VIEWS = ["works", "news", "publications", "books", "photos", "comments"];
 
     const setView = (name) => {
       const view = VIEWS.includes(name) ? name : "works";
@@ -774,6 +778,22 @@
     const sitePhotosFiles = qs("#sitePhotosFiles");
     const sitePhotosReload = qs("#sitePhotosReload");
 
+    // ---------- Books / Press / Sources ----------
+    const docsForm = qs("#docsForm");
+    const docsMsg = qs("#docsMsg");
+    const docsCancel = qs("#docsCancel");
+    const docsReload = qs("#docsReload");
+    const docsBooksList = qs("#docsBooksList");
+    const docsPressList = qs("#docsPressList");
+    const docCover = qs("#docCover");
+    const docPdf = qs("#docPdf");
+
+    const sourcesForm = qs("#sourcesForm");
+    const sourcesMsg = qs("#sourcesMsg");
+    const sourcesCancel = qs("#sourcesCancel");
+    const sourcesReload = qs("#sourcesReload");
+    const sourcesAdminList = qs("#sourcesAdminList");
+
     const setNewsMsg = (t) => {
       if (!newsMsg) return;
       newsMsg.textContent = t || "";
@@ -785,6 +805,14 @@
     const setSitePhotosMsg = (t) => {
       if (!sitePhotosMsg) return;
       sitePhotosMsg.textContent = t || "";
+    };
+    const setDocsMsg = (t) => {
+      if (!docsMsg) return;
+      docsMsg.textContent = t || "";
+    };
+    const setSourcesMsg = (t) => {
+      if (!sourcesMsg) return;
+      sourcesMsg.textContent = t || "";
     };
 
     const renderNewsPreview = () => {
@@ -907,6 +935,31 @@
         .order("sort", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: false })
         .limit(500);
+
+      if (error) throw error;
+      return data || [];
+    }
+
+    async function fetchSiteDocuments(sb) {
+      const { data, error } = await sb
+        .from("site_documents")
+        .select("id,kind,title,year,cover_path,pdf_path,sort,is_published,created_at")
+        .order("kind", { ascending: true })
+        .order("sort", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: false })
+        .limit(1000);
+
+      if (error) throw error;
+      return data || [];
+    }
+
+    async function fetchSiteSources(sb) {
+      const { data, error } = await sb
+        .from("site_sources")
+        .select("id,title,url,meta,sort,is_published,created_at")
+        .order("sort", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: false })
+        .limit(1000);
 
       if (error) throw error;
       return data || [];
@@ -1143,6 +1196,365 @@
       });
     };
 
+    const renderDocsList = () => {
+      const renderKind = (kind, root) => {
+        if (!root) return;
+        root.innerHTML = "";
+
+        const list = docsCache
+          .filter((d) => (d?.kind || "book") === kind)
+          .slice()
+          .sort((a, b) => {
+            const as = Number(a?.sort) || 0;
+            const bs = Number(b?.sort) || 0;
+            if (as !== bs) return as - bs;
+            return String(b?.created_at || "").localeCompare(String(a?.created_at || ""));
+          });
+
+        if (!list.length) {
+          root.innerHTML = `<p class="muted">Aucun élément pour l’instant.</p>`;
+          return;
+        }
+
+        list.forEach((d, idx) => {
+          const row = document.createElement("div");
+          row.className = "admin-item";
+
+          const left = document.createElement("div");
+          left.style.display = "flex";
+          left.style.gap = "12px";
+
+          const img = document.createElement("img");
+          img.style.cssText =
+            "width:64px;height:64px;object-fit:cover;border-radius:14px;border:1px solid rgba(255,255,255,.12)";
+
+          img.src = d?.cover_path ? resolveUrl(sb, d.cover_path) : "";
+          if (!img.src) img.style.background = "rgba(255,255,255,.06)";
+
+          const txt = document.createElement("div");
+          const status = d.is_published ? "Publié" : "Brouillon";
+          const sortVal = Number.isFinite(Number(d.sort)) ? String(d.sort) : "—";
+          const label = kind === "press" ? "Presse" : "Livre";
+          const meta = [label, d.year].filter(Boolean).join(" • ");
+          txt.innerHTML = `
+            <div class="admin-item__meta">${status}${meta ? " • " + meta : ""} • sort ${sortVal}</div>
+            <div><strong>${d.title || "(sans titre)"}</strong></div>
+            <div class="admin-item__text">${d.pdf_path || ""}</div>
+          `;
+
+          left.appendChild(img);
+          left.appendChild(txt);
+
+          const actions = document.createElement("div");
+          actions.className = "admin-actions";
+
+          const btnEdit = document.createElement("button");
+          btnEdit.type = "button";
+          btnEdit.className = "btn";
+          btnEdit.textContent = "Modifier";
+          btnEdit.addEventListener("click", () => {
+            if (!docsForm) return;
+            editingDoc = d;
+            docsForm.elements.id.value = d.id;
+            docsForm.elements.kind.value = d.kind || "book";
+            docsForm.elements.title.value = d.title || "";
+            docsForm.elements.year.value = d.year || "";
+            docsForm.elements.is_published.checked = !!d.is_published;
+            if (docCover) docCover.value = "";
+            if (docPdf) docPdf.value = "";
+            if (docsCancel) docsCancel.hidden = false;
+            setDocsMsg("");
+            docsForm.scrollIntoView({ behavior: "smooth", block: "start" });
+          });
+
+          const btnOpen = document.createElement("button");
+          btnOpen.type = "button";
+          btnOpen.className = "btn";
+          btnOpen.textContent = "Ouvrir PDF";
+          btnOpen.disabled = !d?.pdf_path;
+          btnOpen.addEventListener("click", () => {
+            const u = d?.pdf_path ? resolveUrl(sb, d.pdf_path) : "";
+            if (!u) return;
+            window.open(u, "_blank", "noopener,noreferrer");
+          });
+
+          const btnUp = document.createElement("button");
+          btnUp.type = "button";
+          btnUp.className = "btn";
+          btnUp.textContent = "Monter";
+          btnUp.disabled = idx === 0;
+          btnUp.addEventListener("click", async () => moveDoc(kind, idx, -1));
+
+          const btnDown = document.createElement("button");
+          btnDown.type = "button";
+          btnDown.className = "btn";
+          btnDown.textContent = "Descendre";
+          btnDown.disabled = idx === list.length - 1;
+          btnDown.addEventListener("click", async () => moveDoc(kind, idx, +1));
+
+          const btnPub = document.createElement("button");
+          btnPub.type = "button";
+          btnPub.className = "btn";
+          btnPub.textContent = d.is_published ? "Dépublier" : "Publier";
+          btnPub.addEventListener("click", async () => {
+            btnPub.disabled = true;
+            try {
+              const next = !d.is_published;
+              const { error } = await sb.from("site_documents").update({ is_published: next }).eq("id", d.id);
+              if (error) throw error;
+              toast("Statut mis à jour ✅", "ok");
+              await refreshDocs();
+            } catch (e) {
+              console.error(e);
+              toast(errText(e), "err");
+            } finally {
+              btnPub.disabled = false;
+            }
+          });
+
+          const btnDel = document.createElement("button");
+          btnDel.type = "button";
+          btnDel.className = "btn";
+          btnDel.textContent = "Supprimer";
+          btnDel.style.borderColor = "rgba(255,100,100,.35)";
+          btnDel.addEventListener("click", async () => {
+            const ok = confirm(`Supprimer "${d.title || "document"}" ?`);
+            if (!ok) return;
+
+            btnDel.disabled = true;
+            try {
+              const { error } = await sb.from("site_documents").delete().eq("id", d.id);
+              if (error) throw error;
+
+              const paths = []
+                .concat(storagePathFromUrl(d.cover_path))
+                .concat(storagePathFromUrl(d.pdf_path))
+                .filter(Boolean);
+              if (paths.length) {
+                try { await sb.storage.from(getBucket()).remove(paths); } catch {}
+              }
+
+              toast("Document supprimé ✅", "ok");
+              await refreshDocs();
+            } catch (e) {
+              console.error(e);
+              toast(errText(e), "err");
+            } finally {
+              btnDel.disabled = false;
+            }
+          });
+
+          actions.appendChild(btnEdit);
+          actions.appendChild(btnOpen);
+          actions.appendChild(btnUp);
+          actions.appendChild(btnDown);
+          actions.appendChild(btnPub);
+          actions.appendChild(btnDel);
+
+          row.appendChild(left);
+          row.appendChild(actions);
+          root.appendChild(row);
+        });
+      };
+
+      renderKind("book", docsBooksList);
+      renderKind("press", docsPressList);
+    };
+
+    const renderSourcesAdminList = () => {
+      if (!sourcesAdminList) return;
+      sourcesAdminList.innerHTML = "";
+
+      const list = sourcesCache
+        .slice()
+        .sort((a, b) => {
+          const as = Number(a?.sort) || 0;
+          const bs = Number(b?.sort) || 0;
+          if (as !== bs) return as - bs;
+          return String(b?.created_at || "").localeCompare(String(a?.created_at || ""));
+        });
+
+      if (!list.length) {
+        sourcesAdminList.innerHTML = `<p class="muted">Aucune source pour l’instant.</p>`;
+        return;
+      }
+
+      list.forEach((s, idx) => {
+        const row = document.createElement("div");
+        row.className = "admin-item";
+
+        const left = document.createElement("div");
+        const status = s.is_published ? "Publié" : "Brouillon";
+        const sortVal = Number.isFinite(Number(s.sort)) ? String(s.sort) : "—";
+        left.innerHTML = `
+          <div class="admin-item__meta">${status} • sort ${sortVal}</div>
+          <div><strong>${s.title || "(sans titre)"}</strong></div>
+          ${s.meta ? `<div class="admin-item__text">${String(s.meta)}</div>` : ""}
+          <div class="admin-item__text">${s.url || ""}</div>
+        `;
+
+        const actions = document.createElement("div");
+        actions.className = "admin-actions";
+
+        const btnEdit = document.createElement("button");
+        btnEdit.type = "button";
+        btnEdit.className = "btn";
+        btnEdit.textContent = "Modifier";
+        btnEdit.addEventListener("click", () => {
+          if (!sourcesForm) return;
+          editingSource = s;
+          sourcesForm.elements.id.value = s.id;
+          sourcesForm.elements.title.value = s.title || "";
+          sourcesForm.elements.url.value = s.url || "";
+          sourcesForm.elements.meta.value = s.meta || "";
+          sourcesForm.elements.is_published.checked = !!s.is_published;
+          if (sourcesCancel) sourcesCancel.hidden = false;
+          setSourcesMsg("");
+          sourcesForm.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+
+        const btnOpen = document.createElement("button");
+        btnOpen.type = "button";
+        btnOpen.className = "btn";
+        btnOpen.textContent = "Ouvrir";
+        btnOpen.disabled = !s?.url;
+        btnOpen.addEventListener("click", () => {
+          const u = String(s?.url || "").trim();
+          if (!u) return;
+          window.open(u, "_blank", "noopener,noreferrer");
+        });
+
+        const btnUp = document.createElement("button");
+        btnUp.type = "button";
+        btnUp.className = "btn";
+        btnUp.textContent = "Monter";
+        btnUp.disabled = idx === 0;
+        btnUp.addEventListener("click", async () => moveSource(idx, -1));
+
+        const btnDown = document.createElement("button");
+        btnDown.type = "button";
+        btnDown.className = "btn";
+        btnDown.textContent = "Descendre";
+        btnDown.disabled = idx === list.length - 1;
+        btnDown.addEventListener("click", async () => moveSource(idx, +1));
+
+        const btnPub = document.createElement("button");
+        btnPub.type = "button";
+        btnPub.className = "btn";
+        btnPub.textContent = s.is_published ? "Dépublier" : "Publier";
+        btnPub.addEventListener("click", async () => {
+          btnPub.disabled = true;
+          try {
+            const next = !s.is_published;
+            const { error } = await sb.from("site_sources").update({ is_published: next }).eq("id", s.id);
+            if (error) throw error;
+            toast("Statut mis à jour ✅", "ok");
+            await refreshSources();
+          } catch (e) {
+            console.error(e);
+            toast(errText(e), "err");
+          } finally {
+            btnPub.disabled = false;
+          }
+        });
+
+        const btnDel = document.createElement("button");
+        btnDel.type = "button";
+        btnDel.className = "btn";
+        btnDel.textContent = "Supprimer";
+        btnDel.style.borderColor = "rgba(255,100,100,.35)";
+        btnDel.addEventListener("click", async () => {
+          const ok = confirm(`Supprimer "${s.title || "source"}" ?`);
+          if (!ok) return;
+
+          btnDel.disabled = true;
+          try {
+            const { error } = await sb.from("site_sources").delete().eq("id", s.id);
+            if (error) throw error;
+            toast("Source supprimée ✅", "ok");
+            await refreshSources();
+          } catch (e) {
+            console.error(e);
+            toast(errText(e), "err");
+          } finally {
+            btnDel.disabled = false;
+          }
+        });
+
+        actions.appendChild(btnEdit);
+        actions.appendChild(btnOpen);
+        actions.appendChild(btnUp);
+        actions.appendChild(btnDown);
+        actions.appendChild(btnPub);
+        actions.appendChild(btnDel);
+
+        row.appendChild(left);
+        row.appendChild(actions);
+        sourcesAdminList.appendChild(row);
+      });
+    };
+
+    async function moveDoc(kind, idx, delta) {
+      const list = docsCache
+        .filter((d) => (d?.kind || "book") === kind)
+        .slice()
+        .sort((a, b) => {
+          const as = Number(a?.sort) || 0;
+          const bs = Number(b?.sort) || 0;
+          if (as !== bs) return as - bs;
+          return String(b?.created_at || "").localeCompare(String(a?.created_at || ""));
+        });
+      const cur = list[idx];
+      const other = list[idx + delta];
+      if (!cur?.id || !other?.id) return;
+
+      try {
+        const aSort = Number(cur.sort) || 0;
+        const bSort = Number(other.sort) || 0;
+        const nextASort = aSort === bSort ? bSort + (delta > 0 ? 1 : -1) : bSort;
+
+        const { error: e1 } = await sb.from("site_documents").update({ sort: nextASort }).eq("id", cur.id);
+        if (e1) throw e1;
+        const { error: e2 } = await sb.from("site_documents").update({ sort: aSort }).eq("id", other.id);
+        if (e2) throw e2;
+
+        await refreshDocs();
+      } catch (e) {
+        console.error(e);
+        toast(errText(e), "err");
+      }
+    }
+
+    async function moveSource(idx, delta) {
+      const list = sourcesCache
+        .slice()
+        .sort((a, b) => {
+          const as = Number(a?.sort) || 0;
+          const bs = Number(b?.sort) || 0;
+          if (as !== bs) return as - bs;
+          return String(b?.created_at || "").localeCompare(String(a?.created_at || ""));
+        });
+      const cur = list[idx];
+      const other = list[idx + delta];
+      if (!cur?.id || !other?.id) return;
+
+      try {
+        const aSort = Number(cur.sort) || 0;
+        const bSort = Number(other.sort) || 0;
+        const nextASort = aSort === bSort ? bSort + (delta > 0 ? 1 : -1) : bSort;
+
+        const { error: e1 } = await sb.from("site_sources").update({ sort: nextASort }).eq("id", cur.id);
+        if (e1) throw e1;
+        const { error: e2 } = await sb.from("site_sources").update({ sort: aSort }).eq("id", other.id);
+        if (e2) throw e2;
+
+        await refreshSources();
+      } catch (e) {
+        console.error(e);
+        toast(errText(e), "err");
+      }
+    }
+
     const renderSitePhotosList = () => {
       if (!sitePhotosList) return;
       sitePhotosList.innerHTML = "";
@@ -1285,6 +1697,18 @@
       return path;
     }
 
+    async function uploadFileToFolder(folder, file) {
+      const bucket = getBucket();
+      const path = `${folder}/${Date.now()}-${safeName(file.name || "file")}.${extOf(file.name)}`;
+      const { error } = await sb.storage.from(bucket).upload(path, file, {
+        cacheControl: "31536000",
+        upsert: true,
+        contentType: file.type || "application/octet-stream",
+      });
+      if (error) throw error;
+      return path;
+    }
+
     async function refreshNews() {
       newsCache = await fetchNews(sb);
       renderNewsList();
@@ -1309,6 +1733,58 @@
         renderSitePhotosList();
         setSitePhotosMsg("Erreur de chargement. Cree la table `site_photos` (voir supabase/schema.sql).");
       }
+    }
+
+    async function refreshDocs() {
+      if (!docsBooksList && !docsPressList) return;
+
+      try {
+        docsCache = await fetchSiteDocuments(sb);
+        renderDocsList();
+        setDocsMsg("");
+      } catch (e) {
+        if (isAbort(e)) return;
+        console.warn("[admin] site_documents error", e);
+        docsCache = [];
+        renderDocsList();
+        setDocsMsg("Erreur de chargement. Cree la table `site_documents` (voir supabase/schema.sql).");
+      }
+    }
+
+    async function refreshSources() {
+      if (!sourcesAdminList) return;
+
+      try {
+        sourcesCache = await fetchSiteSources(sb);
+        renderSourcesAdminList();
+        setSourcesMsg("");
+      } catch (e) {
+        if (isAbort(e)) return;
+        console.warn("[admin] site_sources error", e);
+        sourcesCache = [];
+        renderSourcesAdminList();
+        setSourcesMsg("Erreur de chargement. Cree la table `site_sources` (voir supabase/schema.sql).");
+      }
+    }
+
+    function resetDocsForm() {
+      if (!docsForm) return;
+      editingDoc = null;
+      docsForm.reset();
+      docsForm.elements.id.value = "";
+      if (docCover) docCover.value = "";
+      if (docPdf) docPdf.value = "";
+      if (docsCancel) docsCancel.hidden = true;
+      setDocsMsg("");
+    }
+
+    function resetSourcesForm() {
+      if (!sourcesForm) return;
+      editingSource = null;
+      sourcesForm.reset();
+      sourcesForm.elements.id.value = "";
+      if (sourcesCancel) sourcesCancel.hidden = true;
+      setSourcesMsg("");
     }
 
     function resetNewsForm() {
@@ -1336,10 +1812,28 @@
 
     newsCancel?.addEventListener("click", resetNewsForm);
     pubCancel?.addEventListener("click", resetPubForm);
+    docsCancel?.addEventListener("click", resetDocsForm);
+    sourcesCancel?.addEventListener("click", resetSourcesForm);
 
     newsForm?.elements?.media_type?.addEventListener?.("change", syncNewsMediaUI);
     newsImage?.addEventListener("change", renderNewsPreview);
     pubImages?.addEventListener("change", renderPubPreview);
+
+    docsReload?.addEventListener("click", () => {
+      refreshDocs().catch((e) => {
+        if (isAbort(e)) return;
+        console.error(e);
+        toast(errText(e), "err");
+      });
+    });
+
+    sourcesReload?.addEventListener("click", () => {
+      refreshSources().catch((e) => {
+        if (isAbort(e)) return;
+        console.error(e);
+        toast(errText(e), "err");
+      });
+    });
 
     sitePhotosReload?.addEventListener("click", () => {
       refreshSitePhotos().catch((e) => {
@@ -1347,6 +1841,158 @@
         console.error(e);
         toast(errText(e), "err");
       });
+    });
+
+    docsForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!docsForm) return;
+
+      setDocsMsg("");
+
+      const fd = new FormData(docsForm);
+      const id = String(fd.get("id") || "").trim();
+      const kind = String(fd.get("kind") || "book").trim() || "book";
+      const title = String(fd.get("title") || "").trim();
+      const year = String(fd.get("year") || "").trim();
+      const is_published = !!docsForm.elements?.is_published?.checked;
+
+      if (!title) return setDocsMsg("Titre requis.");
+
+      const coverFile = docCover?.files?.[0] || null;
+      const pdfFile = docPdf?.files?.[0] || null;
+
+      if (!id && !pdfFile) return setDocsMsg("Ajoute un PDF.");
+
+      const btn = docsForm.querySelector('button[type="submit"]');
+      if (btn) btn.disabled = true;
+      setDocsMsg("Enregistrement…");
+
+      const old = id
+        ? docsCache.find((d) => d.id === id) || (editingDoc?.id === id ? editingDoc : null)
+        : null;
+
+      try {
+        let cover_path = old?.cover_path || null;
+        let pdf_path = old?.pdf_path || null;
+
+        if (coverFile) cover_path = await uploadImageToFolder(`site/documents/${kind}`, coverFile);
+        if (pdfFile) pdf_path = await uploadFileToFolder(`site/documents/${kind}`, pdfFile);
+
+        if (!pdf_path) throw new Error("PDF manquant.");
+
+        if (id) {
+          const payload = {
+            kind,
+            title,
+            year: year || null,
+            cover_path: cover_path || null,
+            pdf_path,
+            is_published,
+          };
+
+          if (old && old.kind !== kind) {
+            const maxSort = docsCache
+              .filter((d) => (d?.kind || "book") === kind)
+              .reduce((m, x) => Math.max(m, Number(x?.sort) || 0), 0);
+            payload.sort = (Number.isFinite(maxSort) ? maxSort : 0) + 10;
+          }
+
+          const { error } = await sb.from("site_documents").update(payload).eq("id", id);
+          if (error) throw error;
+
+          const rm = [];
+          if (coverFile && old?.cover_path) {
+            const p = storagePathFromUrl(old.cover_path);
+            const np = storagePathFromUrl(cover_path);
+            if (p && np && p !== np) rm.push(p);
+          }
+          if (pdfFile && old?.pdf_path) {
+            const p = storagePathFromUrl(old.pdf_path);
+            const np = storagePathFromUrl(pdf_path);
+            if (p && np && p !== np) rm.push(p);
+          }
+          if (rm.length) {
+            try { await sb.storage.from(getBucket()).remove(rm); } catch {}
+          }
+
+          toast("Document mis à jour ✅", "ok");
+        } else {
+          const maxSort = docsCache
+            .filter((d) => (d?.kind || "book") === kind)
+            .reduce((m, x) => Math.max(m, Number(x?.sort) || 0), 0);
+          const sort = (Number.isFinite(maxSort) ? maxSort : 0) + 10;
+
+          const payload = {
+            kind,
+            title,
+            year: year || null,
+            cover_path: cover_path || null,
+            pdf_path,
+            sort,
+            is_published,
+          };
+
+          const { error } = await sb.from("site_documents").insert(payload);
+          if (error) throw error;
+
+          toast("Document ajouté ✅", "ok");
+        }
+
+        resetDocsForm();
+        await refreshDocs();
+      } catch (e1) {
+        console.error(e1);
+        setDocsMsg("Erreur : " + errText(e1));
+        toast(errText(e1), "err");
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+
+    sourcesForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!sourcesForm) return;
+
+      setSourcesMsg("");
+
+      const fd = new FormData(sourcesForm);
+      const id = String(fd.get("id") || "").trim();
+      const title = String(fd.get("title") || "").trim();
+      const url = String(fd.get("url") || "").trim();
+      const meta = String(fd.get("meta") || "").trim();
+      const is_published = !!sourcesForm.elements?.is_published?.checked;
+
+      if (!title) return setSourcesMsg("Titre requis.");
+      if (!url) return setSourcesMsg("URL requise.");
+
+      const btn = sourcesForm.querySelector('button[type="submit"]');
+      if (btn) btn.disabled = true;
+      setSourcesMsg("Enregistrement…");
+
+      try {
+        if (id) {
+          const payload = { title, url, meta: meta || null, is_published };
+          const { error } = await sb.from("site_sources").update(payload).eq("id", id);
+          if (error) throw error;
+          toast("Source mise à jour ✅", "ok");
+        } else {
+          const maxSort = sourcesCache.reduce((m, x) => Math.max(m, Number(x?.sort) || 0), 0);
+          const sort = (Number.isFinite(maxSort) ? maxSort : 0) + 10;
+          const payload = { title, url, meta: meta || null, sort, is_published };
+          const { error } = await sb.from("site_sources").insert(payload);
+          if (error) throw error;
+          toast("Source ajoutée ✅", "ok");
+        }
+
+        resetSourcesForm();
+        await refreshSources();
+      } catch (e2) {
+        console.error(e2);
+        setSourcesMsg("Erreur : " + errText(e2));
+        toast(errText(e2), "err");
+      } finally {
+        if (btn) btn.disabled = false;
+      }
     });
 
     sitePhotosForm?.addEventListener("submit", async (e) => {
@@ -1755,6 +2401,8 @@
         await refreshWorks();
         await refreshNews();
         await refreshPubs();
+        await refreshDocs();
+        await refreshSources();
         await refreshSitePhotos();
         await refreshModeration();
       } catch (e) {
