@@ -1,4 +1,4 @@
-// js/admin-app.js (v4)
+// js/admin-app.js (v5)
 // - Guard admin AVANT toute requête
 // - CRUD œuvres (titre/texte + publier + image cover)
 // - Best-effort cleanup Storage
@@ -271,13 +271,14 @@
       return;
     }
 
-    let worksCache = [];
-    let selectedFiles = [];
-    let editingId = null;
-    let newsCache = [];
-    let pubsCache = [];
-    let editingNews = null;
-    let editingPub = null;
+      let worksCache = [];
+      let selectedFiles = [];
+      let editingId = null;
+      let newsCache = [];
+      let pubsCache = [];
+      let sitePhotosCache = [];
+      let editingNews = null;
+      let editingPub = null;
 
     const inputFiles = qs("#workImages");
     const drop = qs("#workDrop");
@@ -290,7 +291,7 @@
     const listEl = qs("#worksList");
 
     const navBtns = Array.from(document.querySelectorAll(".admin-nav__btn"));
-    const VIEWS = ["works", "news", "publications", "comments"];
+    const VIEWS = ["works", "news", "publications", "photos", "comments"];
 
     const setView = (name) => {
       const view = VIEWS.includes(name) ? name : "works";
@@ -767,6 +768,12 @@
     const pubPreview = qs("#pubPreview");
     const pubImages = qs("#pubImages");
 
+    const sitePhotosForm = qs("#sitePhotosForm");
+    const sitePhotosMsg = qs("#sitePhotosMsg");
+    const sitePhotosList = qs("#sitePhotosList");
+    const sitePhotosFiles = qs("#sitePhotosFiles");
+    const sitePhotosReload = qs("#sitePhotosReload");
+
     const setNewsMsg = (t) => {
       if (!newsMsg) return;
       newsMsg.textContent = t || "";
@@ -774,6 +781,10 @@
     const setPubMsg = (t) => {
       if (!pubMsg) return;
       pubMsg.textContent = t || "";
+    };
+    const setSitePhotosMsg = (t) => {
+      if (!sitePhotosMsg) return;
+      sitePhotosMsg.textContent = t || "";
     };
 
     const renderNewsPreview = () => {
@@ -884,6 +895,19 @@
         .order("published_at", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(60);
+      if (error) throw error;
+      return data || [];
+    }
+
+    async function fetchSitePhotos(sb) {
+      const { data, error } = await sb
+        .from("site_photos")
+        .select("id,slot,title,alt,path,sort,is_published,created_at")
+        .eq("slot", "drawer_carousel")
+        .order("sort", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: false })
+        .limit(500);
+
       if (error) throw error;
       return data || [];
     }
@@ -1119,6 +1143,136 @@
       });
     };
 
+    const renderSitePhotosList = () => {
+      if (!sitePhotosList) return;
+      sitePhotosList.innerHTML = "";
+
+      if (!sitePhotosCache.length) {
+        sitePhotosList.innerHTML = `<p class="muted">Aucune photo dans le carrousel pour l'instant.</p>`;
+        return;
+      }
+
+      sitePhotosCache.forEach((p, idx) => {
+        const row = document.createElement("div");
+        row.className = "admin-item";
+
+        const left = document.createElement("div");
+        left.style.display = "flex";
+        left.style.gap = "12px";
+
+        const img = document.createElement("img");
+        img.style.cssText =
+          "width:64px;height:64px;object-fit:cover;border-radius:14px;border:1px solid rgba(255,255,255,.12)";
+
+        img.src = p?.path ? resolveUrl(sb, p.path) : "";
+        if (!img.src) img.style.background = "rgba(255,255,255,.06)";
+
+        const txt = document.createElement("div");
+        const status = p.is_published ? "Publie" : "Brouillon";
+        const sortVal = Number.isFinite(Number(p.sort)) ? String(p.sort) : "—";
+        const title = p.title || p.alt || (String(p.path || "").split("/").pop() || "image");
+        txt.innerHTML = `
+          <div class="admin-item__meta">${status} • sort ${sortVal}</div>
+          <div><strong>${title}</strong></div>
+          <div class="admin-item__text">${p.path || ""}</div>
+        `;
+
+        left.appendChild(img);
+        left.appendChild(txt);
+
+        const actions = document.createElement("div");
+        actions.className = "admin-actions";
+
+        const btnUp = document.createElement("button");
+        btnUp.type = "button";
+        btnUp.className = "btn";
+        btnUp.textContent = "Monter";
+        btnUp.disabled = idx === 0;
+        btnUp.addEventListener("click", async () => moveSitePhoto(idx, -1));
+
+        const btnDown = document.createElement("button");
+        btnDown.type = "button";
+        btnDown.className = "btn";
+        btnDown.textContent = "Descendre";
+        btnDown.disabled = idx === sitePhotosCache.length - 1;
+        btnDown.addEventListener("click", async () => moveSitePhoto(idx, +1));
+
+        const btnPub = document.createElement("button");
+        btnPub.type = "button";
+        btnPub.className = "btn";
+        btnPub.textContent = p.is_published ? "Depublier" : "Publier";
+        btnPub.addEventListener("click", async () => {
+          btnPub.disabled = true;
+          try {
+            const next = !p.is_published;
+            const { error } = await sb.from("site_photos").update({ is_published: next }).eq("id", p.id);
+            if (error) throw error;
+            toast("Statut mis a jour.", "ok");
+            await refreshSitePhotos();
+          } catch (e) {
+            console.error(e);
+            toast(errText(e), "err");
+          } finally {
+            btnPub.disabled = false;
+          }
+        });
+
+        const btnDel = document.createElement("button");
+        btnDel.type = "button";
+        btnDel.className = "btn";
+        btnDel.textContent = "Supprimer";
+        btnDel.style.borderColor = "rgba(255,100,100,.35)";
+        btnDel.addEventListener("click", async () => {
+          const ok = confirm("Supprimer cette photo du carrousel ?");
+          if (!ok) return;
+
+          btnDel.disabled = true;
+          try {
+            const { error } = await sb.from("site_photos").delete().eq("id", p.id);
+            if (error) throw error;
+            toast("Photo supprimee.", "ok");
+            await refreshSitePhotos();
+          } catch (e) {
+            console.error(e);
+            toast(errText(e), "err");
+          } finally {
+            btnDel.disabled = false;
+          }
+        });
+
+        actions.appendChild(btnUp);
+        actions.appendChild(btnDown);
+        actions.appendChild(btnPub);
+        actions.appendChild(btnDel);
+
+        row.appendChild(left);
+        row.appendChild(actions);
+        sitePhotosList.appendChild(row);
+      });
+    };
+
+    async function moveSitePhoto(idx, delta) {
+      const cur = sitePhotosCache[idx];
+      const other = sitePhotosCache[idx + delta];
+      if (!cur?.id || !other?.id) return;
+
+      try {
+        const aSort = Number(cur.sort) || 0;
+        const bSort = Number(other.sort) || 0;
+        const nextASort = aSort === bSort ? bSort + (delta > 0 ? 1 : -1) : bSort;
+
+        const { error: e1 } = await sb.from("site_photos").update({ sort: nextASort }).eq("id", cur.id);
+        if (e1) throw e1;
+        const { error: e2 } = await sb.from("site_photos").update({ sort: aSort }).eq("id", other.id);
+        if (e2) throw e2;
+
+        await refreshSitePhotos();
+      } catch (e) {
+        console.error(e);
+        toast(errText(e), "err");
+      }
+    }
+
     async function uploadImageToFolder(folder, file) {
       const bucket = getBucket();
       const path = `${folder}/${Date.now()}-${safeName(file.name || "image")}.${extOf(file.name)}`;
@@ -1139,6 +1293,22 @@
     async function refreshPubs() {
       pubsCache = await fetchPublications(sb);
       renderPubList();
+    }
+
+    async function refreshSitePhotos() {
+      if (!sitePhotosList) return;
+
+      try {
+        sitePhotosCache = await fetchSitePhotos(sb);
+        renderSitePhotosList();
+        setSitePhotosMsg("");
+      } catch (e) {
+        if (isAbort(e)) return;
+        console.warn("[admin] site_photos error", e);
+        sitePhotosCache = [];
+        renderSitePhotosList();
+        setSitePhotosMsg("Erreur de chargement. Cree la table `site_photos` (voir supabase/schema.sql).");
+      }
     }
 
     function resetNewsForm() {
@@ -1170,6 +1340,54 @@
     newsForm?.elements?.media_type?.addEventListener?.("change", syncNewsMediaUI);
     newsImage?.addEventListener("change", renderNewsPreview);
     pubImages?.addEventListener("change", renderPubPreview);
+
+    sitePhotosReload?.addEventListener("click", () => {
+      refreshSitePhotos().catch((e) => {
+        if (isAbort(e)) return;
+        console.error(e);
+        toast(errText(e), "err");
+      });
+    });
+
+    sitePhotosForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!sitePhotosForm) return;
+
+      setSitePhotosMsg("");
+
+      const files = Array.from(sitePhotosFiles?.files || [])
+        .filter((f) => (f.type || "").startsWith("image/"))
+        .slice(0, 30);
+
+      if (!files.length) return setSitePhotosMsg("Ajoute au moins 1 image.");
+
+      const btn = sitePhotosForm.querySelector('button[type="submit"]');
+      if (btn) btn.disabled = true;
+      setSitePhotosMsg("Upload...");
+
+      try {
+        const maxSort = sitePhotosCache.reduce((m, x) => Math.max(m, Number(x?.sort) || 0), 0);
+        let sort = (Number.isFinite(maxSort) ? maxSort : 0) + 10;
+
+        for (const file of files) {
+          const path = await uploadImageToFolder("site/carousel", file);
+          const payload = { slot: "drawer_carousel", path, sort, is_published: true };
+          const { error } = await sb.from("site_photos").insert(payload);
+          if (error) throw error;
+          sort += 10;
+        }
+
+        if (sitePhotosFiles) sitePhotosFiles.value = "";
+        toast("Photos ajoutees.", "ok");
+        await refreshSitePhotos();
+      } catch (e1) {
+        console.error(e1);
+        setSitePhotosMsg("Erreur : " + errText(e1));
+        toast(errText(e1), "err");
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
 
     newsForm?.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -1537,6 +1755,7 @@
         await refreshWorks();
         await refreshNews();
         await refreshPubs();
+        await refreshSitePhotos();
         await refreshModeration();
       } catch (e) {
         if (isAbort(e)) return;

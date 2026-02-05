@@ -214,6 +214,30 @@
         return Array.from(out).map(resolveUrl).filter(Boolean);
       };
 
+      const readCarouselPhotosSupabase = async ()=>{
+        const sb = await waitForSB(3500);
+        if(!sb) return [];
+
+        try{
+          const { data, error } = await sb
+            .from('site_photos')
+            .select('path,sort,created_at')
+            .eq('slot', 'drawer_carousel')
+            .eq('is_published', true)
+            .order('sort', { ascending:true, nullsFirst:false })
+            .order('created_at', { ascending:false })
+            .limit(300);
+
+          if(error) return [];
+          return (data || [])
+            .map((x)=> resolveUrl(x?.path))
+            .filter(Boolean);
+        } catch(e){
+          if(isAbort(e)) return [];
+          return [];
+        }
+      };
+
       let i = 0;
       let timer = null;
       let slides = [];
@@ -300,9 +324,17 @@
       carousel.addEventListener('mouseenter', ()=> timer && clearInterval(timer));
       carousel.addEventListener('mouseleave', restart);
 
-      // Build the carousel with every local + Supabase photo we can access.
+      // Carrousel:
+      // 1) If admin configured public.site_photos (slot=drawer_carousel) => use it.
+      // 2) Otherwise fallback to local JSON + best-effort Supabase scan.
       (async ()=>{
         try{
+          const curated = await readCarouselPhotosSupabase();
+          if(curated.length){
+            mount(curated);
+            return;
+          }
+
           const local = await readLocalPhotos();
           if(local.length) mount(local);
 

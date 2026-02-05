@@ -54,6 +54,7 @@
           <button class="admin-nav__btn is-active" type="button" data-view="works">Galerie</button>
           <button class="admin-nav__btn" type="button" data-view="news">Actualités</button>
           <button class="admin-nav__btn" type="button" data-view="publications">Publications</button>
+          <button class="admin-nav__btn" type="button" data-view="photos">Photos</button>
           <button class="admin-nav__btn" type="button" data-view="comments">Commentaires</button>
         </nav>
 
@@ -225,6 +226,31 @@
           <div id="pubList" class="admin-list"></div>
         </section>
 
+        <section id="view-photos" hidden>
+          <div class="admin-view__head">
+            <h2 style="margin:0">Photos (carrousel)</h2>
+          </div>
+
+          <form id="sitePhotosForm" class="admin-form">
+            <div class="field">
+              <span>Ajouter des photos</span>
+              <input id="sitePhotosFiles" class="input" type="file" accept="image/*" multiple />
+            </div>
+
+            <div class="admin-login-row">
+              <button class="btn" type="submit">Ajouter</button>
+              <button id="sitePhotosReload" class="btn" type="button">Rafraichir</button>
+            </div>
+
+            <div class="muted" style="margin-top:10px">
+              Ces images alimentent le carrousel du menu burger (slot: <code>drawer_carousel</code>).
+            </div>
+            <div id="sitePhotosMsg" class="muted" style="margin-top:8px"></div>
+          </form>
+
+          <div id="sitePhotosList" class="admin-list"></div>
+        </section>
+
         <section id="view-comments" hidden>
           <div class="admin-view__head">
             <h2 style="margin:0">Modération</h2>
@@ -245,6 +271,6 @@
   <script defer src="/js/supabase-config.js?v=1"></script>
   <script defer src="/js/supabase-client.js?v=6"></script>
 
-  <script defer src="/js/admin-app.js?v=5"></script>
+  <script defer src="/js/admin-app.js?v=6"></script>
 </body>
 </html>

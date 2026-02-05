@@ -241,7 +241,46 @@ using (public.is_admin())
 with check (public.is_admin());
 
 -- ============================================================
--- 6) STORAGE policies (bucket: media)
+-- 6) SITE PHOTOS (carousel / medias)
+-- ============================================================
+create table if not exists public.site_photos (
+  id uuid primary key default gen_random_uuid(),
+  slot text not null default 'drawer_carousel', -- ex: drawer_carousel
+  title text,
+  alt text,
+  path text not null,
+  sort int not null default 1000,
+  is_published boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+alter table public.site_photos enable row level security;
+
+drop policy if exists "site photos public read" on public.site_photos;
+drop policy if exists "site photos admin read all" on public.site_photos;
+drop policy if exists "site photos admin write" on public.site_photos;
+
+create policy "site photos public read"
+on public.site_photos
+for select
+to anon, authenticated
+using (is_published = true);
+
+create policy "site photos admin read all"
+on public.site_photos
+for select
+to authenticated
+using (public.is_admin());
+
+create policy "site photos admin write"
+on public.site_photos
+for all
+to authenticated
+using (public.is_admin())
+with check (public.is_admin());
+
+-- ============================================================
+-- 7) STORAGE policies (bucket: media)
 -- IMPORTANT: crée le bucket "media" dans Storage → Buckets
 -- ============================================================
 drop policy if exists "media public read" on storage.objects;
@@ -267,7 +306,7 @@ to authenticated
 using (bucket_id = 'media' and public.is_admin());
 
 -- ============================================================
--- 7) Make your user admin
+-- 8) Make your user admin
 -- ============================================================
 insert into public.profiles (id, role, display_name)
 values ('80bf5061-15d7-4d5c-afdb-492c024fb320', 'admin', 'alexguil94@hotmail.fr')
