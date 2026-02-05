@@ -3,7 +3,14 @@
   if(!root) return;
 
   const KEY = 'exhibitions.v1';
-  function load(){ return JSON.parse(localStorage.getItem(KEY) || '[]'); }
+  function load(){
+    try{
+      const data = JSON.parse(localStorage.getItem(KEY) || '[]');
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
+    }
+  }
 
   let view = new Date();
   view.setDate(1);

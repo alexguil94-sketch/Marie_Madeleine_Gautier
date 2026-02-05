@@ -3,15 +3,41 @@
   if(!root) return;
 
   const KEY = 'exhibitions.v1';
-  const SEED_URL = 'data/exhibitions.seed.json';
+  const SEED_URLS = ['/data/exhibitions.seed.json', 'data/exhibitions.seed.json'];
+
+  const uuid = ()=>{
+    try{
+      if(typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'){
+        return crypto.randomUUID();
+      }
+    } catch {}
+    return `id_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  };
 
   function load(){
-    try{
-      const data = JSON.parse(localStorage.getItem(KEY) || '[]');
-      return Array.isArray(data) ? data : [];
-    } catch {
-      return [];
+    const readKey = (k)=>{
+      try{
+        const data = JSON.parse(localStorage.getItem(k) || '[]');
+        return Array.isArray(data) ? data : [];
+      } catch {
+        return [];
+      }
+    };
+
+    const primary = readKey(KEY);
+    if(primary.length) return primary;
+
+    // Migration: older keys (keep KEY stable for all widgets)
+    const legacyKeys = ['exhibitions', 'mmg.exhibitions', 'agenda.exhibitions'];
+    for(const k of legacyKeys){
+      const v = readKey(k);
+      if(v.length){
+        try{ localStorage.setItem(KEY, JSON.stringify(v)); } catch {}
+        return v;
+      }
     }
+
+    return [];
   }
 
   function save(list){
@@ -28,24 +54,33 @@
   }
 
   async function seedFromFile(){
-    const res = await fetch(SEED_URL, { cache:'no-store' });
-    if(!res.ok) throw new Error(`HTTP ${res.status} on ${SEED_URL}`);
-    const data = await res.json();
-    if(!Array.isArray(data)) throw new Error('seed json must be an array');
+    let lastErr = null;
+    for(const url of SEED_URLS){
+      try{
+        const res = await fetch(url, { cache:'no-store' });
+        if(!res.ok) throw new Error(`HTTP ${res.status} on ${url}`);
+        const data = await res.json();
+        if(!Array.isArray(data)) throw new Error('seed json must be an array');
 
-    const seeded = data
-      .map(x=>({
-        id: crypto.randomUUID(),
-        title: String(x?.title || '').trim(),
-        city: String(x?.city || '').trim(),
-        venue: String(x?.venue || '').trim(),
-        link: String(x?.link || '').trim(),
-        date: String(x?.date || '').trim(),
-        status: x?.status === 'upcoming' ? 'upcoming' : 'past'
-      }))
-      .filter(x=> x.title && x.date && x.status);
+        const seeded = data
+          .map(x=>({
+            id: uuid(),
+            title: String(x?.title || '').trim(),
+            city: String(x?.city || '').trim(),
+            venue: String(x?.venue || '').trim(),
+            link: String(x?.link || '').trim(),
+            date: String(x?.date || '').trim(),
+            status: x?.status === 'upcoming' ? 'upcoming' : 'past'
+          }))
+          .filter(x=> x.title && x.date && x.status);
 
-    save(seeded);
+        save(seeded);
+        return;
+      } catch(e){
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error('seed failed');
   }
 
   async function ensureSeed(){
@@ -219,7 +254,7 @@
       const obj = Object.fromEntries(fd.entries());
       const list = load();
       list.push({
-        id: crypto.randomUUID(),
+        id: uuid(),
         title: String(obj.title||'').trim(),
         city: String(obj.city||'').trim(),
         venue: String(obj.venue||'').trim(),
@@ -235,4 +270,3 @@
 
   ensureSeed().finally(render);
 })();
-
