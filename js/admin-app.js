@@ -768,6 +768,7 @@
     const pubForm = qs("#pubForm");
     const pubMsg = qs("#pubMsg");
     const pubCancel = qs("#pubCancel");
+    const pubDedup = qs("#pubDedup");
     const pubList = qs("#pubList");
     const pubPreview = qs("#pubPreview");
     const pubImages = qs("#pubImages");
@@ -926,6 +927,38 @@
       if (error) throw error;
       return data || [];
     }
+
+    const normPubKeyPart = (v) =>
+      String(v || "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
+
+    const pubDedupeKey = (p) => {
+      const title = normPubKeyPart(p?.title);
+      const body = normPubKeyPart(p?.body);
+      const date = String(p?.published_at || "").slice(0, 10);
+      return `${title}||${body}||${date}`;
+    };
+
+    const findPublicationDuplicates = (list) => {
+      const groups = new Map();
+      (list || []).forEach((p) => {
+        const key = pubDedupeKey(p);
+        if (!key.replace(/\|/g, "")) return;
+        const arr = groups.get(key);
+        if (arr) arr.push(p);
+        else groups.set(key, [p]);
+      });
+
+      const toDelete = [];
+      groups.forEach((arr) => {
+        if (arr.length < 2) return;
+        const sorted = arr.slice().sort((a, b) => String(b?.created_at || "").localeCompare(String(a?.created_at || "")));
+        toDelete.push(...sorted.slice(1)); // keep newest
+      });
+      return toDelete;
+    };
 
     async function fetchSitePhotos(sb) {
       const { data, error } = await sb
@@ -1812,6 +1845,59 @@
 
     newsCancel?.addEventListener("click", resetNewsForm);
     pubCancel?.addEventListener("click", resetPubForm);
+
+    pubDedup?.addEventListener("click", async () => {
+      if (!pubDedup) return;
+      pubDedup.disabled = true;
+      try {
+        // Fresh data first (avoid acting on stale cache)
+        await refreshPubs();
+
+        const duplicates = findPublicationDuplicates(pubsCache);
+        if (!duplicates.length) {
+          toast("Aucun doublon détecté ✅", "ok");
+          return;
+        }
+
+        const sample = duplicates
+          .slice(0, 6)
+          .map((p) => `• ${p?.title || "(sans titre)"}`)
+          .join("\n");
+
+        const ok = confirm(
+          `Supprimer ${duplicates.length} doublon(s) dans Publications ?\n\n${sample}${duplicates.length > 6 ? "\n…" : ""}`
+        );
+        if (!ok) return;
+
+        const ids = duplicates.map((p) => p?.id).filter(Boolean);
+        const paths = [];
+        duplicates.forEach((p) => {
+          (Array.isArray(p?.images) ? p.images : []).forEach((u) => {
+            const path = storagePathFromUrl(u);
+            if (path) paths.push(path);
+          });
+        });
+
+        if (ids.length) {
+          const { error } = await sb.from("publications").delete().in("id", ids);
+          if (error) throw error;
+        }
+
+        const uniqPaths = Array.from(new Set(paths));
+        if (uniqPaths.length) {
+          try { await sb.storage.from(getBucket()).remove(uniqPaths); } catch {}
+        }
+
+        toast("Doublons supprimés ✅", "ok");
+        await refreshPubs();
+      } catch (e) {
+        if (isAbort(e)) return;
+        console.error(e);
+        toast(errText(e), "err");
+      } finally {
+        pubDedup.disabled = false;
+      }
+    });
     docsCancel?.addEventListener("click", resetDocsForm);
     sourcesCancel?.addEventListener("click", resetSourcesForm);
 
@@ -2164,6 +2250,8 @@
 
       const files = Array.from(pubImages?.files || []).slice(0, 6);
 
+      const btn = pubForm.querySelector('button[type="submit"]');
+      if (btn) btn.disabled = true;
       setPubMsg("Enregistrement…");
       try {
         if (id) {
@@ -2223,6 +2311,8 @@
         console.error(e1);
         setPubMsg("Erreur : " + errText(e1));
         toast(errText(e1), "err");
+      } finally {
+        if (btn) btn.disabled = false;
       }
     });
 

@@ -1,4 +1,7 @@
 (function(){
+  if (window.__MMG_PUBLICATIONS_INIT__) return;
+  window.__MMG_PUBLICATIONS_INIT__ = true;
+
   const ROOT_ID = 'publicationsRoot';
 
   const isAbort = (e) =>
@@ -33,6 +36,25 @@
     if(!s) return [];
     return s.split(/\n+/).map(x=>x.trim()).filter(Boolean).slice(0, 8);
   }
+
+  const normKeyPart = (v) =>
+    String(v || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+
+  const dedupe = (items) => {
+    const out = [];
+    const seen = new Set();
+    (items || []).forEach((p) => {
+      const key = `${normKeyPart(p?.title)}||${normKeyPart(Array.isArray(p?.body) ? p.body.join("\n") : p?.body)}||${String(p?.date || "").slice(0, 10)}`;
+      if (!key.replace(/\|/g, "")) return;
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push(p);
+    });
+    return out;
+  };
 
   const getSB = ()=> window.mmgSupabase || null;
   const getBucket = ()=> (window.MMG_SUPABASE?.bucket || window.SUPABASE_BUCKET || "media");
@@ -103,6 +125,7 @@
     const root = document.getElementById(ROOT_ID);
     if(!root) return;
 
+    items = dedupe(items);
     root.classList.add('posts');
 
     root.innerHTML = '';
