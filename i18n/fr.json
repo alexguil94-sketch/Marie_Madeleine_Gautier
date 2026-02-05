@@ -137,7 +137,13 @@
     "kicker": "Bibliothèque",
     "title": "Livres & catalogues (PDF)",
     "open": "Ouvrir PDF",
-    "download": "Télécharger"
+    "download": "Télécharger",
+    "pressTitle": "Presse (PDF)",
+    "pressSub": "Brochures et dossiers de presse.",
+    "sourcesTitle": "Sources",
+    "sourcesSub": "Articles et liens externes.",
+    "openLink": "Ouvrir",
+    "empty": "Aucun élément pour le moment."
   },
   "contact": {
     "kicker": "Contact",

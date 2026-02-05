@@ -1,14 +1,18 @@
-[
-  {
-    "title": "Catalogue — Exposition 2023",
-    "year": "2023",
-    "cover": "assets/placeholders/book-cover-1.svg",
-    "pdf": "assets/pdf/catalogue-2023.pdf"
-  },
-  {
-    "title": "Monographie",
-    "year": "2021",
-    "cover": "assets/placeholders/book-cover-2.svg",
-    "pdf": "assets/pdf/monographie.pdf"
-  }
-]
+{
+  "books": [
+    {
+      "title": "Catalogue — Exposition 2023",
+      "year": "2023",
+      "cover": "assets/placeholders/book-cover-1.svg",
+      "pdf": "assets/pdf/catalogue-2023.pdf"
+    },
+    {
+      "title": "Monographie",
+      "year": "2021",
+      "cover": "assets/placeholders/book-cover-2.svg",
+      "pdf": "assets/pdf/monographie.pdf"
+    }
+  ],
+  "press_brochures": [],
+  "sources": []
+}

@@ -137,7 +137,13 @@
     "kicker": "Library",
     "title": "Books & catalogues (PDF)",
     "open": "Open PDF",
-    "download": "Download"
+    "download": "Download",
+    "pressTitle": "Press (PDF)",
+    "pressSub": "Press brochures and press kits.",
+    "sourcesTitle": "Sources",
+    "sourcesSub": "Articles and external links.",
+    "openLink": "Open",
+    "empty": "No items yet."
   },
   "contact": {
     "kicker": "Contact",

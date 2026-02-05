@@ -137,7 +137,13 @@
     "kicker": "書庫",
     "title": "書籍與圖錄（PDF）",
     "open": "開啟 PDF",
-    "download": "下載"
+    "download": "下載",
+    "pressTitle": "媒體／新聞（PDF）",
+    "pressSub": "新聞手冊與媒體資料（Press kit）。",
+    "sourcesTitle": "來源",
+    "sourcesSub": "文章與外部連結。",
+    "openLink": "開啟",
+    "empty": "目前沒有內容。"
   },
   "contact": {
     "kicker": "聯絡",
