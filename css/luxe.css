@@ -335,7 +335,7 @@ html[data-theme="light"] .nav-carousel{
 .nav-carousel__track{display:flex; transition:transform .45s ease}
 .nav-carousel__slide{
   flex:0 0 100%;
-  height:132px;
+  height:160px;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -399,7 +399,7 @@ html[data-theme="light"] .nav-carousel__count{
 
 @media (max-width:980px){
   .nav-links.nav-drawer{width:min(88vw, 380px)}
-  .nav-carousel__slide{height:120px}
+  .nav-carousel__slide{height:140px}
 }
 
 /* -----------------------------
