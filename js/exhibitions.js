@@ -3,47 +3,85 @@
   if(!root) return;
 
   const KEY = 'exhibitions.v1';
+  const SEED_URL = 'data/exhibitions.seed.json';
 
-  function seedIfEmpty(){
-    if(localStorage.getItem(KEY)) return;
-    const now = new Date();
-
-    const mk = (title, city, date, status)=>({
-      id: crypto.randomUUID(),
-      title, city,
-      date: date.toISOString().slice(0,10),
-      status, // past | upcoming
-      venue: '',
-      link: ''
-    });
-
-    const data = [];
-    for(let i=1;i<=20;i++){
-      const d = new Date(now); d.setMonth(d.getMonth()-i);
-      data.push(mk(`Exposition #${i}`, 'Paris', d, 'past'));
+  function load(){
+    try{
+      const data = JSON.parse(localStorage.getItem(KEY) || '[]');
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
     }
-    for(let i=1;i<=5;i++){
-      const d = new Date(now); d.setMonth(d.getMonth()+i);
-      data.push(mk(`Exposition à venir #${i}`, 'New York', d, 'upcoming'));
-    }
-
-    localStorage.setItem(KEY, JSON.stringify(data));
   }
 
-  function load(){ seedIfEmpty(); return JSON.parse(localStorage.getItem(KEY) || '[]'); }
   function save(list){
     localStorage.setItem(KEY, JSON.stringify(list));
     // Notify other widgets (calendar, etc.)
     try{ window.dispatchEvent(new Event('exhibitions:changed')); }catch{}
   }
 
+  function looksLikeDemoSeed(list){
+    if(!Array.isArray(list) || !list.length) return false;
+    // Old demo seed uses titles like "Exposition #1" / "Exposition à venir #1"
+    const demo = list.filter(x=> typeof x?.title === 'string' && /^Exposition\b.*#\d+/.test(x.title));
+    return demo.length >= Math.min(8, list.length);
+  }
+
+  async function seedFromFile(){
+    const res = await fetch(SEED_URL, { cache:'no-store' });
+    if(!res.ok) throw new Error(`HTTP ${res.status} on ${SEED_URL}`);
+    const data = await res.json();
+    if(!Array.isArray(data)) throw new Error('seed json must be an array');
+
+    const seeded = data
+      .map(x=>({
+        id: crypto.randomUUID(),
+        title: String(x?.title || '').trim(),
+        city: String(x?.city || '').trim(),
+        venue: String(x?.venue || '').trim(),
+        link: String(x?.link || '').trim(),
+        date: String(x?.date || '').trim(),
+        status: x?.status === 'upcoming' ? 'upcoming' : 'past'
+      }))
+      .filter(x=> x.title && x.date && x.status);
+
+    save(seeded);
+  }
+
+  async function ensureSeed(){
+    const list = load();
+    if(Array.isArray(list) && list.length && !looksLikeDemoSeed(list)) return;
+
+    try{
+      await seedFromFile();
+    } catch(e){
+      console.warn('[exhibitions] seed failed', e);
+    }
+  }
+
+  function displayWhen(x){
+    const v = String(x?.date || '').trim();
+    if(!v) return '';
+    if(x?.status === 'past') return v.slice(0,4) || v;
+    return v;
+  }
+
   function rowHTML(x){
-    const badge = x.status==='upcoming' ? (window.__t?.('expo.badgeUpcoming') ?? 'À venir') : (window.__t?.('expo.badgePast') ?? 'Passée');
+    const badge = x.status==='upcoming'
+      ? (window.__t?.('expo.badgeUpcoming') ?? 'À venir')
+      : (window.__t?.('expo.badgePast') ?? 'Passée');
+
+    const meta = [
+      String(x.city||'').trim(),
+      displayWhen(x),
+      String(x.venue||'').trim()
+    ].filter(Boolean).join(' • ');
+
     return `
       <div class="item">
         <div>
           <div style="font-weight:600">${x.title}</div>
-          <div class="muted">${x.city} • ${x.date}${x.venue ? ' • '+x.venue : ''}</div>
+          ${meta ? `<div class="muted">${meta}</div>` : ''}
           ${x.link ? `<div><a class="muted" href="${x.link}" target="_blank" rel="noreferrer">${x.link}</a></div>` : ''}
         </div>
         <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px">
@@ -86,8 +124,8 @@
 
   function render(){
     const list = load();
-    const past = list.filter(x=>x.status==='past').sort((a,b)=> b.date.localeCompare(a.date));
-    const up = list.filter(x=>x.status==='upcoming').sort((a,b)=> a.date.localeCompare(b.date));
+    const past = list.filter(x=>x.status==='past').sort((a,b)=> String(b.date||'').localeCompare(String(a.date||'')));
+    const up = list.filter(x=>x.status==='upcoming').sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')));
 
     root.innerHTML = `
       <div class="toolbar">
@@ -129,6 +167,7 @@
     m.classList.add('is-open');
     m.setAttribute('aria-hidden','false');
   }
+
   function closeModal(){
     const m = document.getElementById('expoModal');
     m.classList.remove('is-open');
@@ -181,12 +220,12 @@
       const list = load();
       list.push({
         id: crypto.randomUUID(),
-        title: obj.title.trim(),
-        city: obj.city.trim(),
-        venue: (obj.venue||'').trim(),
-        link: (obj.link||'').trim(),
-        date: obj.date,
-        status: obj.status
+        title: String(obj.title||'').trim(),
+        city: String(obj.city||'').trim(),
+        venue: String(obj.venue||'').trim(),
+        link: String(obj.link||'').trim(),
+        date: String(obj.date||'').trim(),
+        status: obj.status === 'upcoming' ? 'upcoming' : 'past'
       });
       save(list);
       closeModal();
@@ -194,5 +233,6 @@
     });
   }
 
-  render();
+  ensureSeed().finally(render);
 })();
+
