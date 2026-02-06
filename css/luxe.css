@@ -555,6 +555,32 @@ html[data-theme="light"] .lang-grid{background:rgba(0,0,0,.04)}
   padding:clamp(18px, 4vw, 48px);
   margin:0 auto;
 }
+
+/* Dark mode: improve contrast on bright hero background */
+html[data-theme="dark"] .hero--welcome .hero-welcome__overlay > p.muted{
+  color:rgba(255,255,255,.92);
+  text-shadow:0 14px 46px rgba(0,0,0,.70);
+  background:rgba(0,0,0,.34);
+  border:1px solid rgba(255,255,255,.14);
+  padding:10px 14px;
+  border-radius:18px;
+  display:inline-block;
+  backdrop-filter: blur(10px);
+}
+html[data-theme="dark"] .hero--welcome .hero-ctas .btn{
+  color:rgba(255,255,255,.96);
+  text-shadow:0 14px 46px rgba(0,0,0,.70);
+  background:rgba(0,0,0,.34);
+  border-color:rgba(255,255,255,.18);
+}
+html[data-theme="dark"] .hero--welcome .hero-ctas .btn:hover{
+  background:rgba(0,0,0,.40);
+  border-color:rgba(255,255,255,.26);
+}
+html[data-theme="dark"] .hero--welcome .hero-ctas .btn.ghost{
+  background:rgba(0,0,0,.22);
+  border-color:rgba(255,255,255,.18);
+}
 .hero-ctas{
   display:flex;
   justify-content:center;
