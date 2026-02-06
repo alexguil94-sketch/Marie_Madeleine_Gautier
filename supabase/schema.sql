@@ -362,10 +362,17 @@ create table if not exists public.site_social_links (
   platform text not null, -- instagram | facebook | youtube | whatsapp | etc.
   title text,
   url text not null,
+  icon_light_path text, -- optional: icon for light theme
+  icon_dark_path text,  -- optional: icon for dark theme
   sort int not null default 1000,
   is_published boolean not null default true,
   created_at timestamptz not null default now()
 );
+
+-- add columns on existing installs
+alter table public.site_social_links
+  add column if not exists icon_light_path text,
+  add column if not exists icon_dark_path text;
 
 create unique index if not exists site_social_links_platform_key
 on public.site_social_links (platform);

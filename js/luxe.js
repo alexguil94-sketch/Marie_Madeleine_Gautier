@@ -482,7 +482,7 @@
 
         const { data, error } = await sb
           .from('site_social_links')
-          .select('platform,url,title,sort,is_published,created_at')
+          .select('*')
           .eq('is_published', true)
           .order('sort', { ascending:true, nullsFirst:false })
           .order('created_at', { ascending:false })
@@ -495,6 +495,8 @@
             platform: norm(x?.platform),
             url: String(x?.url || '').trim(),
             title: String(x?.title || '').trim(),
+            icon_light_url: resolveUrl(x?.icon_light_path),
+            icon_dark_url: resolveUrl(x?.icon_dark_path),
             sort: Number(x?.sort),
             created_at: String(x?.created_at || '').trim()
           }))
@@ -528,6 +530,50 @@
               labelEl.removeAttribute('data-i18n');
             }
             a.setAttribute('aria-label', cfg.title);
+          }
+
+          // Custom icons (optional): replace the default inline SVG with images.
+          const baseIco = a.querySelector('svg.ico');
+          a.querySelectorAll('img[data-social-icon]').forEach((el)=> el.remove());
+          if(baseIco) baseIco.hidden = false;
+
+          const iconL = String(cfg.icon_light_url || '').trim();
+          const iconD = String(cfg.icon_dark_url || '').trim();
+          const useL = iconL || iconD;
+          const useD = iconD || iconL;
+
+          if(useL || useD){
+            const w = Number(baseIco?.getAttribute?.('width')) || 16;
+            const h = Number(baseIco?.getAttribute?.('height')) || w;
+
+            const imgL = document.createElement('img');
+            imgL.className = 'ico logo--light';
+            imgL.setAttribute('data-social-icon', 'light');
+            imgL.setAttribute('alt', '');
+            imgL.setAttribute('decoding', 'async');
+            imgL.setAttribute('loading', 'lazy');
+            imgL.width = w;
+            imgL.height = h;
+            imgL.src = useL;
+
+            const imgD = document.createElement('img');
+            imgD.className = 'ico logo--dark';
+            imgD.setAttribute('data-social-icon', 'dark');
+            imgD.setAttribute('alt', '');
+            imgD.setAttribute('decoding', 'async');
+            imgD.setAttribute('loading', 'lazy');
+            imgD.width = w;
+            imgD.height = h;
+            imgD.src = useD;
+
+            if(baseIco?.after){
+              baseIco.hidden = true;
+              baseIco.after(imgL, imgD);
+            } else {
+              if(baseIco) baseIco.hidden = true;
+              a.insertBefore(imgD, a.firstChild);
+              a.insertBefore(imgL, a.firstChild);
+            }
           }
         });
 

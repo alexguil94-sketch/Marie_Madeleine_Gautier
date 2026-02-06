@@ -860,6 +860,17 @@
     const socialCancel = qs("#socialCancel");
     const socialReload = qs("#socialReload");
     const socialList = qs("#socialList");
+    const socialIconLight = qs("#socialIconLight");
+    const socialIconDark = qs("#socialIconDark");
+    const socialIconLightPreview = qs("#socialIconLightPreview");
+    const socialIconDarkPreview = qs("#socialIconDarkPreview");
+    const socialIconLightClear = qs("#socialIconLightClear");
+    const socialIconDarkClear = qs("#socialIconDarkClear");
+
+    let socialIconLightRemove = false;
+    let socialIconDarkRemove = false;
+    let socialIconLightObjectUrl = "";
+    let socialIconDarkObjectUrl = "";
 
     const setNewsMsg = (t) => {
       if (!newsMsg) return;
@@ -885,6 +896,127 @@
       if (!socialMsg) return;
       socialMsg.textContent = t || "";
     };
+
+    const revokeObjectUrl = (u) => {
+      const v = String(u || "").trim();
+      if (!v || !v.startsWith("blob:")) return;
+      try { URL.revokeObjectURL(v); } catch {}
+    };
+
+    const resetSocialIconUI = () => {
+      socialIconLightRemove = false;
+      socialIconDarkRemove = false;
+
+      revokeObjectUrl(socialIconLightObjectUrl);
+      revokeObjectUrl(socialIconDarkObjectUrl);
+      socialIconLightObjectUrl = "";
+      socialIconDarkObjectUrl = "";
+
+      if (socialIconLight) socialIconLight.value = "";
+      if (socialIconDark) socialIconDark.value = "";
+
+      if (socialIconLightPreview) {
+        socialIconLightPreview.hidden = true;
+        socialIconLightPreview.removeAttribute("src");
+      }
+      if (socialIconDarkPreview) {
+        socialIconDarkPreview.hidden = true;
+        socialIconDarkPreview.removeAttribute("src");
+      }
+      if (socialIconLightClear) socialIconLightClear.hidden = true;
+      if (socialIconDarkClear) socialIconDarkClear.hidden = true;
+    };
+
+    const renderSocialIconUI = () => {
+      if (!socialForm) return;
+
+      const cur = editingSocial;
+      const existingLight = cur?.icon_light_path || "";
+      const existingDark = cur?.icon_dark_path || "";
+
+      const lightFile = socialIconLight?.files?.[0] || null;
+      const darkFile = socialIconDark?.files?.[0] || null;
+
+      // Light preview
+      if (socialIconLightPreview) {
+        if (socialIconLightRemove) {
+          socialIconLightPreview.hidden = true;
+          socialIconLightPreview.removeAttribute("src");
+        } else if (lightFile) {
+          revokeObjectUrl(socialIconLightObjectUrl);
+          socialIconLightObjectUrl = URL.createObjectURL(lightFile);
+          socialIconLightPreview.src = socialIconLightObjectUrl;
+          socialIconLightPreview.hidden = false;
+        } else if (existingLight) {
+          socialIconLightPreview.src = resolveUrl(sb, existingLight);
+          socialIconLightPreview.hidden = false;
+        } else {
+          socialIconLightPreview.hidden = true;
+          socialIconLightPreview.removeAttribute("src");
+        }
+      }
+
+      if (socialIconLightClear) {
+        const show = !!lightFile || !!existingLight || socialIconLightRemove;
+        socialIconLightClear.hidden = !show;
+        socialIconLightClear.textContent = socialIconLightRemove ? "Annuler retrait" : "Retirer";
+      }
+
+      // Dark preview
+      if (socialIconDarkPreview) {
+        if (socialIconDarkRemove) {
+          socialIconDarkPreview.hidden = true;
+          socialIconDarkPreview.removeAttribute("src");
+        } else if (darkFile) {
+          revokeObjectUrl(socialIconDarkObjectUrl);
+          socialIconDarkObjectUrl = URL.createObjectURL(darkFile);
+          socialIconDarkPreview.src = socialIconDarkObjectUrl;
+          socialIconDarkPreview.hidden = false;
+        } else if (existingDark) {
+          socialIconDarkPreview.src = resolveUrl(sb, existingDark);
+          socialIconDarkPreview.hidden = false;
+        } else {
+          socialIconDarkPreview.hidden = true;
+          socialIconDarkPreview.removeAttribute("src");
+        }
+      }
+
+      if (socialIconDarkClear) {
+        const show = !!darkFile || !!existingDark || socialIconDarkRemove;
+        socialIconDarkClear.hidden = !show;
+        socialIconDarkClear.textContent = socialIconDarkRemove ? "Annuler retrait" : "Retirer";
+      }
+    };
+
+    socialIconLight?.addEventListener("change", () => {
+      socialIconLightRemove = false;
+      renderSocialIconUI();
+    });
+    socialIconDark?.addEventListener("change", () => {
+      socialIconDarkRemove = false;
+      renderSocialIconUI();
+    });
+
+    socialIconLightClear?.addEventListener("click", () => {
+      const hasFile = !!(socialIconLight?.files?.length);
+      if (hasFile) {
+        if (socialIconLight) socialIconLight.value = "";
+        socialIconLightRemove = false;
+      } else {
+        socialIconLightRemove = !socialIconLightRemove;
+      }
+      renderSocialIconUI();
+    });
+    socialIconDarkClear?.addEventListener("click", () => {
+      const hasFile = !!(socialIconDark?.files?.length);
+      if (hasFile) {
+        if (socialIconDark) socialIconDark.value = "";
+        socialIconDarkRemove = false;
+      } else {
+        socialIconDarkRemove = !socialIconDarkRemove;
+      }
+      renderSocialIconUI();
+    });
 
     const renderNewsPreview = () => {
       if (!newsPreview) return;
@@ -1072,7 +1204,7 @@
     async function fetchSocialLinks(sb) {
       const { data, error } = await sb
         .from("site_social_links")
-        .select("id,platform,title,url,sort,is_published,created_at")
+        .select("*")
         .order("sort", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: false })
         .limit(200);
@@ -1637,10 +1769,20 @@
         const platform = String(s.platform || "").trim() || "—";
         const sortVal = Number.isFinite(Number(s.sort)) ? String(s.sort) : "—";
         const title = String(s.title || "").trim() || platform;
+        const icoL = s?.icon_light_path ? resolveUrl(sb, s.icon_light_path) : "";
+        const icoD = s?.icon_dark_path ? resolveUrl(sb, s.icon_dark_path) : "";
+        const icoRow =
+          icoL || icoD
+            ? `<div style="display:flex;gap:8px;margin-top:6px">
+                ${icoL ? `<img src="${icoL}" alt="" title="Icône clair" style="width:22px;height:22px;object-fit:contain;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.25)"/>` : ""}
+                ${icoD ? `<img src="${icoD}" alt="" title="Icône sombre" style="width:22px;height:22px;object-fit:contain;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.25)"/>` : ""}
+              </div>`
+            : "";
         left.innerHTML = `
           <div class="admin-item__meta">${status} • ${platform} • sort ${sortVal}</div>
           <div><strong>${title}</strong></div>
           <div class="admin-item__text">${s.url || ""}</div>
+          ${icoRow}
         `;
 
         const actions = document.createElement("div");
@@ -1659,6 +1801,10 @@
           socialForm.elements.url.value = s.url || "";
           socialForm.elements.title.value = s.title || "";
           socialForm.elements.is_published.checked = !!s.is_published;
+          resetSocialIconUI();
+          socialIconLightRemove = false;
+          socialIconDarkRemove = false;
+          renderSocialIconUI();
           if (socialCancel) socialCancel.hidden = false;
           setSocialMsg("");
           socialForm.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -2092,6 +2238,7 @@
       socialForm.reset();
       socialForm.elements.id.value = "";
       try { socialForm.elements.platform.disabled = false; } catch {}
+      resetSocialIconUI();
       if (socialCancel) socialCancel.hidden = true;
       setSocialMsg("");
     }
@@ -2406,6 +2553,22 @@
           (x) => String(x?.platform || "").trim().toLowerCase() === platformKey
         );
 
+        const lightFile = socialIconLight?.files?.[0] || null;
+        const darkFile = socialIconDark?.files?.[0] || null;
+        const wantsIconUpdate =
+          !!lightFile || !!darkFile || !!socialIconLightRemove || !!socialIconDarkRemove;
+
+        let icon_light_path = existing?.icon_light_path || null;
+        let icon_dark_path = existing?.icon_dark_path || null;
+
+        if (wantsIconUpdate) {
+          if (socialIconLightRemove) icon_light_path = null;
+          if (socialIconDarkRemove) icon_dark_path = null;
+
+          if (lightFile) icon_light_path = await uploadImageToFolder(`site/social/${platformKey}`, lightFile);
+          if (darkFile) icon_dark_path = await uploadImageToFolder(`site/social/${platformKey}`, darkFile);
+        }
+
         const maxSort = socialCache.reduce((m, x) => Math.max(m, Number(x?.sort) || 0), 0);
         const sort = existing
           ? Number.isFinite(Number(existing.sort))
@@ -2421,18 +2584,45 @@
           is_published,
         };
 
+        if (wantsIconUpdate) {
+          payload.icon_light_path = icon_light_path || null;
+          payload.icon_dark_path = icon_dark_path || null;
+        }
+
         // If we're editing, keep id stable (optional), but we still upsert on platform.
         if (id) payload.id = id;
 
         const { error } = await sb.from("site_social_links").upsert(payload, { onConflict: "platform" });
         if (error) throw error;
 
+        // Best-effort cleanup (remove old icons if replaced/removed)
+        if (wantsIconUpdate && existing) {
+          const rm = [];
+
+          const oldL = storagePathFromUrl(existing?.icon_light_path);
+          const oldD = storagePathFromUrl(existing?.icon_dark_path);
+          const newL = storagePathFromUrl(icon_light_path);
+          const newD = storagePathFromUrl(icon_dark_path);
+
+          if (oldL && oldL !== newL && !rm.includes(oldL)) rm.push(oldL);
+          if (oldD && oldD !== newD && !rm.includes(oldD)) rm.push(oldD);
+
+          if (rm.length) {
+            try { await sb.storage.from(getBucket()).remove(rm); } catch {}
+          }
+        }
+
         toast("Lien enregistré ✅", "ok");
         resetSocialForm();
         await refreshSocial();
       } catch (e2) {
         console.error(e2);
-        setSocialMsg("Erreur : " + errText(e2));
+        const msg = errText(e2);
+        if (/icon_(light|dark)_path/i.test(msg)) {
+          setSocialMsg("Erreur : ajoute les colonnes `icon_light_path` / `icon_dark_path` (voir supabase/schema.sql), puis réessaie.");
+        } else {
+          setSocialMsg("Erreur : " + msg);
+        }
         toast(errText(e2), "err");
       } finally {
         if (btn) btn.disabled = false;
