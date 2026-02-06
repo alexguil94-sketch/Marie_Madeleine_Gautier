@@ -210,6 +210,9 @@
     const slot = qs("#mmgProfileSlot");
     if (!slot) return;
 
+    const adminSlot = qs("#mmgAdminSlot");
+    if (adminSlot) adminSlot.innerHTML = "";
+
     const user = await getUser();
     slot.innerHTML = "";
 
@@ -225,6 +228,15 @@
     const profile = await ensureProfileRow(user);
     const name = profile?.display_name || "Mon profil";
     const avatar = resolveUrl(profile?.avatar_url || "");
+
+    if (adminSlot && profile?.role === "admin") {
+      const aAdmin = document.createElement("a");
+      aAdmin.className = "pill";
+      aAdmin.href = "/studio.html";
+      aAdmin.textContent = "Studio";
+      aAdmin.setAttribute("aria-label", "Studio");
+      adminSlot.appendChild(aAdmin);
+    }
 
     const a = document.createElement("a");
     a.className = "mmg-profbtn";
