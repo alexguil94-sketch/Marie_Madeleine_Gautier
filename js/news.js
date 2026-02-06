@@ -8,6 +8,8 @@
   if (window.__MMG_NEWS_INIT__) return;
   window.__MMG_NEWS_INIT__ = true;
 
+  let renderSeq = 0;
+
   const ROOT_ID = "newsRoot";
   const FALLBACK_ITEMS = [
     {
@@ -338,21 +340,30 @@
     root.appendChild(form);
   }
 
-  async function render() {
+  async function render(seq) {
     const root = document.getElementById(ROOT_ID);
     if (!root) return;
+    if (seq !== renderSeq) return;
 
     root.innerHTML = "";
 
     const sb = await waitForSB();
+    if (seq !== renderSeq) return;
     let items = sb ? await loadPostsSupabase() : null;
+    if (seq !== renderSeq) return;
     if (!items || !items.length) items = FALLBACK_ITEMS;
 
     const user = await getUser();
+    if (seq !== renderSeq) return;
     const myProfile = user ? await getMyProfile(user) : null;
+    if (seq !== renderSeq) return;
 
     const ids = items.map((x) => x.id);
     const { map: commentsMap } = sb ? await loadCommentsSupabase(ids) : { map: {} };
+    if (seq !== renderSeq) return;
+
+    // Clear again to avoid interleaved renders on slow networks / i18n changes.
+    root.innerHTML = "";
 
     items.forEach((item) => {
       const card = document.createElement("article");
@@ -390,11 +401,13 @@
     });
   }
 
-  const safeRender = () =>
-    render().catch((err) => {
+  const safeRender = () => {
+    const seq = ++renderSeq;
+    render(seq).catch((err) => {
       if (isAbort(err)) return;
       console.error(err);
     });
+  };
 
   window.addEventListener("DOMContentLoaded", safeRender);
   window.addEventListener("i18n:changed", safeRender);
