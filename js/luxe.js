@@ -176,24 +176,30 @@
         }
       };
 
-      // Header logos (optional overrides via site_photos)
+      // Site logos (optional overrides via site_photos)
       (async ()=>{
         const light = await readFirstSitePhotoSupabase('header_logo_light');
-        if(light?.url){
-          const el = document.querySelector('[data-site-logo-light]');
-          if(el){
-            el.setAttribute('src', light.url);
-            if(light.alt) el.setAttribute('alt', light.alt);
-          }
-        }
-
         const dark = await readFirstSitePhotoSupabase('header_logo_dark');
-        if(dark?.url){
-          const el = document.querySelector('[data-site-logo-dark]');
-          if(el){
-            el.setAttribute('src', dark.url);
-            if(dark.alt) el.setAttribute('alt', dark.alt);
+
+        const apply = ()=>{
+          if(light?.url){
+            document.querySelectorAll('[data-site-logo-light]').forEach((el)=>{
+              el.setAttribute('src', light.url);
+              if(light.alt) el.setAttribute('alt', light.alt);
+            });
           }
+          if(dark?.url){
+            document.querySelectorAll('[data-site-logo-dark]').forEach((el)=>{
+              el.setAttribute('src', dark.url);
+              if(dark.alt) el.setAttribute('alt', dark.alt);
+            });
+          }
+        };
+
+        // Apply now (best effort), and again after header/footer partials are injected.
+        apply();
+        if(!window.__MMG_PARTIALS_LOADED__){
+          document.addEventListener('partials:loaded', apply, { once:true });
         }
       })().catch(()=>{});
 
