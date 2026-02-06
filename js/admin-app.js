@@ -2560,6 +2560,39 @@
       }
     });
 
+    // OAuth login (Google) - convenient shortcut for studio/admin
+    document.querySelectorAll("[data-admin-oauth]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const msgEl = qs("#loginMsg");
+        const provider = String(btn.getAttribute("data-admin-oauth") || "").trim();
+        if (!provider) return;
+
+        if (location.protocol === "file:") {
+          if (msgEl) msgEl.textContent = "OAuth nécessite un site servi en http(s) (pas file://).";
+          return;
+        }
+
+        try {
+          btn.disabled = true;
+          if (msgEl) msgEl.textContent = `Redirection ${provider}…`;
+
+          // Redirect back to this exact admin page (works for root deploy + GitHub Pages subpaths).
+          const redirectTo = new URL(location.pathname, location.origin).toString();
+
+          const { error } = await sb.auth.signInWithOAuth({
+            provider,
+            options: { redirectTo },
+          });
+          if (error) throw error;
+        } catch (err) {
+          if (isAbort(err)) return;
+          console.error(err);
+          if (msgEl) msgEl.textContent = "Erreur : " + errText(err);
+          try { btn.disabled = false; } catch {}
+        }
+      });
+    });
+
     async function initAuthed(res) {
       showDash();
 
