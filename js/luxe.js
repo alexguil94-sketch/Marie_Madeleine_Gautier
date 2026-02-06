@@ -431,6 +431,80 @@
       if(e.key !== 'Escape') return;
       if(langWrap?.classList.contains('is-open')) setLangOpen(false);
     });
+
+    // ----- Social links (footer/contact)
+    // If admin configured public.site_social_links, update anchors with [data-social].
+    (async ()=>{
+      const anchors = Array.from(document.querySelectorAll('[data-social]'));
+      if(!anchors.length) return;
+
+      const isAbort = (e)=>
+        e?.name === 'AbortError' || /signal is aborted/i.test(String(e?.message || e || ''));
+
+      const getSB = ()=> window.mmgSupabase || null;
+
+      const waitForSB = async (timeoutMs = 3500)=>{
+        if(getSB()) return getSB();
+
+        const status = window.__MMG_SB_STATUS__;
+        if(status && status !== 'loading') return null;
+
+        return await new Promise((resolve)=>{
+          let done = false;
+          const onReady = ()=>{
+            if(done) return;
+            done = true;
+            resolve(getSB());
+          };
+
+          document.addEventListener('sb:ready', onReady, { once:true });
+
+          setTimeout(()=>{
+            if(done) return;
+            done = true;
+            document.removeEventListener('sb:ready', onReady);
+            resolve(getSB());
+          }, timeoutMs);
+        });
+      };
+
+      const norm = (s)=> String(s || '').trim().toLowerCase();
+
+      try{
+        const sb = await waitForSB(3500);
+        if(!sb) return;
+
+        const { data, error } = await sb
+          .from('site_social_links')
+          .select('platform,url,is_published')
+          .eq('is_published', true)
+          .limit(50);
+
+        if(error) return;
+
+        const map = new Map();
+        (data || []).forEach((x)=>{
+          const k = norm(x?.platform);
+          const u = String(x?.url || '').trim();
+          if(!k || !u) return;
+          map.set(k, u);
+        });
+
+        if(!map.size) return;
+
+        anchors.forEach((a)=>{
+          const k = norm(a.getAttribute('data-social'));
+          const u = map.get(k);
+          if(!u) return;
+          a.setAttribute('href', u);
+          if(!a.getAttribute('target')) a.setAttribute('target', '_blank');
+          if(!a.getAttribute('rel')) a.setAttribute('rel', 'noopener noreferrer');
+        });
+      } catch(e){
+        if(isAbort(e)) return;
+        console.warn('[social-links] init error', e);
+      }
+    })();
   }
 
   document.addEventListener('partials:loaded', bind);

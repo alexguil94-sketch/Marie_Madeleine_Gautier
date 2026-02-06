@@ -60,6 +60,7 @@
           <button class="admin-nav__btn" type="button" data-view="news">Actualités</button>
           <button class="admin-nav__btn" type="button" data-view="publications">Publications</button>
           <button class="admin-nav__btn" type="button" data-view="books">Livres</button>
+          <button class="admin-nav__btn" type="button" data-view="social">Réseaux</button>
           <button class="admin-nav__btn" type="button" data-view="photos">Photos</button>
           <button class="admin-nav__btn" type="button" data-view="comments">Commentaires</button>
         </nav>
@@ -340,6 +341,59 @@
           <div id="sourcesAdminList" class="admin-list"></div>
         </section>
 
+        <section id="view-social" hidden>
+          <div class="admin-view__head">
+            <h2 style="margin:0">Réseaux sociaux</h2>
+          </div>
+
+          <form id="socialForm" class="admin-form">
+            <input type="hidden" name="id" />
+
+            <div class="row">
+              <div class="field">
+                <span>Plateforme</span>
+                <select class="input" name="platform">
+                  <option value="instagram">Instagram</option>
+                  <option value="facebook">Facebook</option>
+                  <option value="youtube">YouTube</option>
+                  <option value="whatsapp">WhatsApp</option>
+                  <option value="tiktok">TikTok</option>
+                  <option value="x">X (Twitter)</option>
+                  <option value="pinterest">Pinterest</option>
+                  <option value="website">Site web</option>
+                </select>
+              </div>
+              <div class="field">
+                <span>URL</span>
+                <input class="input" name="url" placeholder="https://..." required />
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <span>Label (option)</span>
+                <input class="input" name="title" placeholder="Ex: Instagram" />
+              </div>
+              <div class="field">
+                <span>Publié</span>
+                <label class="admin-toggle">
+                  <input type="checkbox" name="is_published" checked />
+                  <span>oui</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="admin-login-row">
+              <button class="btn" type="submit">Enregistrer</button>
+              <button id="socialCancel" class="btn" type="button" hidden>Annuler</button>
+              <button id="socialReload" class="btn" type="button">Rafraichir</button>
+            </div>
+            <div id="socialMsg" class="muted"></div>
+          </form>
+
+          <div id="socialList" class="admin-list"></div>
+        </section>
+
         <section id="view-photos" hidden>
           <div class="admin-view__head">
             <h2 style="margin:0">Photos du site</h2>
@@ -395,6 +449,6 @@
   <script defer src="/js/supabase-config.js?v=1"></script>
   <script defer src="/js/supabase-client.js?v=6"></script>
 
-  <script defer src="/js/admin-app.js?v=10"></script>
+  <script defer src="/js/admin-app.js?v=11"></script>
 </body>
 </html>

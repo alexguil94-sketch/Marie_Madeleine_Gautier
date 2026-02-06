@@ -279,10 +279,12 @@
       let sitePhotosCache = [];
       let docsCache = [];
       let sourcesCache = [];
+      let socialCache = [];
       let editingNews = null;
       let editingPub = null;
       let editingDoc = null;
       let editingSource = null;
+      let editingSocial = null;
 
     const inputFiles = qs("#workImages");
     const drop = qs("#workDrop");
@@ -295,7 +297,7 @@
     const listEl = qs("#worksList");
 
     const navBtns = Array.from(document.querySelectorAll(".admin-nav__btn"));
-    const VIEWS = ["works", "news", "publications", "books", "photos", "comments"];
+    const VIEWS = ["works", "news", "publications", "books", "social", "photos", "comments"];
 
     const setView = (name) => {
       const view = VIEWS.includes(name) ? name : "works";
@@ -852,6 +854,13 @@
     const sourcesReload = qs("#sourcesReload");
     const sourcesAdminList = qs("#sourcesAdminList");
 
+    // ---------- Social links ----------
+    const socialForm = qs("#socialForm");
+    const socialMsg = qs("#socialMsg");
+    const socialCancel = qs("#socialCancel");
+    const socialReload = qs("#socialReload");
+    const socialList = qs("#socialList");
+
     const setNewsMsg = (t) => {
       if (!newsMsg) return;
       newsMsg.textContent = t || "";
@@ -871,6 +880,10 @@
     const setSourcesMsg = (t) => {
       if (!sourcesMsg) return;
       sourcesMsg.textContent = t || "";
+    };
+    const setSocialMsg = (t) => {
+      if (!socialMsg) return;
+      socialMsg.textContent = t || "";
     };
 
     const renderNewsPreview = () => {
@@ -1051,6 +1064,18 @@
         .order("sort", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: false })
         .limit(1000);
+
+      if (error) throw error;
+      return data || [];
+    }
+
+    async function fetchSocialLinks(sb) {
+      const { data, error } = await sb
+        .from("site_social_links")
+        .select("id,platform,title,url,sort,is_published,created_at")
+        .order("sort", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: false })
+        .limit(200);
 
       if (error) throw error;
       return data || [];
@@ -1585,6 +1610,125 @@
       });
     };
 
+    const renderSocialList = () => {
+      if (!socialList) return;
+      socialList.innerHTML = "";
+
+      const list = socialCache
+        .slice()
+        .sort((a, b) => {
+          const as = Number(a?.sort) || 0;
+          const bs = Number(b?.sort) || 0;
+          if (as !== bs) return as - bs;
+          return String(b?.created_at || "").localeCompare(String(a?.created_at || ""));
+        });
+
+      if (!list.length) {
+        socialList.innerHTML = `<p class="muted">Aucun lien pour l’instant.</p>`;
+        return;
+      }
+
+      list.forEach((s) => {
+        const row = document.createElement("div");
+        row.className = "admin-item";
+
+        const left = document.createElement("div");
+        const status = s.is_published ? "Publié" : "Brouillon";
+        const platform = String(s.platform || "").trim() || "—";
+        const sortVal = Number.isFinite(Number(s.sort)) ? String(s.sort) : "—";
+        const title = String(s.title || "").trim() || platform;
+        left.innerHTML = `
+          <div class="admin-item__meta">${status} • ${platform} • sort ${sortVal}</div>
+          <div><strong>${title}</strong></div>
+          <div class="admin-item__text">${s.url || ""}</div>
+        `;
+
+        const actions = document.createElement("div");
+        actions.className = "admin-actions";
+
+        const btnEdit = document.createElement("button");
+        btnEdit.type = "button";
+        btnEdit.className = "btn";
+        btnEdit.textContent = "Modifier";
+        btnEdit.addEventListener("click", () => {
+          if (!socialForm) return;
+          editingSocial = s;
+          socialForm.elements.id.value = s.id || "";
+          socialForm.elements.platform.value = s.platform || "instagram";
+          try { socialForm.elements.platform.disabled = true; } catch {}
+          socialForm.elements.url.value = s.url || "";
+          socialForm.elements.title.value = s.title || "";
+          socialForm.elements.is_published.checked = !!s.is_published;
+          if (socialCancel) socialCancel.hidden = false;
+          setSocialMsg("");
+          socialForm.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+
+        const btnOpen = document.createElement("button");
+        btnOpen.type = "button";
+        btnOpen.className = "btn";
+        btnOpen.textContent = "Ouvrir";
+        btnOpen.disabled = !s?.url;
+        btnOpen.addEventListener("click", () => {
+          const u = String(s?.url || "").trim();
+          if (!u) return;
+          window.open(u, "_blank", "noopener,noreferrer");
+        });
+
+        const btnPub = document.createElement("button");
+        btnPub.type = "button";
+        btnPub.className = "btn";
+        btnPub.textContent = s.is_published ? "Dépublier" : "Publier";
+        btnPub.addEventListener("click", async () => {
+          btnPub.disabled = true;
+          try {
+            const next = !s.is_published;
+            const { error } = await sb.from("site_social_links").update({ is_published: next }).eq("id", s.id);
+            if (error) throw error;
+            toast("Statut mis à jour ✅", "ok");
+            await refreshSocial();
+          } catch (e) {
+            console.error(e);
+            toast(errText(e), "err");
+          } finally {
+            btnPub.disabled = false;
+          }
+        });
+
+        const btnDel = document.createElement("button");
+        btnDel.type = "button";
+        btnDel.className = "btn";
+        btnDel.textContent = "Supprimer";
+        btnDel.style.borderColor = "rgba(255,100,100,.35)";
+        btnDel.addEventListener("click", async () => {
+          const ok = confirm(`Supprimer "${title}" ?`);
+          if (!ok) return;
+
+          btnDel.disabled = true;
+          try {
+            const { error } = await sb.from("site_social_links").delete().eq("id", s.id);
+            if (error) throw error;
+            toast("Lien supprimé ✅", "ok");
+            await refreshSocial();
+          } catch (e) {
+            console.error(e);
+            toast(errText(e), "err");
+          } finally {
+            btnDel.disabled = false;
+          }
+        });
+
+        actions.appendChild(btnEdit);
+        actions.appendChild(btnOpen);
+        actions.appendChild(btnPub);
+        actions.appendChild(btnDel);
+
+        row.appendChild(left);
+        row.appendChild(actions);
+        socialList.appendChild(row);
+      });
+    };
+
     async function moveDoc(kind, idx, delta) {
       const list = docsCache
         .filter((d) => (d?.kind || "book") === kind)
@@ -1860,6 +2004,22 @@
       }
     }
 
+    async function refreshSocial() {
+      if (!socialList) return;
+
+      try {
+        socialCache = await fetchSocialLinks(sb);
+        renderSocialList();
+        setSocialMsg("");
+      } catch (e) {
+        if (isAbort(e)) return;
+        console.warn("[admin] site_social_links error", e);
+        socialCache = [];
+        renderSocialList();
+        setSocialMsg("Erreur de chargement. Cree la table `site_social_links` (voir supabase/schema.sql).");
+      }
+    }
+
     function resetDocsForm() {
       if (!docsForm) return;
       editingDoc = null;
@@ -1878,6 +2038,16 @@
       sourcesForm.elements.id.value = "";
       if (sourcesCancel) sourcesCancel.hidden = true;
       setSourcesMsg("");
+    }
+
+    function resetSocialForm() {
+      if (!socialForm) return;
+      editingSocial = null;
+      socialForm.reset();
+      socialForm.elements.id.value = "";
+      try { socialForm.elements.platform.disabled = false; } catch {}
+      if (socialCancel) socialCancel.hidden = true;
+      setSocialMsg("");
     }
 
     function resetNewsForm() {
@@ -1905,6 +2075,7 @@
 
     newsCancel?.addEventListener("click", resetNewsForm);
     pubCancel?.addEventListener("click", resetPubForm);
+    socialCancel?.addEventListener("click", resetSocialForm);
 
     pubDedup?.addEventListener("click", async () => {
       if (!pubDedup) return;
@@ -1975,6 +2146,14 @@
 
     sourcesReload?.addEventListener("click", () => {
       refreshSources().catch((e) => {
+        if (isAbort(e)) return;
+        console.error(e);
+        toast(errText(e), "err");
+      });
+    });
+
+    socialReload?.addEventListener("click", () => {
+      refreshSocial().catch((e) => {
         if (isAbort(e)) return;
         console.error(e);
         toast(errText(e), "err");
@@ -2144,6 +2323,70 @@
       } catch (e2) {
         console.error(e2);
         setSourcesMsg("Erreur : " + errText(e2));
+        toast(errText(e2), "err");
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+
+    socialForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!socialForm) return;
+
+      setSocialMsg("");
+
+      const fd = new FormData(socialForm);
+      const id = String(fd.get("id") || "").trim();
+      const platform = String(fd.get("platform") || "").trim().toLowerCase();
+      const title = String(fd.get("title") || "").trim();
+      const urlRaw = String(fd.get("url") || "").trim();
+      const is_published = !!socialForm.elements?.is_published?.checked;
+
+      if (!platform) return setSocialMsg("Plateforme requise.");
+      if (!urlRaw) return setSocialMsg("URL requise.");
+
+      let url = urlRaw;
+      if (!/^[a-z]+:\/\//i.test(url) && !/^mailto:/i.test(url) && !/^tel:/i.test(url)) {
+        url = "https://" + url.replace(/^\/+/, "");
+      }
+
+      const btn = socialForm.querySelector('button[type="submit"]');
+      if (btn) btn.disabled = true;
+      setSocialMsg("Enregistrement…");
+
+      try {
+        const platformKey = String(platform || "").trim().toLowerCase();
+        const existing = socialCache.find(
+          (x) => String(x?.platform || "").trim().toLowerCase() === platformKey
+        );
+
+        const maxSort = socialCache.reduce((m, x) => Math.max(m, Number(x?.sort) || 0), 0);
+        const sort = existing
+          ? Number.isFinite(Number(existing.sort))
+            ? Number(existing.sort)
+            : 1000
+          : (Number.isFinite(maxSort) ? maxSort : 0) + 10;
+
+        const payload = {
+          platform: platformKey,
+          title: title || null,
+          url,
+          sort,
+          is_published,
+        };
+
+        // If we're editing, keep id stable (optional), but we still upsert on platform.
+        if (id) payload.id = id;
+
+        const { error } = await sb.from("site_social_links").upsert(payload, { onConflict: "platform" });
+        if (error) throw error;
+
+        toast("Lien enregistré ✅", "ok");
+        resetSocialForm();
+        await refreshSocial();
+      } catch (e2) {
+        console.error(e2);
+        setSocialMsg("Erreur : " + errText(e2));
         toast(errText(e2), "err");
       } finally {
         if (btn) btn.disabled = false;
@@ -2618,6 +2861,7 @@
         await refreshPubs();
         await refreshDocs();
         await refreshSources();
+        await refreshSocial();
         await refreshSitePhotos();
         await refreshModeration();
       } catch (e) {

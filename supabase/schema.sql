@@ -355,7 +355,48 @@ using (public.is_admin())
 with check (public.is_admin());
 
 -- ============================================================
--- 8) STORAGE policies (bucket: media)
+-- 8) SOCIAL LINKS (footer / contact)
+-- ============================================================
+create table if not exists public.site_social_links (
+  id uuid primary key default gen_random_uuid(),
+  platform text not null, -- instagram | facebook | youtube | whatsapp | etc.
+  title text,
+  url text not null,
+  sort int not null default 1000,
+  is_published boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create unique index if not exists site_social_links_platform_key
+on public.site_social_links (platform);
+
+alter table public.site_social_links enable row level security;
+
+drop policy if exists "site social public read" on public.site_social_links;
+drop policy if exists "site social admin read all" on public.site_social_links;
+drop policy if exists "site social admin write" on public.site_social_links;
+
+create policy "site social public read"
+on public.site_social_links
+for select
+to anon, authenticated
+using (is_published = true);
+
+create policy "site social admin read all"
+on public.site_social_links
+for select
+to authenticated
+using (public.is_admin());
+
+create policy "site social admin write"
+on public.site_social_links
+for all
+to authenticated
+using (public.is_admin())
+with check (public.is_admin());
+
+-- ============================================================
+-- 9) STORAGE policies (bucket: media)
 -- IMPORTANT: crée le bucket "media" dans Storage → Buckets
 -- ============================================================
 drop policy if exists "media public read" on storage.objects;
@@ -381,7 +422,7 @@ to authenticated
 using (bucket_id = 'media' and public.is_admin());
 
 -- ============================================================
--- 9) Make your user admin
+-- 10) Make your user admin
 -- ============================================================
 insert into public.profiles (id, role, display_name)
 values ('80bf5061-15d7-4d5c-afdb-492c024fb320', 'admin', 'alexguil94@hotmail.fr')

@@ -18,14 +18,17 @@
   "footer": {
     "rights": "All rights reserved.",
     "getInTouch": "Get in touch",
-    "tagline": "Sculpture • Texts • Utopian worlds",
-    "linksTitle": "Links",
+    "tagline": "Sculptures, texts and exhibitions — a signature where matter meets utopia.",
+    "linksTitle": "Navigation",
+    "accountTitle": "Account",
+    "profile": "My profile",
     "socialTitle": "Social",
     "contactTitle": "Contact",
     "socialHint": "Replace the “#” with your links.",
     "instagram": "Instagram",
     "facebook": "Facebook",
     "youtube": "YouTube",
+    "siteOfficial": "Official site",
     "location": "France • By appointment"
   },
   "home": {

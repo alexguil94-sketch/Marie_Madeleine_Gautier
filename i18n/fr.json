@@ -18,14 +18,17 @@
   "footer": {
     "rights": "Tous droits réservés.",
     "getInTouch": "Prendre contact",
-    "tagline": "Sculpture • Textes • Mondes utopiques",
-    "linksTitle": "Liens",
+    "tagline": "Sculptures, textes et expositions — une signature où la matière rencontre l’utopie.",
+    "linksTitle": "Navigation",
+    "accountTitle": "Compte",
+    "profile": "Mon profil",
     "socialTitle": "Réseaux",
     "contactTitle": "Contact",
     "socialHint": "Remplacez les “#” par vos liens.",
     "instagram": "Instagram",
     "facebook": "Facebook",
     "youtube": "YouTube",
+    "siteOfficial": "Site officiel",
     "location": "France • Sur rendez-vous"
   },
   "home": {

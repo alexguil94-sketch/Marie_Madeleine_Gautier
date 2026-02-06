@@ -4,7 +4,7 @@ const I18N = {
 };
 
 async function loadLang(lang){
-  const res = await fetch(`i18n/${lang}.json`);
+  const res = await fetch(`i18n/${lang}.json`, { cache: 'no-store' });
   I18N.dict = await res.json();
   I18N.lang = lang;
   localStorage.setItem('lang', lang);

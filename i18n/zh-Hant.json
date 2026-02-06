@@ -18,14 +18,17 @@
   "footer": {
     "rights": "版權所有。",
     "getInTouch": "聯絡我們",
-    "tagline": "雕塑 • 文字 • 烏托邦世界",
-    "linksTitle": "連結",
+    "tagline": "雕塑、文字與展覽——在此，物質與烏托邦相遇的印記。",
+    "linksTitle": "導覽",
+    "accountTitle": "帳戶",
+    "profile": "我的個人檔案",
     "socialTitle": "社群",
     "contactTitle": "聯絡",
     "socialHint": "把「#」換成你的連結。",
     "instagram": "Instagram",
     "facebook": "Facebook",
     "youtube": "YouTube",
+    "siteOfficial": "官方網站",
     "location": "法國 • 預約制"
   },
   "home": {
