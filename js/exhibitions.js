@@ -3,7 +3,32 @@
   if(!root) return;
 
   const KEY = 'exhibitions.v1';
-  const SEED_URLS = ['/data/exhibitions.seed.json', 'data/exhibitions.seed.json'];
+
+  const appBaseURL = (()=>{
+    try{
+      const src = document.currentScript?.src;
+      if(src){
+        // If script is /<base>/js/exhibitions.js -> base is /<base>/
+        return new URL('../', src).toString();
+      }
+    } catch {}
+    try{
+      return new URL('./', location.href).toString();
+    } catch {
+      return '/';
+    }
+  })();
+
+  const SEED_URLS = [
+    new URL('data/exhibitions.seed.json', appBaseURL).toString(),
+    '/data/exhibitions.seed.json',
+    'data/exhibitions.seed.json'
+  ];
+
+  const tr = (key, fallback)=>{
+    const v = window.__t?.(key);
+    return (!v || v === key) ? fallback : v;
+  };
 
   const uuid = ()=>{
     try{
@@ -41,7 +66,11 @@
   }
 
   function save(list){
-    localStorage.setItem(KEY, JSON.stringify(list));
+    try{
+      localStorage.setItem(KEY, JSON.stringify(list));
+    } catch(e){
+      console.warn('[exhibitions] localStorage save failed', e);
+    }
     // Notify other widgets (calendar, etc.)
     try{ window.dispatchEvent(new Event('exhibitions:changed')); }catch{}
   }
@@ -171,6 +200,7 @@
             ${window.__t?.('expo.import') ?? 'Importer JSON'}
             <input type="file" accept="application/json" hidden data-import>
           </label>
+          <button class="btn ghost" data-reset>${tr('expo.reset','Restaurer la liste')}</button>
         </div>
         <span class="muted">${past.length} / ${up.length}</span>
       </div>
@@ -219,6 +249,23 @@
       a.download = 'exhibitions.json';
       a.click();
       URL.revokeObjectURL(a.href);
+    });
+
+    root.querySelector('[data-reset]')?.addEventListener('click', async ()=>{
+      const ok = confirm(
+        (tr('expo.resetConfirm','Restaurer la liste initiale ?')) +
+        '\n\n' +
+        (tr('expo.resetHint','Cela remplacera vos expositions actuelles dans ce navigateur.'))
+      );
+      if(!ok) return;
+
+      try{
+        await seedFromFile();
+      } catch(e){
+        console.warn('[exhibitions] reset failed', e);
+        alert((tr('expo.resetFail','Impossible de restaurer la liste.')) + `\n\n${String(e?.message || e || '')}`);
+      }
+      render();
     });
 
     const file = root.querySelector('[data-import]');

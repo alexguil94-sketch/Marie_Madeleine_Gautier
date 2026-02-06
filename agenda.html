@@ -20,7 +20,7 @@
 
   <main class="page">
     <div class="container">
-      <section class="reveal">
+      <section class="reveal is-visible">
         <div class="card card-pad">
           <div class="kicker" data-i18n="agenda.kicker">Agenda</div>
           <h1 style="margin:10px 0 0" data-i18n="agenda.title">Agenda des expositions</h1>
@@ -34,22 +34,22 @@
         </div>
       </section>
 
-      <section class="reveal" id="expositions">
+      <section class="reveal is-visible" id="expositions">
         <div class="card card-pad">
           <div class="kicker" data-i18n="expo.kicker">Dashboard</div>
           <h2 style="margin:10px 0 0" data-i18n="expo.title">Expositions : passées & à venir</h2>
           <p class="muted" data-i18n="expo.subtitle">Ajoutez, supprimez, exportez/importez vos expositions facilement.</p>
           <div class="hr"></div>
-          <div id="expoRoot"></div>
+          <div id="expoRoot"><p class="muted">Chargement…</p></div>
         </div>
       </section>
 
-      <section class="reveal" id="calendrier">
+      <section class="reveal is-visible" id="calendrier">
         <div class="card card-pad">
           <div class="kicker" data-i18n="cal.kicker">Agenda</div>
           <h2 style="margin:10px 0 0" data-i18n="cal.title">Calendrier des expositions à venir</h2>
           <div class="hr"></div>
-          <div id="calRoot"></div>
+          <div id="calRoot"><p class="muted">Chargement…</p></div>
         </div>
       </section>
 
@@ -57,8 +57,8 @@
   </main>
 
   <!-- IMPORTANT: exhibitions.js avant calendar.js -->
-  <script src="/js/exhibitions.js?v=2"></script>
-  <script src="/js/calendar.js?v=2"></script>
+  <script src="/js/exhibitions.js?v=3"></script>
+  <script src="/js/calendar.js?v=3"></script>
   
   <div id="siteFooter"></div>
 
