@@ -15,9 +15,13 @@ Il reste à **activer Google OAuth** dans Supabase + Google Cloud.
      - (dev) : `http://localhost:XXXX`
      - (GitHub Pages) : `https://<user>.github.io`
    - **Authorized redirect URIs** (IMPORTANT) :
-     - `https://<PROJECT_REF>.supabase.co/auth/v1/callback`
+     - `https://<PROJECT-REF>.supabase.co/auth/v1/callback`
 
-> Si tu vois l’erreur Google `redirect_uri_mismatch`, c’est presque toujours cette URL qui manque ou qui est différente.
+Exemple pour ce projet :
+- `https://dwmiiloophmziyqilygd.supabase.co/auth/v1/callback`
+
+> Si tu colles le placeholder tel quel (ex: `<PROJECT_REF>`), Google peut afficher “trait de soulignement dans le domaine”.
+> Il faut remplacer `<PROJECT-REF>` par le **Project ref** Supabase (sans chevrons).
 
 ## 2) Activer Google dans Supabase
 
@@ -54,6 +58,5 @@ Toujours dans Supabase :
 - **Supabase “Unsupported provider”** : Google n’est pas activé dans `Auth → Providers`.
 - **Supabase “redirect_to not allowed” / “Invalid redirect URL”** : ajoute l’URL (et la page) dans `Auth → URL Configuration`.
 - **Google 400 redirect_uri_mismatch** : l’URL callback Google doit être exactement :
-  `https://<PROJECT_REF>.supabase.co/auth/v1/callback`
+  `https://<PROJECT-REF>.supabase.co/auth/v1/callback`
 - **Tu ouvres le site en `file://`** : OAuth ne marche pas. Il faut servir le site en `http(s)` (localhost ou domaine).
-
