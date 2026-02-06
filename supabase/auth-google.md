@@ -1,4 +1,4 @@
-# Auth Google (Supabase) — MMG
+# Supabase — Auth Google (MMG)
 
 Le code du site est déjà prêt (bouton Google sur `login.html` + sur l’admin `studio.html`).
 Il reste à **activer Google OAuth** dans Supabase + Google Cloud.
