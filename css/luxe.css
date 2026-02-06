@@ -855,7 +855,7 @@ html[data-theme="light"] .footer-grid a{color:rgba(0,0,0,.70)}
   border-radius:999px;
   background:rgba(0,0,0,.28);
 }
-.social .ico{flex:0 0 auto; display:block; opacity:.92}
+.social .ico{flex:0 0 auto; display:block; opacity:1}
 html[data-theme="light"] .social{background:rgba(255,255,255,.70); border-color:rgba(0,0,0,.12)}
 .social:hover{border-color:rgba(212,175,55,.55)}
 .footer-bottom{
