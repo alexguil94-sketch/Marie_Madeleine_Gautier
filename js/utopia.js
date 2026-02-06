@@ -1,88 +1,1106 @@
-(function(){
-  const root = document.getElementById('utopiaRoot');
-  if(!root) return;
+(function () {
+  "use strict";
 
-  const steps = [
-    { key:'country', titleKey:'utopia.stepCountry', choices:[
-      {id:'utopie', labelKey:'utopia.c1'}, {id:'harmonia', labelKey:'utopia.c2'}, {id:'serenite', labelKey:'utopia.c3'}
-    ]},
-    { key:'gov', titleKey:'utopia.stepGov', choices:[
-      {id:'direct', labelKey:'utopia.g1'}, {id:'consensus', labelKey:'utopia.g2'}, {id:'merit', labelKey:'utopia.g3'}
-    ]},
-    { key:'eco', titleKey:'utopia.stepEco', choices:[
-      {id:'sharing', labelKey:'utopia.e1'}, {id:'circular', labelKey:'utopia.e2'}, {id:'resilient', labelKey:'utopia.e3'}
-    ]},
-    { key:'edu', titleKey:'utopia.stepEdu', choices:[
-      {id:'lifelong', labelKey:'utopia.ed1'}, {id:'practical', labelKey:'utopia.ed2'}, {id:'holistic', labelKey:'utopia.ed3'}
-    ]},
-    { key:'env', titleKey:'utopia.stepEnv', choices:[
-      {id:'zero', labelKey:'utopia.en1'}, {id:'renew', labelKey:'utopia.en2'}, {id:'regen', labelKey:'utopia.en3'}
-    ]},
+  if (window.__MMG_UTOPIA_GAME_INIT__) return;
+  window.__MMG_UTOPIA_GAME_INIT__ = true;
+
+  const ROOT_ID = "utopiaRoot";
+  const STORAGE_KEY = "mmg_utopia_game_v1";
+  const HASH_PREFIX = "#utopia=";
+
+  const root = document.getElementById(ROOT_ID);
+  if (!root) return;
+
+  const esc = (s) =>
+    String(s ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+
+  const isAbort = (e) =>
+    e?.name === "AbortError" || /signal is aborted/i.test(String(e?.message || e || ""));
+
+  const getLocale = () => {
+    const v = (typeof window.__lang === "function" && window.__lang()) || document.documentElement.lang;
+    return String(v || navigator.language || "fr").trim() || "fr";
+  };
+
+  // ---------- Countries ----------
+  const COMMON_COUNTRY_CODES = [
+    "FR",
+    "BE",
+    "CH",
+    "CA",
+    "US",
+    "GB",
+    "IE",
+    "ES",
+    "PT",
+    "IT",
+    "DE",
+    "NL",
+    "SE",
+    "NO",
+    "DK",
+    "FI",
+    "PL",
+    "CZ",
+    "AT",
+    "GR",
+    "TR",
+    "MA",
+    "TN",
+    "DZ",
+    "EG",
+    "ZA",
+    "NG",
+    "SN",
+    "CI",
+    "BR",
+    "AR",
+    "CL",
+    "MX",
+    "CO",
+    "PE",
+    "AU",
+    "NZ",
+    "JP",
+    "KR",
+    "CN",
+    "TW",
+    "HK",
+    "SG",
+    "TH",
+    "VN",
+    "IN",
+    "ID",
+    "PH",
+    "RU",
+    "UA",
+    "IL",
+    "SA",
+    "AE",
+    "QA",
   ];
 
-  let at = 0;
-  const picked = {};
+  let countryCache = { locale: "", items: [] };
 
-  function render(){
-    const s = steps[at];
-    if(!s){
-      const summary = steps.map(st=>{
-        const choice = st.choices.find(c=>c.id===picked[st.key]);
-        return `${window.__t(st.titleKey)}: ${window.__t(choice.labelKey)}`;
-      }).join('\n');
+  function getCountryItems() {
+    const locale = getLocale();
+    if (countryCache.locale === locale && countryCache.items.length) return countryCache.items;
 
-      root.innerHTML = `
-        <div class="card card-pad">
-          <h2 style="margin-top:0">${window.__t('utopia.resultTitle')}</h2>
-          <pre style="white-space:pre-wrap; background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.12); padding:12px; border-radius:14px">${summary}</pre>
-          <div style="display:flex; gap:10px; flex-wrap:wrap">
-            <button class="btn" data-copy>${window.__t('utopia.copy')}</button>
-            <button class="btn ghost" data-reset>${window.__t('utopia.reset')}</button>
-          </div>
-        </div>
-      `;
+    let codes = [];
+    try {
+      if (typeof Intl.supportedValuesOf === "function") {
+        codes = Intl.supportedValuesOf("region") || [];
+      }
+    } catch {}
 
-      root.querySelector('[data-copy]').onclick = async ()=>{
-        await navigator.clipboard.writeText(summary);
-      };
-      root.querySelector('[data-reset]').onclick = ()=>{
-        at = 0;
-        for(const k in picked) delete picked[k];
-        render();
-      };
-      return;
+    if (!Array.isArray(codes) || !codes.length) codes = COMMON_COUNTRY_CODES.slice();
+
+    const dn =
+      typeof Intl.DisplayNames === "function"
+        ? new Intl.DisplayNames([locale], { type: "region" })
+        : null;
+
+    const seen = new Set();
+    const items = [];
+    codes.forEach((code) => {
+      const c = String(code || "").trim();
+      if (!c) return;
+      const name = dn ? dn.of(c) : c;
+      const n = String(name || c).trim();
+      const key = (c + "||" + n).toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      items.push({ code: c, name: n });
+    });
+
+    items.sort((a, b) => a.name.localeCompare(b.name, locale, { sensitivity: "base" }));
+    countryCache = { locale, items };
+    return items;
+  }
+
+  function parseCountryInput(v) {
+    const raw = String(v || "").trim();
+    if (!raw) return { name: "", code: "" };
+
+    // Accept "France (FR)" style as well as plain "France".
+    const m = raw.match(/^(.*)\s+\(([A-Z0-9]{2,3})\)\s*$/i);
+    if (m) {
+      return { name: String(m[1] || "").trim() || raw, code: String(m[2] || "").toUpperCase() };
     }
 
-    root.innerHTML = `
-      <div class="card card-pad">
-        <h2 style="margin-top:0">${window.__t(s.titleKey)}</h2>
-        <div class="columns">
-          ${s.choices.map(c=>`
-            <button class="card card-pad" style="text-align:left; cursor:pointer" data-pick="${c.id}">
-              <div class="kicker">${window.__t('utopia.choice')}</div>
-              <div style="font-size:18px; font-family:'Cinzel', 'Playfair Display', Georgia, serif">${window.__t(c.labelKey)}</div>
-              <p class="muted" style="margin-bottom:0">${window.__t('utopia.tap')}</p>
-            </button>
-          `).join('')}
+    const locale = getLocale();
+    const items = getCountryItems();
+    const hit = items.find((it) => it.name.localeCompare(raw, locale, { sensitivity: "base" }) === 0);
+    if (hit) return { name: hit.name, code: hit.code };
+
+    return { name: raw, code: "" };
+  }
+
+  // ---------- Game data ----------
+  const CITY_CHOICES = [
+    { id: "atelier-lumiere", name: "Atelier-Lumière", hint: "Une ville où l’on fabrique le calme." },
+    { id: "verre-foret", name: "Verre-Forêt", hint: "Une canopée de reflets, une patience de mousse." },
+    { id: "port-etoile", name: "Port-Étoile", hint: "Un quai de constellations, des départs doux." },
+    { id: "rives-ocres", name: "Rives Ocres", hint: "Des pigments dans l’air, des mains dans la matière." },
+    { id: "bibliotheque-vive", name: "Bibliothèque Vive", hint: "Ici, les livres respirent, les mots guérissent." },
+    { id: "jardins-hauts", name: "Jardins-Hauts", hint: "Des terrasses de plantes, des ponts de lierre." },
+    { id: "cendre-bleue", name: "Cendre Bleue", hint: "Une cité volcanique, bleutée de silence." },
+    { id: "plaine-argile", name: "Plaine d’Argile", hint: "On y sculpte l’eau et le temps." },
+    { id: "sables-chantants", name: "Sables Chantants", hint: "Un désert musical, un vent qui raconte." },
+    { id: "miroirs-nord", name: "Miroirs du Nord", hint: "Des nuits longues, des lumières qui veillent." },
+    { id: "azur-rituel", name: "Azur Rituel", hint: "Une mer comme un oracle, des gestes simples." },
+    { id: "pierre-douce", name: "Pierre Douce", hint: "Une ville de marbre chaud, sans angle blessant." },
+    { id: "cite-nacre", name: "Cité Nacre", hint: "Tout y est nacré, même les décisions." },
+    { id: "delta-atelier", name: "Delta Atelier", hint: "Des canaux, des ateliers flottants, des accords." },
+    { id: "clairiere-suspendue", name: "Clairière Suspendue", hint: "Une place au milieu des nuages." },
+  ];
+
+  // 15 cultures / politiques (choix “preset”)
+  const CULTURES = [
+    {
+      id: "republique_ateliers",
+      name: "République des Ateliers",
+      desc: "La politique est un geste : on décide en fabriquant ensemble.",
+      laws: ["Le temps est un matériau.", "Toute voix a un espace.", "Réparer vaut célébrer."],
+      palette: ["faire", "réparer", "partager"],
+    },
+    {
+      id: "federation_reves",
+      name: "Fédération des Rêves",
+      desc: "Les récits deviennent des ponts : on vote avec des histoires.",
+      laws: ["Raconter avant de trancher.", "Accueillir l’inédit.", "Ne pas humilier."],
+      palette: ["récit", "écoute", "imagination"],
+    },
+    {
+      id: "ecologie_sacree",
+      name: "Écologie sacrée",
+      desc: "La nature n’est pas un décor : c’est une personne morale.",
+      laws: ["Régénérer plutôt qu’extraire.", "L’eau est un droit.", "La forêt a un vote."],
+      palette: ["vivant", "eau", "sol"],
+    },
+    {
+      id: "democratie_silence",
+      name: "Démocratie du Silence",
+      desc: "On protège le silence comme on protège une œuvre en cours.",
+      laws: ["Le calme est un service public.", "Le conflit se soigne.", "Chaque décision respire."],
+      palette: ["silence", "soin", "lenteur"],
+    },
+    {
+      id: "communes_lumiere",
+      name: "Communes de la Lumière",
+      desc: "Transparence douce, énergie partagée, ombres respectées.",
+      laws: ["L’énergie appartient à tous.", "Nul n’éblouit volontairement.", "La clarté n’est pas la violence."],
+      palette: ["lumière", "partage", "mesure"],
+    },
+    {
+      id: "bibliotheque_civique",
+      name: "Bibliothèque civique",
+      desc: "Le savoir circule comme une rivière : libre, généreux, vivant.",
+      laws: ["Tout apprendre, tout transmettre.", "Protéger les nuances.", "Douter est une force."],
+      palette: ["savoir", "nuance", "curiosité"],
+    },
+    {
+      id: "economie_don",
+      name: "Économie du Don",
+      desc: "La richesse se mesure à la qualité des liens, pas aux stocks.",
+      laws: ["Donner sans humilier.", "Recevoir sans dette.", "Chacun a sa place."],
+      palette: ["don", "lien", "hospitalité"],
+    },
+    {
+      id: "matriarcat_jardins",
+      name: "Matriarcat des Jardins",
+      desc: "Une culture du soin : nourrir, protéger, faire grandir.",
+      laws: ["La tendresse est politique.", "La terre est commune.", "La joie se planifie."],
+      palette: ["jardin", "soin", "joie"],
+    },
+    {
+      id: "technopoesie",
+      name: "Technopoésie",
+      desc: "La technologie est un artisanat : utile, beau, responsable.",
+      laws: ["La machine sert le vivant.", "Le code se relit à voix haute.", "La beauté n’est pas optionnelle."],
+      palette: ["tech", "poésie", "responsabilité"],
+    },
+    {
+      id: "conseil_enfants",
+      name: "Conseil des Enfants",
+      desc: "On écoute d’abord ceux qui héritent : l’avenir siège au premier rang.",
+      laws: ["Préférer le futur au prestige.", "Simplifier avant d’ajouter.", "Protéger le jeu."],
+      palette: ["avenir", "jeu", "simplicité"],
+    },
+    {
+      id: "plurivers",
+      name: "Pluralisme des Mondes",
+      desc: "Plusieurs cultures cohabitent sans se dissoudre : un accord polyphonique.",
+      laws: ["Traduire plutôt qu’abolir.", "Célébrer les différences.", "Aucun centre unique."],
+      palette: ["pluralité", "traduction", "respect"],
+    },
+    {
+      id: "cites_marees",
+      name: "Cités des Marées",
+      desc: "Des villes amphibies : souples, solidaires, au rythme des eaux.",
+      laws: ["Le rivage est un bien commun.", "S’entraider est normal.", "Construire léger."],
+      palette: ["eau", "souplesse", "entraide"],
+    },
+    {
+      id: "accords_matiere",
+      name: "Accords de Matière",
+      desc: "Une culture sculpturale : on écoute les matériaux avant de décider.",
+      laws: ["La matière a droit au temps.", "Ne pas forcer ce qui résiste.", "La trace raconte."],
+      palette: ["matière", "écoute", "trace"],
+    },
+    {
+      id: "assemblee_artisans",
+      name: "Assemblée des Artisans",
+      desc: "Le pouvoir est tournant : chacun sert, puis retourne au geste.",
+      laws: ["Le mandat est une parenthèse.", "On dirige en servant.", "L’humilité est un protocole."],
+      palette: ["service", "rotation", "humilité"],
+    },
+    {
+      id: "utopie_errante",
+      name: "Utopie Errante",
+      desc: "Un peuple en mouvement : on change de place pour changer de regard.",
+      laws: ["Ne pas s’installer dans l’habitude.", "Voyager léger.", "Faire de la route une école."],
+      palette: ["mouvement", "regard", "route"],
+    },
+  ];
+
+  const TOTEMS = [
+    "Atelier",
+    "Jardin",
+    "Forêt",
+    "Mer",
+    "Bibliothèque",
+    "Place",
+    "Constellation",
+    "Musée",
+    "Four",
+    "Argile",
+    "Marbre",
+    "Pigment",
+  ];
+
+  const SLIDERS = [
+    { key: "lumiere", label: "Lumière", hint: "Clarté / ombre" },
+    { key: "silence", label: "Silence", hint: "Calme / tumulte" },
+    { key: "matiere", label: "Matière", hint: "Dense / aérien" },
+    { key: "nature", label: "Nature", hint: "Minéral / végétal" },
+    { key: "rituel", label: "Rituel", hint: "Spontané / cérémoniel" },
+  ];
+
+  // ---------- State ----------
+  const blankState = () => ({
+    step: "country", // country | city | culture | builder | result
+    country: "",
+    country_code: "",
+    city: "",
+    culture_id: "",
+    mode: "preset", // preset | custom
+    custom: {
+      world_name: "",
+      motto: "",
+      sliders: { lumiere: 70, silence: 55, matiere: 65, nature: 60, rituel: 45 },
+      totems: [],
+    },
+  });
+
+  function safeJsonParse(s) {
+    try {
+      return JSON.parse(String(s || ""));
+    } catch {
+      return null;
+    }
+  }
+
+  function encodeB64(str) {
+    const bytes = new TextEncoder().encode(str);
+    let bin = "";
+    bytes.forEach((b) => (bin += String.fromCharCode(b)));
+    return btoa(bin);
+  }
+
+  function decodeB64(b64) {
+    const bin = atob(String(b64 || ""));
+    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  }
+
+  function readHashState() {
+    const h = String(location.hash || "");
+    if (!h.startsWith(HASH_PREFIX)) return null;
+    const raw = h.slice(HASH_PREFIX.length);
+    if (!raw) return null;
+    try {
+      const json = decodeB64(decodeURIComponent(raw));
+      return safeJsonParse(json);
+    } catch {
+      return null;
+    }
+  }
+
+  function publicState(state) {
+    return {
+      country: state.country,
+      country_code: state.country_code,
+      city: state.city,
+      culture_id: state.culture_id,
+      mode: state.mode,
+      custom: state.mode === "custom" ? state.custom : null,
+    };
+  }
+
+  function loadState() {
+    const fromHash = readHashState();
+    const fromLS = safeJsonParse(localStorage.getItem(STORAGE_KEY));
+    const s = fromHash || fromLS;
+    const out = blankState();
+
+    if (s && typeof s === "object") {
+      if (typeof s.country === "string") out.country = s.country;
+      if (typeof s.country_code === "string") out.country_code = s.country_code;
+      if (typeof s.city === "string") out.city = s.city;
+      if (typeof s.culture_id === "string") out.culture_id = s.culture_id;
+      if (s.mode === "custom") out.mode = "custom";
+
+      if (s.custom && typeof s.custom === "object") {
+        if (typeof s.custom.world_name === "string") out.custom.world_name = s.custom.world_name;
+        if (typeof s.custom.motto === "string") out.custom.motto = s.custom.motto;
+        if (s.custom.sliders && typeof s.custom.sliders === "object") {
+          SLIDERS.forEach((sl) => {
+            const v = Number(s.custom.sliders[sl.key]);
+            if (Number.isFinite(v)) out.custom.sliders[sl.key] = clamp(Math.round(v), 0, 100);
+          });
+        }
+        if (Array.isArray(s.custom.totems)) {
+          out.custom.totems = s.custom.totems.map((x) => String(x || "").trim()).filter(Boolean).slice(0, 6);
+        }
+      }
+    }
+
+    if (out.country) out.step = "city";
+    if (out.country && out.city) out.step = "culture";
+    if (out.country && out.city && out.culture_id) out.step = out.mode === "custom" ? "builder" : "result";
+    if (out.step === "builder" && out.mode !== "custom") out.step = "result";
+
+    return out;
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(publicState(state)));
+    } catch {}
+  }
+
+  function writeHashState(state) {
+    try {
+      const json = JSON.stringify(publicState(state));
+      const b64 = encodeB64(json);
+      const next = HASH_PREFIX + encodeURIComponent(b64);
+      history.replaceState(null, "", next);
+    } catch {}
+  }
+
+  let state = loadState();
+
+  // ---------- RNG + manifesto ----------
+  function hash32(str) {
+    // FNV-1a 32-bit
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = (h * 0x01000193) >>> 0;
+    }
+    return h >>> 0;
+  }
+
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a |= 0;
+      a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function pick(rng, arr) {
+    if (!arr?.length) return "";
+    const i = Math.floor(rng() * arr.length);
+    return arr[i];
+  }
+
+  function uniq(arr) {
+    const out = [];
+    const seen = new Set();
+    (arr || []).forEach((x) => {
+      const v = String(x || "").trim();
+      if (!v) return;
+      const k = v.toLowerCase();
+      if (seen.has(k)) return;
+      seen.add(k);
+      out.push(v);
+    });
+    return out;
+  }
+
+  function cultureById(id) {
+    return CULTURES.find((c) => c.id === id) || null;
+  }
+
+  function autoWorldName() {
+    const country = state.country || state.country_code || "Monde";
+    const city = state.city || "Utopie";
+    const seed = hash32([country, city, state.culture_id].join("|"));
+    const rng = mulberry32(seed);
+    const a = ["Nacre", "Argile", "Lumière", "Ocres", "Marée", "Constance", "Sillage", "Matière"];
+    const b = ["Atelier", "Jardins", "Bibliothèque", "Rives", "Constellation", "Place", "Forêt", "Port"];
+    return `${city} — ${pick(rng, a)} ${pick(rng, b)}`.replace(/\s+/g, " ").trim();
+  }
+
+  function buildManifesto() {
+    const c = state.mode === "custom" ? null : cultureById(state.culture_id);
+    const sliders = state.custom.sliders || {};
+    const totems = uniq(state.custom.totems || []);
+
+    const seedStr = [
+      state.country,
+      state.country_code,
+      state.city,
+      state.culture_id,
+      state.mode,
+      state.custom.world_name,
+      state.custom.motto,
+      JSON.stringify(sliders),
+      totems.join(","),
+    ].join("|");
+    const rng = mulberry32(hash32(seedStr));
+
+    const place = `${state.city || "—"}, ${state.country || state.country_code || "—"}`.replace(/\s+,/g, ",");
+
+    const openers = [
+      "Ici, la matière a le droit au temps.",
+      "Ici, l’utopie n’est pas une fuite : c’est une boussole.",
+      "Ici, on construit comme on sculpte : par écoute.",
+      "Ici, la beauté est une responsabilité collective.",
+      "Ici, le calme est un atelier ouvert.",
+      "Ici, la nuance vaut mieux que la vitesse.",
+    ];
+
+    const verbs = ["accueillir", "réparer", "relier", "cultiver", "apprendre", "prendre soin", "façonner", "apaiser"];
+    const nouns = ["le silence", "la lumière", "la trace", "la terre", "les récits", "les liens", "le vivant", "la lenteur"];
+
+    const signature = [
+      "— une signature où la matière rencontre l’utopie.",
+      "— un monde qui respire avant de parler.",
+      "— un atelier de formes, de textes et de constellations.",
+    ];
+
+    const laws = (() => {
+      if (state.mode !== "custom") return c?.laws || [];
+
+      const lum = Number(sliders.lumiere);
+      const sil = Number(sliders.silence);
+      const mat = Number(sliders.matiere);
+      const nat = Number(sliders.nature);
+      const rit = Number(sliders.rituel);
+
+      const out = [];
+      out.push(sil >= 70 ? "Le silence est un droit, jamais une punition." : "On parle peu, mais on écoute beaucoup.");
+      out.push(lum >= 70 ? "La lumière se partage : aucune zone ne reste invisible." : "Les ombres sont respectées : on n’exige pas la clarté.");
+      out.push(mat >= 70 ? "Tout projet commence par toucher la matière." : "On construit léger : la trace suffit.");
+      out.push(nat >= 70 ? "Le vivant siège au conseil : arbres, rivières, sols." : "Le minéral enseigne la patience : rien ne se brusque.");
+      out.push(rit >= 70 ? "On protège des rituels simples pour tenir le lien." : "La spontanéité est une fête : on laisse la place à l’imprévu.");
+      return out;
+    })();
+
+    const pickLaws = (() => {
+      const src = laws.slice();
+      const out = [];
+      while (src.length && out.length < 3) {
+        const idx = Math.floor(rng() * src.length);
+        out.push(src.splice(idx, 1)[0]);
+      }
+      return out;
+    })();
+
+    const palette = uniq([...(c?.palette || []), ...totems.map((t) => t.toLowerCase())]).slice(0, 8);
+
+    const lines = [];
+    lines.push(pick(rng, openers));
+    lines.push(`Dans ${place}, nous voulons ${pick(rng, verbs)} ${pick(rng, nouns)} — un monde à hauteur de main.`);
+    if (palette.length) lines.push(`Couleurs du monde : ${palette.join(" • ")}.`);
+    if (state.custom.motto) lines.push(`Devise : “${state.custom.motto.trim()}”.`);
+    lines.push(pick(rng, signature));
+
+    return { place, lines, laws: pickLaws };
+  }
+
+  function resultTitle() {
+    if (state.mode === "custom" && String(state.custom.world_name || "").trim()) return state.custom.world_name.trim();
+    const c = cultureById(state.culture_id);
+    const base = c?.name || "Monde utopique";
+    return `${base} — ${state.city || "Utopie"}`.replace(/\s+/g, " ").trim();
+  }
+
+  // ---------- Rendering ----------
+  function mainStepIndex() {
+    if (state.step === "country") return 1;
+    if (state.step === "city") return 2;
+    return 3;
+  }
+
+  function percent() {
+    return clamp(Math.round((mainStepIndex() / 3) * 100), 0, 100);
+  }
+
+  function renderHeader() {
+    const idx = mainStepIndex();
+    const hint =
+      state.step === "country"
+        ? "Choisis un pays (tous les pays sont possibles)."
+        : state.step === "city"
+        ? "Choisis une ville (15 propositions) ou écris la tienne."
+        : state.step === "culture"
+        ? "Choisis une culture/politique (15) ou passe en mode création."
+        : state.step === "builder"
+        ? "Ajuste ton monde : nom, devise, intensités, totems."
+        : "Voici ton monde — tu peux copier ou partager le manifeste.";
+
+    return `
+      <div class="utopia-top">
+        <div class="utopia-top__left">
+          <div class="kicker">Jeu imaginaire</div>
+          <h2 class="utopia-h2">Cartographier une utopie</h2>
+          <p class="muted" style="margin:6px 0 0">${esc(hint)}</p>
         </div>
-        <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; align-items:center">
-          ${at>0 ? `<button class="btn ghost" data-back>← ${window.__t('utopia.back')}</button>` : ''}
-          <span class="muted">${window.__t('utopia.progress')} ${at+1}/${steps.length}</span>
+        <div class="utopia-top__right">
+          ${state.step !== "country" ? `<button class="btn ghost" type="button" data-back>← Retour</button>` : ""}
+          <button class="btn ghost" type="button" data-reset>Recommencer</button>
+        </div>
+      </div>
+
+      <div class="utopia-progress" role="progressbar" aria-valuenow="${percent()}" aria-valuemin="0" aria-valuemax="100">
+        <div class="utopia-progress__bar" style="width:${percent()}%"></div>
+        <div class="utopia-progress__meta">
+          <span>Étape ${idx}/3</span>
+          <span class="muted">${esc(state.country || "—")} • ${esc(state.city || "—")}</span>
         </div>
       </div>
     `;
+  }
 
-    root.querySelectorAll('[data-pick]').forEach(b=>{
-      b.onclick = ()=>{
-        picked[s.key] = b.dataset.pick;
-        at++;
-        render();
-      };
+  function renderCountryStep() {
+    const items = getCountryItems();
+    const options = items
+      .slice(0, 260)
+      .map((it) => `<option value="${esc(it.name)}"></option>`)
+      .join("");
+
+    return `
+      <div class="utopia-cardblock">
+        <div class="utopia-stephead">
+          <div class="utopia-stephead__k">1 — Pays</div>
+          <div class="utopia-stephead__t">Où naît ton monde ?</div>
+        </div>
+
+        <form class="utopia-form" data-step="country">
+          <label class="utopia-label" for="utopiaCountry">Pays</label>
+          <input
+            id="utopiaCountry"
+            class="input utopia-input"
+            name="country"
+            placeholder="Tape le nom d’un pays…"
+            list="utopiaCountries"
+            value="${esc(state.country)}"
+            autocomplete="off"
+            required
+          />
+          <datalist id="utopiaCountries">${options}</datalist>
+
+          <div class="utopia-row">
+            <button class="btn" type="submit">Continuer</button>
+            <button class="btn ghost" type="button" data-random-country>Au hasard</button>
+          </div>
+
+          <p class="muted utopia-help">
+            Astuce : tu peux écrire n’importe quel pays, même si ton navigateur ne propose pas de liste.
+          </p>
+        </form>
+      </div>
+    `;
+  }
+
+  function renderCityStep() {
+    const titleCountry = state.country || state.country_code || "ton pays";
+
+    const cards = CITY_CHOICES.map((c) => {
+      const on = state.city === c.name;
+      return `
+        <button class="utopia-pick ${on ? "is-on" : ""}" type="button" data-pick-city="${esc(c.name)}">
+          <div class="utopia-pick__t">${esc(c.name)}</div>
+          <div class="utopia-pick__d muted">${esc(c.hint)}</div>
+        </button>
+      `;
+    }).join("");
+
+    return `
+      <div class="utopia-cardblock">
+        <div class="utopia-stephead">
+          <div class="utopia-stephead__k">2 — Ville</div>
+          <div class="utopia-stephead__t">Choisis une ville (15 propositions) dans ${esc(titleCountry)}.</div>
+        </div>
+
+        <div class="utopia-grid">${cards}</div>
+
+        <form class="utopia-form" data-step="city" style="margin-top:14px">
+          <div class="utopia-split">
+            <div>
+              <label class="utopia-label" for="utopiaCityCustom">Ou écris ta ville</label>
+              <input
+                id="utopiaCityCustom"
+                class="input utopia-input"
+                name="custom_city"
+                placeholder="Ex: Combrit Sainte‑Marine, Marseille, Tokyo…"
+                autocomplete="off"
+              />
+            </div>
+            <div class="utopia-row" style="align-items:flex-end">
+              <button class="btn ghost" type="button" data-use-custom-city>Utiliser</button>
+              <button class="btn" type="submit">Continuer</button>
+            </div>
+          </div>
+          <p class="muted utopia-help">La ville peut être réelle… ou entièrement inventée.</p>
+        </form>
+      </div>
+    `;
+  }
+
+  function renderCultureStep() {
+    const picks = CULTURES.map((c) => {
+      const on = state.culture_id === c.id && state.mode === "preset";
+      return `
+        <button class="utopia-pick ${on ? "is-on" : ""}" type="button" data-pick-culture="${esc(c.id)}">
+          <div class="utopia-pick__t">${esc(c.name)}</div>
+          <div class="utopia-pick__d muted">${esc(c.desc)}</div>
+        </button>
+      `;
+    }).join("");
+
+    const onCustom = state.mode === "custom";
+    const customCard = `
+      <button class="utopia-pick utopia-pick--custom ${onCustom ? "is-on" : ""}" type="button" data-pick-custom>
+        <div class="utopia-pick__t">Créer mon monde</div>
+        <div class="utopia-pick__d muted">Nom, devise, intensités, totems — tu composes ta propre utopie.</div>
+      </button>
+    `;
+
+    const selected = state.mode === "custom" ? null : cultureById(state.culture_id);
+    const info = selected
+      ? `
+        <div class="utopia-info">
+          <div class="kicker">Sélection</div>
+          <div class="utopia-info__title">${esc(selected.name)}</div>
+          <div class="muted" style="margin-top:6px">${esc(selected.desc)}</div>
+          <div class="utopia-laws">
+            ${selected.laws
+              .slice(0, 3)
+              .map((x) => `<div class="utopia-law">• ${esc(x)}</div>`)
+              .join("")}
+          </div>
+        </div>
+      `
+      : `
+        <div class="utopia-info">
+          <div class="kicker">Sélection</div>
+          <div class="utopia-info__title">${onCustom ? "Mode création" : "Choisis une culture/politique"}</div>
+          <div class="muted" style="margin-top:6px">Tu peux partir d’un modèle… ou inventer ton monde.</div>
+        </div>
+      `;
+
+    return `
+      <div class="utopia-cardblock">
+        <div class="utopia-stephead">
+          <div class="utopia-stephead__k">3 — Culture / politique</div>
+          <div class="utopia-stephead__t">Quelle atmosphère gouverne ${esc(state.city || "ta ville")} ?</div>
+        </div>
+
+        <div class="utopia-two">
+          <div class="utopia-grid utopia-grid--tight">
+            ${customCard}
+            ${picks}
+          </div>
+          ${info}
+        </div>
+
+        <div class="utopia-row" style="margin-top:14px">
+          <button class="btn" type="button" data-continue-culture>Continuer</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderBuilderStep() {
+    const worldName = state.custom.world_name || autoWorldName();
+    const motto = state.custom.motto || "";
+
+    const sliders = SLIDERS.map((sl) => {
+      const v = clamp(Number(state.custom.sliders?.[sl.key] ?? 50), 0, 100);
+      return `
+        <div class="utopia-slider">
+          <div class="utopia-slider__row">
+            <div>
+              <strong>${esc(sl.label)}</strong>
+              <span class="muted"> — ${esc(sl.hint)}</span>
+            </div>
+            <span class="utopia-slider__val" data-slider-val="${esc(sl.key)}">${v}</span>
+          </div>
+          <input class="utopia-range" type="range" name="${esc(sl.key)}" min="0" max="100" value="${v}" />
+        </div>
+      `;
+    }).join("");
+
+    const chosen = new Set((state.custom.totems || []).map((x) => String(x || "").toLowerCase()));
+    const chips = TOTEMS.map((t) => {
+      const on = chosen.has(String(t).toLowerCase());
+      return `
+        <label class="utopia-chip">
+          <input type="checkbox" name="totems" value="${esc(t)}" ${on ? "checked" : ""} />
+          <span>${esc(t)}</span>
+        </label>
+      `;
+    }).join("");
+
+    return `
+      <div class="utopia-cardblock">
+        <div class="utopia-stephead">
+          <div class="utopia-stephead__k">Création — ton monde</div>
+          <div class="utopia-stephead__t">Compose une utopie “à la matière” : simple, sensible, vivante.</div>
+        </div>
+
+        <form class="utopia-form" data-step="builder">
+          <div class="utopia-two">
+            <div>
+              <label class="utopia-label" for="utopiaWorldName">Nom du monde</label>
+              <input id="utopiaWorldName" class="input utopia-input" name="world_name" value="${esc(worldName)}" maxlength="72" required />
+
+              <label class="utopia-label" for="utopiaMotto" style="margin-top:10px">Devise (optionnel)</label>
+              <input id="utopiaMotto" class="input utopia-input" name="motto" value="${esc(motto)}" maxlength="90" placeholder="Ex: “La douceur est une force.”" />
+
+              <div class="utopia-subcard" style="margin-top:12px">
+                <div class="kicker">Totems</div>
+                <div class="muted" style="margin:8px 0 10px">Choisis jusqu’à 6 symboles.</div>
+                <div class="utopia-chips">${chips}</div>
+              </div>
+            </div>
+
+            <div>
+              <div class="utopia-subcard">
+                <div class="kicker">Intensités</div>
+                <div class="muted" style="margin:8px 0 10px">Une palette pour guider le texte du manifeste.</div>
+                ${sliders}
+              </div>
+            </div>
+          </div>
+
+          <div class="utopia-row" style="margin-top:14px">
+            <button class="btn" type="submit">Générer le manifeste</button>
+            <button class="btn ghost" type="button" data-reroll-name>Proposer un autre nom</button>
+          </div>
+        </form>
+      </div>
+    `;
+  }
+
+  function renderResultStep() {
+    const c = state.mode === "custom" ? null : cultureById(state.culture_id);
+    const title = resultTitle();
+    const subtitle = state.mode === "custom" ? "Monde créé" : c?.name || "Monde";
+    const man = buildManifesto();
+
+    const laws = (man.laws || []).map((x) => `<li>${esc(x)}</li>`).join("");
+    const lines = (man.lines || []).map((x) => `<p class="utopia-manif__p">${esc(x)}</p>`).join("");
+
+    const txt = [
+      title,
+      subtitle,
+      "",
+      `Pays : ${state.country || state.country_code || "—"}`,
+      `Ville : ${state.city || "—"}`,
+      state.mode === "custom" ? "Culture : (personnalisée)" : `Culture : ${c?.name || "—"}`,
+      "",
+      ...(man.lines || []),
+      "",
+      "Trois lois :",
+      ...(man.laws || []).map((x) => `- ${x}`),
+    ].join("\n");
+
+    return `
+      <div class="utopia-cardblock">
+        <div class="utopia-poster">
+          <div class="utopia-poster__head">
+            <div>
+              <div class="kicker">${esc(subtitle)}</div>
+              <div class="utopia-poster__title">${esc(title)}</div>
+              <div class="muted" style="margin-top:6px">${esc(man.place)}</div>
+            </div>
+            <div class="utopia-row">
+              <button class="btn" type="button" data-copy>Copier</button>
+              <button class="btn ghost" type="button" data-share>Lien</button>
+              <button class="btn ghost" type="button" data-download>TXT</button>
+            </div>
+          </div>
+
+          <div class="utopia-poster__body">
+            <div class="utopia-manif">
+              <div class="kicker">Manifeste</div>
+              ${lines}
+            </div>
+            <div class="utopia-lawsbox">
+              <div class="kicker">Trois lois</div>
+              <ul class="utopia-lawslist">${laws}</ul>
+            </div>
+          </div>
+
+          <div class="utopia-row" style="margin-top:12px">
+            <button class="btn ghost" type="button" data-edit>${state.mode === "custom" ? "Modifier" : "Changer de culture"}</button>
+            <button class="btn ghost" type="button" data-reset>Rejouer</button>
+          </div>
+        </div>
+
+        <textarea class="utopia-sr" aria-hidden="true" tabindex="-1" data-result-text>${esc(txt)}</textarea>
+      </div>
+    `;
+  }
+
+  function renderStep() {
+    if (state.step === "country") return renderCountryStep();
+    if (state.step === "city") return renderCityStep();
+    if (state.step === "culture") return renderCultureStep();
+    if (state.step === "builder") return renderBuilderStep();
+    return renderResultStep();
+  }
+
+  function render() {
+    root.innerHTML = `
+      <div class="utopia-game">
+        ${renderHeader()}
+        ${renderStep()}
+      </div>
+    `;
+
+    // global actions
+    root.querySelector("[data-reset]")?.addEventListener("click", () => {
+      state = blankState();
+      saveState();
+      try {
+        history.replaceState(null, "", location.pathname + location.search);
+      } catch {}
+      render();
     });
 
-    const back = root.querySelector('[data-back]');
-    if(back) back.onclick = ()=>{ at = Math.max(0, at-1); render(); };
+    root.querySelector("[data-back]")?.addEventListener("click", () => {
+      if (state.step === "city") state.step = "country";
+      else if (state.step === "culture") state.step = "city";
+      else if (state.step === "builder") state.step = "culture";
+      else if (state.step === "result") state.step = state.mode === "custom" ? "builder" : "culture";
+      saveState();
+      render();
+    });
+
+    const step = root.querySelector("[data-step]")?.getAttribute("data-step") || "";
+
+    if (step === "country") {
+      root.querySelector("[data-random-country]")?.addEventListener("click", () => {
+        const items = getCountryItems();
+        if (!items.length) return;
+        const pickOne = items[Math.floor(Math.random() * items.length)];
+        state.country = pickOne.name;
+        state.country_code = pickOne.code || "";
+        saveState();
+        render();
+      });
+
+      root.querySelector('form[data-step="country"]')?.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const input = root.querySelector("#utopiaCountry");
+        const parsed = parseCountryInput(input?.value || "");
+        if (!parsed.name) return;
+        state.country = parsed.name;
+        state.country_code = parsed.code || "";
+        state.step = "city";
+        saveState();
+        render();
+      });
+      return;
+    }
+
+    if (step === "city") {
+      root.querySelectorAll("[data-pick-city]")?.forEach((b) => {
+        b.addEventListener("click", () => {
+          const v = b.getAttribute("data-pick-city");
+          state.city = String(v || "").trim();
+          saveState();
+          render();
+        });
+      });
+
+      root.querySelector("[data-use-custom-city]")?.addEventListener("click", () => {
+        const v = root.querySelector("#utopiaCityCustom")?.value || "";
+        const name = String(v || "").trim();
+        if (!name) return;
+        state.city = name;
+        saveState();
+        render();
+      });
+
+      root.querySelector('form[data-step="city"]')?.addEventListener("submit", (e) => {
+        e.preventDefault();
+        if (!String(state.city || "").trim()) {
+          const v = root.querySelector("#utopiaCityCustom")?.value || "";
+          const name = String(v || "").trim();
+          if (name) state.city = name;
+        }
+        if (!String(state.city || "").trim()) return;
+        state.step = "culture";
+        saveState();
+        render();
+      });
+      return;
+    }
+
+    if (step === "culture") {
+      root.querySelectorAll("[data-pick-culture]")?.forEach((b) => {
+        b.addEventListener("click", () => {
+          const id = String(b.getAttribute("data-pick-culture") || "").trim();
+          if (!id) return;
+          state.mode = "preset";
+          state.culture_id = id;
+          saveState();
+          render();
+        });
+      });
+
+      root.querySelector("[data-pick-custom]")?.addEventListener("click", () => {
+        state.mode = "custom";
+        state.culture_id = "custom";
+        if (!String(state.custom.world_name || "").trim()) state.custom.world_name = autoWorldName();
+        saveState();
+        render();
+      });
+
+      root.querySelector("[data-continue-culture]")?.addEventListener("click", () => {
+        if (state.mode === "custom") {
+          state.step = "builder";
+          saveState();
+          render();
+          return;
+        }
+        if (!String(state.culture_id || "").trim()) return;
+        state.step = "result";
+        saveState();
+        render();
+      });
+      return;
+    }
+
+    if (step === "builder") {
+      root.querySelectorAll(".utopia-range").forEach((range) => {
+        range.addEventListener("input", () => {
+          const key = range.getAttribute("name") || "";
+          const v = clamp(Number(range.value), 0, 100);
+          const out = root.querySelector(`[data-slider-val="${key}"]`);
+          if (out) out.textContent = String(v);
+        });
+      });
+
+      root.querySelector("[data-reroll-name]")?.addEventListener("click", () => {
+        const current = state.custom.world_name || "";
+        const next = autoWorldName();
+        state.custom.world_name = next === current ? autoWorldName() : next;
+        saveState();
+        render();
+      });
+
+      root.querySelector('form[data-step="builder"]')?.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        const fd = new FormData(form);
+
+        const world_name = String(fd.get("world_name") || "").trim().slice(0, 72);
+        const motto = String(fd.get("motto") || "").trim().slice(0, 90);
+        if (!world_name) return;
+
+        const sliders = {};
+        SLIDERS.forEach((sl) => {
+          const v = clamp(Number(fd.get(sl.key)), 0, 100);
+          sliders[sl.key] = Number.isFinite(v) ? Math.round(v) : 50;
+        });
+
+        const totems = Array.from(fd.getAll("totems"))
+          .map((x) => String(x || "").trim())
+          .filter(Boolean)
+          .slice(0, 6);
+
+        state.custom.world_name = world_name;
+        state.custom.motto = motto;
+        state.custom.sliders = sliders;
+        state.custom.totems = totems;
+
+        state.step = "result";
+        saveState();
+        render();
+      });
+      return;
+    }
+
+    // result step events
+    root.querySelector("[data-copy]")?.addEventListener("click", async () => {
+      const t = root.querySelector("[data-result-text]")?.value || "";
+      try {
+        await navigator.clipboard.writeText(String(t || ""));
+      } catch (e) {
+        if (!isAbort(e)) console.warn(e);
+      }
+    });
+
+    root.querySelector("[data-download]")?.addEventListener("click", () => {
+      const t = root.querySelector("[data-result-text]")?.value || "";
+      const blob = new Blob([String(t || "")], { type: "text/plain;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "monde-utopique.txt";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1200);
+    });
+
+    root.querySelector("[data-share]")?.addEventListener("click", async () => {
+      writeHashState(state);
+      const url = location.href;
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch {}
+    });
+
+    root.querySelector("[data-edit]")?.addEventListener("click", () => {
+      state.step = state.mode === "custom" ? "builder" : "culture";
+      saveState();
+      render();
+    });
   }
+
+  window.addEventListener("i18n:changed", () => {
+    countryCache = { locale: "", items: [] };
+    render();
+  });
 
   render();
 })();

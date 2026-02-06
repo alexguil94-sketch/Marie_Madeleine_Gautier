@@ -1,0 +1,265 @@
+/* Monde utopique — mini jeu (page utopia) */
+
+.utopia-game{
+  display:grid;
+  gap:14px;
+}
+
+.utopia-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:14px;
+  flex-wrap:wrap;
+}
+.utopia-top__right{display:flex; gap:10px; flex-wrap:wrap}
+.utopia-h2{
+  margin:8px 0 0;
+  font-family:"Cinzel","Playfair Display",Georgia,serif;
+  letter-spacing:.02em;
+}
+
+.utopia-progress{
+  position:relative;
+  border-radius:999px;
+  border:1px solid var(--stroke);
+  background:var(--glass2);
+  overflow:hidden;
+  padding:10px 12px;
+}
+.utopia-progress__bar{
+  position:absolute;
+  inset:0;
+  width:0%;
+  background:linear-gradient(90deg, rgba(197,160,89,.26), rgba(255,255,255,.08));
+  pointer-events:none;
+}
+.utopia-progress__meta{
+  position:relative;
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  font-weight:700;
+  letter-spacing:.3px;
+}
+
+.utopia-cardblock{
+  border:1px solid var(--stroke);
+  background:var(--glass);
+  border-radius:var(--radius);
+  padding:14px;
+  box-shadow:0 14px 44px rgba(0,0,0,.22);
+}
+
+.utopia-stephead{margin:0 0 12px}
+.utopia-stephead__k{
+  color:var(--gold);
+  text-transform:uppercase;
+  letter-spacing:2px;
+  font-size:12px;
+  opacity:.95;
+}
+.utopia-stephead__t{
+  margin-top:6px;
+  font-size:18px;
+  font-family:"Cinzel","Playfair Display",Georgia,serif;
+}
+
+.utopia-form{display:grid; gap:10px}
+.utopia-label{display:block; font-size:13px; opacity:.85; margin:0 0 6px}
+.utopia-input{font-size:15px}
+.utopia-help{margin:4px 0 0}
+
+.utopia-row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.utopia-split{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  gap:12px;
+  align-items:end;
+}
+@media (max-width:740px){
+  .utopia-split{grid-template-columns:1fr}
+}
+
+.utopia-grid{
+  display:grid;
+  gap:12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width:980px){
+  .utopia-grid{grid-template-columns: repeat(2, minmax(0, 1fr));}
+}
+@media (max-width:520px){
+  .utopia-grid{grid-template-columns: 1fr;}
+}
+.utopia-grid--tight{grid-template-columns: repeat(2, minmax(0, 1fr));}
+@media (max-width:980px){
+  .utopia-grid--tight{grid-template-columns: 1fr;}
+}
+
+.utopia-pick{
+  text-align:left;
+  border-radius:18px;
+  border:1px solid var(--stroke);
+  background:rgba(0,0,0,.18);
+  padding:12px;
+  cursor:pointer;
+  color:inherit;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+html[data-theme="light"] .utopia-pick{background:rgba(255,255,255,.70)}
+.utopia-pick:hover{
+  transform:translateY(-1px);
+  border-color:rgba(197,160,89,.40);
+  background:rgba(197,160,89,.10);
+}
+.utopia-pick.is-on{
+  border-color:rgba(197,160,89,.70);
+  box-shadow:0 0 0 3px rgba(197,160,89,.14);
+}
+.utopia-pick__t{
+  font-family:"Cinzel","Playfair Display",Georgia,serif;
+  font-size:16px;
+  letter-spacing:.02em;
+}
+.utopia-pick__d{margin-top:6px; font-size:13px; line-height:1.35}
+.utopia-pick--custom{
+  border-color:rgba(197,160,89,.40);
+  background:linear-gradient(180deg, rgba(197,160,89,.14), rgba(0,0,0,.16));
+}
+
+.utopia-two{
+  display:grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap:12px;
+  align-items:start;
+}
+@media (max-width:980px){
+  .utopia-two{grid-template-columns:1fr}
+}
+
+.utopia-info{
+  border:1px solid var(--stroke);
+  background:rgba(0,0,0,.14);
+  border-radius:18px;
+  padding:12px;
+}
+html[data-theme="light"] .utopia-info{background:rgba(255,255,255,.70)}
+.utopia-info__title{
+  margin-top:6px;
+  font-family:"Cinzel","Playfair Display",Georgia,serif;
+  font-size:18px;
+}
+.utopia-laws{margin-top:10px; display:grid; gap:6px}
+.utopia-law{opacity:.92}
+
+.utopia-subcard{
+  border:1px solid var(--stroke);
+  background:rgba(0,0,0,.14);
+  border-radius:18px;
+  padding:12px;
+}
+html[data-theme="light"] .utopia-subcard{background:rgba(255,255,255,.70)}
+
+.utopia-chips{display:flex; flex-wrap:wrap; gap:8px}
+.utopia-chip{display:inline-flex; align-items:center}
+.utopia-chip input{
+  position:absolute;
+  opacity:0;
+  pointer-events:none;
+}
+.utopia-chip span{
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(0,0,0,.18);
+  cursor:pointer;
+  font-weight:700;
+  letter-spacing:.3px;
+}
+html[data-theme="light"] .utopia-chip span{background:rgba(0,0,0,.03); border-color:rgba(0,0,0,.12)}
+.utopia-chip input:checked + span{
+  border-color:rgba(197,160,89,.65);
+  background:rgba(197,160,89,.16);
+}
+
+.utopia-slider{margin-top:10px}
+.utopia-slider__row{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:baseline;
+}
+.utopia-slider__val{
+  font-variant-numeric: tabular-nums;
+  opacity:.9;
+  font-weight:800;
+}
+.utopia-range{width:100%}
+
+.utopia-poster{
+  border:1px solid rgba(197,160,89,.25);
+  border-radius:22px;
+  background:
+    radial-gradient(700px 380px at 20% 0%, rgba(197,160,89,.16), transparent 60%),
+    radial-gradient(700px 380px at 80% 0%, rgba(255,255,255,.07), transparent 60%),
+    rgba(0,0,0,.16);
+  padding:14px;
+}
+html[data-theme="light"] .utopia-poster{
+  background:
+    radial-gradient(700px 380px at 20% 0%, rgba(197,160,89,.14), transparent 60%),
+    radial-gradient(700px 380px at 80% 0%, rgba(0,0,0,.05), transparent 60%),
+    rgba(255,255,255,.75);
+}
+.utopia-poster__head{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  align-items:flex-start;
+}
+.utopia-poster__title{
+  margin-top:6px;
+  font-family:"Cinzel","Playfair Display",Georgia,serif;
+  font-size:22px;
+  letter-spacing:.02em;
+}
+.utopia-poster__body{
+  display:grid;
+  grid-template-columns: 1.35fr .9fr;
+  gap:12px;
+  margin-top:12px;
+}
+@media (max-width:980px){
+  .utopia-poster__body{grid-template-columns:1fr}
+}
+.utopia-manif__p{margin:8px 0 0}
+.utopia-lawsbox{
+  border:1px solid var(--stroke);
+  background:rgba(0,0,0,.14);
+  border-radius:18px;
+  padding:12px;
+}
+html[data-theme="light"] .utopia-lawsbox{background:rgba(0,0,0,.03)}
+.utopia-lawslist{margin:8px 0 0 18px; padding:0}
+.utopia-lawslist li{margin:6px 0}
+
+.utopia-sr{
+  position:absolute;
+  width:1px;
+  height:1px;
+  padding:0;
+  margin:-1px;
+  overflow:hidden;
+  clip:rect(0,0,0,0);
+  white-space:nowrap;
+  border:0;
+}
+
