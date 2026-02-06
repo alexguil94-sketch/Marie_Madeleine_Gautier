@@ -1628,7 +1628,7 @@
         return;
       }
 
-      list.forEach((s) => {
+      list.forEach((s, idx) => {
         const row = document.createElement("div");
         row.className = "admin-item";
 
@@ -1675,6 +1675,20 @@
           window.open(u, "_blank", "noopener,noreferrer");
         });
 
+        const btnUp = document.createElement("button");
+        btnUp.type = "button";
+        btnUp.className = "btn";
+        btnUp.textContent = "Monter";
+        btnUp.disabled = idx === 0;
+        btnUp.addEventListener("click", async () => moveSocial(idx, -1));
+
+        const btnDown = document.createElement("button");
+        btnDown.type = "button";
+        btnDown.className = "btn";
+        btnDown.textContent = "Descendre";
+        btnDown.disabled = idx === list.length - 1;
+        btnDown.addEventListener("click", async () => moveSocial(idx, +1));
+
         const btnPub = document.createElement("button");
         btnPub.type = "button";
         btnPub.className = "btn";
@@ -1720,6 +1734,8 @@
 
         actions.appendChild(btnEdit);
         actions.appendChild(btnOpen);
+        actions.appendChild(btnUp);
+        actions.appendChild(btnDown);
         actions.appendChild(btnPub);
         actions.appendChild(btnDel);
 
@@ -1784,6 +1800,36 @@
         if (e2) throw e2;
 
         await refreshSources();
+      } catch (e) {
+        console.error(e);
+        toast(errText(e), "err");
+      }
+    }
+
+    async function moveSocial(idx, delta) {
+      const list = socialCache
+        .slice()
+        .sort((a, b) => {
+          const as = Number(a?.sort) || 0;
+          const bs = Number(b?.sort) || 0;
+          if (as !== bs) return as - bs;
+          return String(b?.created_at || "").localeCompare(String(a?.created_at || ""));
+        });
+      const cur = list[idx];
+      const other = list[idx + delta];
+      if (!cur?.id || !other?.id) return;
+
+      try {
+        const aSort = Number(cur.sort) || 0;
+        const bSort = Number(other.sort) || 0;
+        const nextASort = aSort === bSort ? bSort + (delta > 0 ? 1 : -1) : bSort;
+
+        const { error: e1 } = await sb.from("site_social_links").update({ sort: nextASort }).eq("id", cur.id);
+        if (e1) throw e1;
+        const { error: e2 } = await sb.from("site_social_links").update({ sort: aSort }).eq("id", other.id);
+        if (e2) throw e2;
+
+        await refreshSocial();
       } catch (e) {
         console.error(e);
         toast(errText(e), "err");

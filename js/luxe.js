@@ -482,29 +482,66 @@
 
         const { data, error } = await sb
           .from('site_social_links')
-          .select('platform,url,is_published')
+          .select('platform,url,title,sort,is_published,created_at')
           .eq('is_published', true)
-          .limit(50);
+          .order('sort', { ascending:true, nullsFirst:false })
+          .order('created_at', { ascending:false })
+          .limit(200);
 
         if(error) return;
 
-        const map = new Map();
-        (data || []).forEach((x)=>{
-          const k = norm(x?.platform);
-          const u = String(x?.url || '').trim();
-          if(!k || !u) return;
-          map.set(k, u);
-        });
+        const configs = (data || [])
+          .map((x)=>({
+            platform: norm(x?.platform),
+            url: String(x?.url || '').trim(),
+            title: String(x?.title || '').trim(),
+            sort: Number(x?.sort),
+            created_at: String(x?.created_at || '').trim()
+          }))
+          .filter((x)=> !!x.platform && !!x.url)
+          .sort((a, b)=>{
+            const as = Number.isFinite(a.sort) ? a.sort : 1000;
+            const bs = Number.isFinite(b.sort) ? b.sort : 1000;
+            if(as !== bs) return as - bs;
+            return String(b.created_at).localeCompare(String(a.created_at));
+          });
 
-        if(!map.size) return;
+        const byPlatform = new Map(configs.map((c)=> [c.platform, c]));
 
+        // Apply config to existing anchors: set href/label, and hide missing links.
         anchors.forEach((a)=>{
           const k = norm(a.getAttribute('data-social'));
-          const u = map.get(k);
-          if(!u) return;
-          a.setAttribute('href', u);
+          const cfg = byPlatform.get(k);
+
+          // Query succeeded: hide anything not configured/published
+          a.hidden = !cfg;
+          if(!cfg) return;
+
+          a.setAttribute('href', cfg.url);
           if(!a.getAttribute('target')) a.setAttribute('target', '_blank');
           if(!a.getAttribute('rel')) a.setAttribute('rel', 'noopener noreferrer');
+
+          if(cfg.title){
+            const labelEl = a.querySelector('span');
+            if(labelEl){
+              labelEl.textContent = cfg.title;
+              labelEl.removeAttribute('data-i18n');
+            }
+            a.setAttribute('aria-label', cfg.title);
+          }
+        });
+
+        // Reorder inside each container based on `sort` (only for anchors already in the DOM).
+        const parents = new Set(anchors.map((a)=> a?.parentElement).filter(Boolean));
+        parents.forEach((p)=>{
+          const kids = Array.from(p.children || []).filter((el)=> el?.matches?.('[data-social]'));
+          if(!kids.length) return;
+          const kidByPlatform = new Map();
+          kids.forEach((el)=> kidByPlatform.set(norm(el.getAttribute('data-social')), el));
+          configs.forEach((c)=>{
+            const el = kidByPlatform.get(c.platform);
+            if(el) p.appendChild(el);
+          });
         });
       } catch(e){
         if(isAbort(e)) return;

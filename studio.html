@@ -345,6 +345,9 @@
           <div class="admin-view__head">
             <h2 style="margin:0">Réseaux sociaux</h2>
           </div>
+          <div class="muted" style="margin:10px 0 0">
+            Publie uniquement les liens à afficher sur le site. Les liens supprimés / dépubliés sont cachés automatiquement.
+          </div>
 
           <form id="socialForm" class="admin-form">
             <input type="hidden" name="id" />
@@ -371,8 +374,8 @@
 
             <div class="row">
               <div class="field">
-                <span>Label (option)</span>
-                <input class="input" name="title" placeholder="Ex: Instagram" />
+                <span>Nom affiché (option)</span>
+                <input class="input" name="title" placeholder="Ex: @mmg" />
               </div>
               <div class="field">
                 <span>Publié</span>
@@ -449,6 +452,6 @@
   <script defer src="/js/supabase-config.js?v=1"></script>
   <script defer src="/js/supabase-client.js?v=6"></script>
 
-  <script defer src="/js/admin-app.js?v=11"></script>
+  <script defer src="/js/admin-app.js?v=12"></script>
 </body>
 </html>
