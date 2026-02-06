@@ -846,11 +846,16 @@ html[data-theme="light"] .footer-grid a{color:rgba(0,0,0,.70)}
 .footer-grid a:hover{color:rgba(212,175,55,.95)}
 .social-row{display:flex; flex-wrap:wrap; gap:10px}
 .social{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  margin:0;
   padding:8px 12px;
   border:1px solid rgba(255,255,255,.12);
   border-radius:999px;
   background:rgba(0,0,0,.28);
 }
+.social .ico{flex:0 0 auto; display:block; opacity:.92}
 html[data-theme="light"] .social{background:rgba(255,255,255,.70); border-color:rgba(0,0,0,.12)}
 .social:hover{border-color:rgba(212,175,55,.55)}
 .footer-bottom{
