@@ -148,6 +148,55 @@
         return data?.publicUrl || v;
       };
 
+      const readFirstSitePhotoSupabase = async (slot)=>{
+        const sb = await waitForSB(3500);
+        if(!sb) return null;
+
+        try{
+          const { data, error } = await sb
+            .from('site_photos')
+            .select('path,title,alt,sort,created_at')
+            .eq('slot', slot)
+            .eq('is_published', true)
+            .order('sort', { ascending:true, nullsFirst:false })
+            .order('created_at', { ascending:false })
+            .limit(1);
+
+          if(error) return null;
+          const row = (data || [])[0];
+          if(!row?.path) return null;
+
+          return {
+            url: resolveUrl(row.path),
+            alt: String(row.alt || row.title || '').trim()
+          };
+        } catch(e){
+          if(isAbort(e)) return null;
+          return null;
+        }
+      };
+
+      // Header logos (optional overrides via site_photos)
+      (async ()=>{
+        const light = await readFirstSitePhotoSupabase('header_logo_light');
+        if(light?.url){
+          const el = document.querySelector('[data-site-logo-light]');
+          if(el){
+            el.setAttribute('src', light.url);
+            if(light.alt) el.setAttribute('alt', light.alt);
+          }
+        }
+
+        const dark = await readFirstSitePhotoSupabase('header_logo_dark');
+        if(dark?.url){
+          const el = document.querySelector('[data-site-logo-dark]');
+          if(el){
+            el.setAttribute('src', dark.url);
+            if(dark.alt) el.setAttribute('alt', dark.alt);
+          }
+        }
+      })().catch(()=>{});
+
       const readLocalPhotos = async ()=>{
         try{
           const res = await fetch('data/site-photos.json', { cache:'no-store' });

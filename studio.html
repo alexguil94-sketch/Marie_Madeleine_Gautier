@@ -337,13 +337,25 @@
 
         <section id="view-photos" hidden>
           <div class="admin-view__head">
-            <h2 style="margin:0">Photos (carrousel)</h2>
+            <h2 style="margin:0">Photos du site</h2>
           </div>
 
           <form id="sitePhotosForm" class="admin-form">
-            <div class="field">
-              <span>Ajouter des photos</span>
-              <input id="sitePhotosFiles" class="input" type="file" accept="image/*" multiple />
+            <div class="row">
+              <div class="field">
+                <span>Emplacement</span>
+                <select id="sitePhotosSlot" class="input">
+                  <option value="drawer_carousel">Menu burger — Carrousel</option>
+                  <option value="home_hero">Accueil — Header (fond)</option>
+                  <option value="home_feature">Accueil — Exposition du moment</option>
+                  <option value="header_logo_light">Header — Logo clair</option>
+                  <option value="header_logo_dark">Header — Logo sombre</option>
+                </select>
+              </div>
+              <div class="field">
+                <span>Ajouter des photos</span>
+                <input id="sitePhotosFiles" class="input" type="file" accept="image/*" multiple />
+              </div>
             </div>
 
             <div class="admin-login-row">
@@ -351,9 +363,7 @@
               <button id="sitePhotosReload" class="btn" type="button">Rafraichir</button>
             </div>
 
-            <div class="muted" style="margin-top:10px">
-              Ces images alimentent le carrousel du menu burger (slot: <code>drawer_carousel</code>).
-            </div>
+            <div id="sitePhotosHint" class="muted" style="margin-top:10px"></div>
             <div id="sitePhotosMsg" class="muted" style="margin-top:8px"></div>
           </form>
 
@@ -380,6 +390,6 @@
   <script defer src="/js/supabase-config.js?v=1"></script>
   <script defer src="/js/supabase-client.js?v=6"></script>
 
-  <script defer src="/js/admin-app.js?v=8"></script>
+  <script defer src="/js/admin-app.js?v=9"></script>
 </body>
 </html>

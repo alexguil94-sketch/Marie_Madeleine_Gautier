@@ -49,6 +49,52 @@
     return data?.publicUrl || v;
   };
 
+  async function loadSitePhoto(slot) {
+    const sb = await waitForSB(3500);
+    if (!sb) return null;
+
+    try {
+      const { data, error } = await sb
+        .from("site_photos")
+        .select("path,title,alt,sort,created_at")
+        .eq("slot", slot)
+        .eq("is_published", true)
+        .order("sort", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (error) return null;
+      const row = (data || [])[0];
+      if (!row?.path) return null;
+
+      return {
+        url: resolveUrl(row.path),
+        alt: String(row.alt || row.title || "").trim(),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async function applyHomeSitePhotos() {
+    // Header background (Accueil)
+    const hero = qs(".hero--welcome");
+    if (hero) {
+      const p = await loadSitePhoto("home_hero");
+      if (p?.url) hero.style.backgroundImage = `url("${p.url}")`;
+    }
+
+    // Exposition du moment (image)
+    const featureImg = qs("[data-home-feature]");
+    if (featureImg) {
+      const p = await loadSitePhoto("home_feature");
+      if (p?.url) {
+        featureImg.src = p.url;
+        if (p.alt) featureImg.alt = p.alt;
+      }
+    }
+  }
+
   function pickWorkImage(work) {
     if (!work) return "";
     if (work.cover_url) return resolveUrl(work.cover_url);
@@ -173,6 +219,7 @@
     const worksRoot = qs("#homeWorks");
     if (worksRoot) worksRoot.innerHTML = `<div class="muted">Chargement…</div>`;
     renderAgendaPreview();
+    applyHomeSitePhotos().catch(() => {});
 
     const works = await loadWorksSupabase();
     if (works.length) {

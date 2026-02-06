@@ -776,8 +776,65 @@
     const sitePhotosForm = qs("#sitePhotosForm");
     const sitePhotosMsg = qs("#sitePhotosMsg");
     const sitePhotosList = qs("#sitePhotosList");
+    const sitePhotosSlot = qs("#sitePhotosSlot");
     const sitePhotosFiles = qs("#sitePhotosFiles");
     const sitePhotosReload = qs("#sitePhotosReload");
+    const sitePhotosHint = qs("#sitePhotosHint");
+
+    const SITE_PHOTO_SLOTS = {
+      drawer_carousel: {
+        label: "Menu burger — Carrousel",
+        multiple: true,
+        folder: "site/carousel",
+        hint: 'Ces images alimentent le carrousel du menu burger (slot: <code>drawer_carousel</code>).',
+      },
+      home_hero: {
+        label: "Accueil — Header (fond)",
+        multiple: false,
+        folder: "site/home_hero",
+        hint: 'Image de fond du grand header sur la page Accueil (slot: <code>home_hero</code>).',
+      },
+      home_feature: {
+        label: "Accueil — Exposition du moment",
+        multiple: false,
+        folder: "site/home_feature",
+        hint: 'Image de la section “Exposition du moment” sur la page Accueil (slot: <code>home_feature</code>).',
+      },
+      header_logo_light: {
+        label: "Header — Logo clair",
+        multiple: false,
+        folder: "site/header_logo_light",
+        hint: 'Logo “clair” du header (slot: <code>header_logo_light</code>).',
+      },
+      header_logo_dark: {
+        label: "Header — Logo sombre",
+        multiple: false,
+        folder: "site/header_logo_dark",
+        hint: 'Logo “sombre” du header (slot: <code>header_logo_dark</code>).',
+      },
+    };
+
+    const getSitePhotoSlot = () => {
+      const v = String(sitePhotosSlot?.value || "drawer_carousel").trim();
+      return SITE_PHOTO_SLOTS[v] ? v : "drawer_carousel";
+    };
+
+    const currentSitePhotoSlotLabel = () => SITE_PHOTO_SLOTS[getSitePhotoSlot()]?.label || "Photos";
+
+    const syncSitePhotosUI = () => {
+      const slot = getSitePhotoSlot();
+      const cfg = SITE_PHOTO_SLOTS[slot] || SITE_PHOTO_SLOTS.drawer_carousel;
+
+      if (sitePhotosHint) {
+        sitePhotosHint.innerHTML =
+          (cfg?.hint || "") +
+          (cfg?.multiple
+            ? ""
+            : '<div style="margin-top:6px">Astuce : pour cet emplacement, seule la dernière image publiée est utilisée.</div>');
+      }
+
+      if (sitePhotosFiles) sitePhotosFiles.multiple = !!cfg?.multiple;
+    };
 
     // ---------- Books / Press / Sources ----------
     const docsForm = qs("#docsForm");
@@ -961,10 +1018,11 @@
     };
 
     async function fetchSitePhotos(sb) {
+      const slot = getSitePhotoSlot();
       const { data, error } = await sb
         .from("site_photos")
         .select("id,slot,title,alt,path,sort,is_published,created_at")
-        .eq("slot", "drawer_carousel")
+        .eq("slot", slot)
         .order("sort", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: false })
         .limit(500);
@@ -1593,7 +1651,7 @@
       sitePhotosList.innerHTML = "";
 
       if (!sitePhotosCache.length) {
-        sitePhotosList.innerHTML = `<p class="muted">Aucune photo dans le carrousel pour l'instant.</p>`;
+        sitePhotosList.innerHTML = `<p class="muted">Aucune photo pour “${currentSitePhotoSlotLabel()}” pour l’instant.</p>`;
         return;
       }
 
@@ -1616,8 +1674,9 @@
         const status = p.is_published ? "Publie" : "Brouillon";
         const sortVal = Number.isFinite(Number(p.sort)) ? String(p.sort) : "—";
         const title = p.title || p.alt || (String(p.path || "").split("/").pop() || "image");
+        const slotLabel = SITE_PHOTO_SLOTS[p?.slot]?.label || String(p?.slot || "");
         txt.innerHTML = `
-          <div class="admin-item__meta">${status} • sort ${sortVal}</div>
+          <div class="admin-item__meta">${status}${slotLabel ? " • " + slotLabel : ""} • sort ${sortVal}</div>
           <div><strong>${title}</strong></div>
           <div class="admin-item__text">${p.path || ""}</div>
         `;
@@ -1668,7 +1727,7 @@
         btnDel.textContent = "Supprimer";
         btnDel.style.borderColor = "rgba(255,100,100,.35)";
         btnDel.addEventListener("click", async () => {
-          const ok = confirm("Supprimer cette photo du carrousel ?");
+          const ok = confirm("Supprimer cette photo ?");
           if (!ok) return;
 
           btnDel.disabled = true;
@@ -1756,6 +1815,7 @@
       if (!sitePhotosList) return;
 
       try {
+        syncSitePhotosUI();
         sitePhotosCache = await fetchSitePhotos(sb);
         renderSitePhotosList();
         setSitePhotosMsg("");
@@ -1929,6 +1989,15 @@
       });
     });
 
+    sitePhotosSlot?.addEventListener("change", () => {
+      syncSitePhotosUI();
+      refreshSitePhotos().catch((e) => {
+        if (isAbort(e)) return;
+        console.error(e);
+        toast(errText(e), "err");
+      });
+    });
+
     docsForm?.addEventListener("submit", async (e) => {
       e.preventDefault();
       if (!docsForm) return;
@@ -2087,9 +2156,12 @@
 
       setSitePhotosMsg("");
 
-      const files = Array.from(sitePhotosFiles?.files || [])
+      const slot = getSitePhotoSlot();
+      const cfg = SITE_PHOTO_SLOTS[slot] || SITE_PHOTO_SLOTS.drawer_carousel;
+
+      let files = Array.from(sitePhotosFiles?.files || [])
         .filter((f) => (f.type || "").startsWith("image/"))
-        .slice(0, 30);
+        .slice(0, cfg?.multiple ? 30 : 1);
 
       if (!files.length) return setSitePhotosMsg("Ajoute au moins 1 image.");
 
@@ -2098,15 +2170,35 @@
       setSitePhotosMsg("Upload...");
 
       try {
-        const maxSort = sitePhotosCache.reduce((m, x) => Math.max(m, Number(x?.sort) || 0), 0);
-        let sort = (Number.isFinite(maxSort) ? maxSort : 0) + 10;
+        if (cfg?.multiple) {
+          const maxSort = sitePhotosCache.reduce((m, x) => Math.max(m, Number(x?.sort) || 0), 0);
+          let sort = (Number.isFinite(maxSort) ? maxSort : 0) + 10;
 
-        for (const file of files) {
-          const path = await uploadImageToFolder("site/carousel", file);
-          const payload = { slot: "drawer_carousel", path, sort, is_published: true };
-          const { error } = await sb.from("site_photos").insert(payload);
+          for (const file of files) {
+            const path = await uploadImageToFolder(cfg.folder, file);
+            const payload = { slot, path, sort, is_published: true };
+            const { error } = await sb.from("site_photos").insert(payload);
+            if (error) throw error;
+            sort += 10;
+          }
+        } else {
+          const file = files[0];
+          const path = await uploadImageToFolder(cfg.folder, file);
+          const payload = { slot, path, sort: 0, is_published: true };
+
+          const { data: created, error } = await sb
+            .from("site_photos")
+            .insert(payload)
+            .select("id")
+            .single();
           if (error) throw error;
-          sort += 10;
+
+          const newId = created?.id;
+          if (newId) {
+            try {
+              await sb.from("site_photos").update({ is_published: false }).eq("slot", slot).neq("id", newId);
+            } catch {}
+          }
         }
 
         if (sitePhotosFiles) sitePhotosFiles.value = "";
