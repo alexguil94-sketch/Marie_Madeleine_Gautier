@@ -24,6 +24,64 @@
   const isAbort = (e) =>
     e?.name === "AbortError" || /signal is aborted/i.test(String(e?.message || e || ""));
 
+  const stripDiacritics = (s) => {
+    try {
+      return String(s ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    } catch {
+      return String(s ?? "");
+    }
+  };
+
+  const norm = (s) => stripDiacritics(String(s ?? "")).toLowerCase().trim();
+
+  const prefersReducedMotion = (() => {
+    try {
+      return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch {
+      return false;
+    }
+  })();
+
+  // ---------- Toasts ----------
+  let toastWrap = null;
+
+  function ensureToastWrap() {
+    if (toastWrap && document.body.contains(toastWrap)) return toastWrap;
+    const el = document.createElement("div");
+    el.className = "utopia-toasts";
+    el.setAttribute("aria-live", "polite");
+    el.setAttribute("aria-atomic", "true");
+    document.body.appendChild(el);
+    toastWrap = el;
+    return el;
+  }
+
+  function toast(message, kind = "info") {
+    const msg = String(message || "").trim();
+    if (!msg) return;
+
+    const wrap = ensureToastWrap();
+    const el = document.createElement("div");
+    el.className = `utopia-toast utopia-toast--${kind}`;
+    el.textContent = msg;
+    wrap.appendChild(el);
+
+    if (!prefersReducedMotion) {
+      // Let layout happen so CSS transition can play.
+      requestAnimationFrame(() => el.classList.add("is-on"));
+    } else {
+      el.classList.add("is-on");
+    }
+
+    const ttl = kind === "error" ? 4200 : 2600;
+    setTimeout(() => {
+      el.classList.remove("is-on");
+      setTimeout(() => el.remove(), prefersReducedMotion ? 0 : 260);
+    }, ttl);
+  }
+
   const getLocale = () => {
     const v = (typeof window.__lang === "function" && window.__lang()) || document.documentElement.lang;
     return String(v || navigator.language || "fr").trim() || "fr";
@@ -310,6 +368,21 @@
     },
   });
 
+  function resetAfterCountryPick() {
+    state.city = "";
+    state.culture_id = "";
+    state.mode = "preset";
+    state.custom.world_name = "";
+    state.custom.motto = "";
+  }
+
+  function resetAfterCityPick() {
+    state.culture_id = "";
+    state.mode = "preset";
+    state.custom.world_name = "";
+    state.custom.motto = "";
+  }
+
   function safeJsonParse(s) {
     try {
       return JSON.parse(String(s || ""));
@@ -549,6 +622,190 @@
     return `${base} — ${state.city || "Utopie"}`.replace(/\s+/g, " ").trim();
   }
 
+  // ---------- Sigil (canvas) ----------
+  function safeFilename(input, fallback = "monde-utopique") {
+    const base = stripDiacritics(String(input || "").trim())
+      .replace(/['"]/g, "")
+      .replace(/[^a-zA-Z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .toLowerCase()
+      .slice(0, 60);
+    return base || fallback;
+  }
+
+  function sigilSeedString() {
+    const sliders = state.custom.sliders || {};
+    const totems = uniq(state.custom.totems || []);
+    return [
+      state.country,
+      state.country_code,
+      state.city,
+      state.culture_id,
+      state.mode,
+      state.custom.world_name,
+      state.custom.motto,
+      JSON.stringify(sliders),
+      totems.join(","),
+    ].join("|");
+  }
+
+  function drawSigil(canvas) {
+    const ctx = canvas?.getContext?.("2d");
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.max(1, rect.width);
+    const h = Math.max(1, rect.height);
+    if (!Number.isFinite(w) || !Number.isFinite(h) || w < 10 || h < 10) return;
+
+    const dpr = clamp(window.devicePixelRatio || 1, 1, 2.5);
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const theme = document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+    const seedStr = sigilSeedString();
+    const rng = mulberry32(hash32(seedStr + "|sigil"));
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Background wash
+    const bg = ctx.createLinearGradient(0, 0, w, h);
+    if (theme === "light") {
+      bg.addColorStop(0, "rgba(255,255,255,.92)");
+      bg.addColorStop(1, "rgba(246,242,232,.78)");
+    } else {
+      bg.addColorStop(0, "rgba(0,0,0,.26)");
+      bg.addColorStop(1, "rgba(0,0,0,.08)");
+    }
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+
+    const glow = ctx.createRadialGradient(w * 0.26, h * 0.20, 0, w * 0.26, h * 0.20, Math.max(w, h) * 0.95);
+    glow.addColorStop(0, theme === "light" ? "rgba(197,160,89,.16)" : "rgba(197,160,89,.22)");
+    glow.addColorStop(1, "rgba(197,160,89,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, w, h);
+
+    // Stars count influenced by the “palette”
+    const sliders = state.custom.sliders || {};
+    const lum = clamp(Number(sliders.lumiere ?? 60), 0, 100);
+    const nat = clamp(Number(sliders.nature ?? 55), 0, 100);
+    const sil = clamp(Number(sliders.silence ?? 55), 0, 100);
+    const mat = clamp(Number(sliders.matiere ?? 65), 0, 100);
+    const starCount = clamp(Math.round(18 + (lum + nat) / 12 + (100 - sil) / 30), 16, 46);
+
+    const pad = 14;
+    const pts = [];
+    for (let i = 0; i < starCount; i++) {
+      pts.push({
+        x: pad + rng() * (w - pad * 2),
+        y: pad + rng() * (h - pad * 2),
+        r: 0.9 + rng() * (1.8 + mat / 120),
+      });
+    }
+
+    // Connections (nearest neighbor)
+    const maxD = Math.min(w, h) * 0.38;
+    const edges = new Set();
+    for (let i = 0; i < pts.length; i++) {
+      let bestJ = -1;
+      let bestD = Infinity;
+      for (let j = 0; j < pts.length; j++) {
+        if (i === j) continue;
+        const dx = pts[i].x - pts[j].x;
+        const dy = pts[i].y - pts[j].y;
+        const d = Math.hypot(dx, dy);
+        if (d < bestD) {
+          bestD = d;
+          bestJ = j;
+        }
+      }
+      if (bestJ >= 0 && bestD <= maxD) {
+        const a = Math.min(i, bestJ);
+        const b = Math.max(i, bestJ);
+        edges.add(a + "-" + b);
+      }
+    }
+
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = theme === "light" ? "rgba(0,0,0,.16)" : "rgba(255,255,255,.14)";
+    ctx.beginPath();
+    edges.forEach((key) => {
+      const [aStr, bStr] = key.split("-");
+      const a = Number(aStr);
+      const b = Number(bStr);
+      const pa = pts[a];
+      const pb = pts[b];
+      if (!pa || !pb) return;
+      ctx.moveTo(pa.x, pa.y);
+      ctx.lineTo(pb.x, pb.y);
+    });
+    ctx.stroke();
+
+    ctx.globalCompositeOperation = "lighter";
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = theme === "light" ? "rgba(197,160,89,.22)" : "rgba(197,160,89,.18)";
+    ctx.beginPath();
+    edges.forEach((key) => {
+      const [aStr, bStr] = key.split("-");
+      const a = Number(aStr);
+      const b = Number(bStr);
+      const pa = pts[a];
+      const pb = pts[b];
+      if (!pa || !pb) return;
+      ctx.moveTo(pa.x, pa.y);
+      ctx.lineTo(pb.x, pb.y);
+    });
+    ctx.stroke();
+    ctx.globalCompositeOperation = "source-over";
+
+    // Star points
+    for (const p of pts) {
+      ctx.beginPath();
+      ctx.fillStyle = theme === "light" ? "rgba(0,0,0,.52)" : "rgba(255,255,255,.86)";
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.fillStyle = theme === "light" ? "rgba(197,160,89,.55)" : "rgba(197,160,89,.62)";
+      ctx.arc(p.x, p.y, Math.max(0.6, p.r * 0.55), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function downloadCanvasPng(canvas, filename) {
+    return new Promise((resolve, reject) => {
+      if (!canvas?.toBlob) {
+        reject(new Error("canvas.toBlob unavailable"));
+        return;
+      }
+      try {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("PNG blob empty"));
+              return;
+            }
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1200);
+            resolve();
+          },
+          "image/png",
+          0.92
+        );
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
   // ---------- Rendering ----------
   function mainStepIndex() {
     if (state.step === "country") return 1;
@@ -597,12 +854,6 @@
   }
 
   function renderCountryStep() {
-    const items = getCountryItems();
-    const options = items
-      .slice(0, 260)
-      .map((it) => `<option value="${esc(it.name)}"></option>`)
-      .join("");
-
     return `
       <div class="utopia-cardblock">
         <div class="utopia-stephead">
@@ -612,17 +863,24 @@
 
         <form class="utopia-form" data-step="country">
           <label class="utopia-label" for="utopiaCountry">Pays</label>
-          <input
-            id="utopiaCountry"
-            class="input utopia-input"
-            name="country"
-            placeholder="Tape le nom d’un pays…"
-            list="utopiaCountries"
-            value="${esc(state.country)}"
-            autocomplete="off"
-            required
-          />
-          <datalist id="utopiaCountries">${options}</datalist>
+          <div class="utopia-countrybox">
+            <input
+              id="utopiaCountry"
+              class="input utopia-input"
+              name="country"
+              placeholder="Tape quelques lettres… ou choisis dans la liste"
+              value="${esc(state.country)}"
+              autocomplete="off"
+              required
+            />
+            <div class="utopia-suggest" data-country-suggest hidden>
+              <div class="utopia-suggest__meta">
+                <span class="muted">Tous les pays</span>
+                <span class="muted" data-country-suggest-count></span>
+              </div>
+              <div class="utopia-suggest__list" role="listbox" aria-label="Pays"></div>
+            </div>
+          </div>
 
           <div class="utopia-row">
             <button class="btn" type="submit">Continuer</button>
@@ -630,7 +888,7 @@
           </div>
 
           <p class="muted utopia-help">
-            Astuce : tu peux écrire n’importe quel pays, même si ton navigateur ne propose pas de liste.
+            Astuce : tu peux écrire n’importe quel pays (même inventé).
           </p>
         </form>
       </div>
@@ -673,6 +931,7 @@
             </div>
             <div class="utopia-row" style="align-items:flex-end">
               <button class="btn ghost" type="button" data-use-custom-city>Utiliser</button>
+              <button class="btn ghost" type="button" data-random-city>Au hasard</button>
               <button class="btn" type="submit">Continuer</button>
             </div>
           </div>
@@ -741,6 +1000,7 @@
 
         <div class="utopia-row" style="margin-top:14px">
           <button class="btn" type="button" data-continue-culture>Continuer</button>
+          <button class="btn ghost" type="button" data-random-culture>Au hasard</button>
         </div>
       </div>
     `;
@@ -812,6 +1072,7 @@
           <div class="utopia-row" style="margin-top:14px">
             <button class="btn" type="submit">Générer le manifeste</button>
             <button class="btn ghost" type="button" data-reroll-name>Proposer un autre nom</button>
+            <button class="btn ghost" type="button" data-randomize-world>Palette au hasard</button>
           </div>
         </form>
       </div>
@@ -853,6 +1114,7 @@
             <div class="utopia-row">
               <button class="btn" type="button" data-copy>Copier</button>
               <button class="btn ghost" type="button" data-share>Lien</button>
+              <button class="btn ghost" type="button" data-download-png>PNG</button>
               <button class="btn ghost" type="button" data-download>TXT</button>
             </div>
           </div>
@@ -862,9 +1124,16 @@
               <div class="kicker">Manifeste</div>
               ${lines}
             </div>
-            <div class="utopia-lawsbox">
-              <div class="kicker">Trois lois</div>
-              <ul class="utopia-lawslist">${laws}</ul>
+            <div class="utopia-rightcol">
+              <div class="utopia-sigilcard">
+                <div class="kicker">Constellation</div>
+                <canvas class="utopia-sigil" data-sigil role="img" aria-label="Constellation générée"></canvas>
+                <div class="muted utopia-sigil__meta">Une trace générée à partir de tes choix.</div>
+              </div>
+              <div class="utopia-lawsbox">
+                <div class="kicker">Trois lois</div>
+                <ul class="utopia-lawslist">${laws}</ul>
+              </div>
             </div>
           </div>
 
@@ -917,23 +1186,114 @@
     const step = root.querySelector("[data-step]")?.getAttribute("data-step") || "";
 
     if (step === "country") {
+      const items = getCountryItems();
+      const commonSet = new Set(COMMON_COUNTRY_CODES);
+      const input = root.querySelector("#utopiaCountry");
+      const suggest = root.querySelector("[data-country-suggest]");
+      const suggestList = suggest?.querySelector(".utopia-suggest__list");
+      const suggestCount = root.querySelector("[data-country-suggest-count]");
+
+      const renderSuggest = () => {
+        if (!suggest || !suggestList) return;
+        const q = input?.value || "";
+        const nq = norm(q);
+
+        let out = [];
+        if (!items.length) out = [];
+        else if (!nq) {
+          const common = items.filter((it) => commonSet.has(it.code));
+          const rest = items.filter((it) => !commonSet.has(it.code));
+          out = [...common, ...rest];
+        } else {
+          out = items.filter((it) => norm(it.name).includes(nq) || norm(it.code).includes(nq));
+        }
+
+        if (suggestCount) suggestCount.textContent = `${out.length}/${items.length}`;
+
+        if (!out.length) {
+          suggestList.innerHTML = `<div class="utopia-suggest__empty muted">Aucun résultat — tu peux écrire ton pays librement.</div>`;
+          return;
+        }
+
+        suggestList.innerHTML = out
+          .map(
+            (it) => `
+              <button
+                class="utopia-suggest__opt"
+                type="button"
+                role="option"
+                data-country-pick="${esc(it.name)}"
+                data-country-code="${esc(it.code)}"
+              >
+                <span>${esc(it.name)}</span>
+                <span class="muted utopia-suggest__code">${esc(it.code)}</span>
+              </button>
+            `
+          )
+          .join("");
+      };
+
+      const showSuggest = () => {
+        if (!suggest) return;
+        suggest.hidden = false;
+        renderSuggest();
+      };
+
+      const hideSuggest = () => {
+        if (!suggest) return;
+        suggest.hidden = true;
+      };
+
+      if (suggest && input) {
+        input.addEventListener("focus", showSuggest);
+        input.addEventListener("input", showSuggest);
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") hideSuggest();
+        });
+        input.addEventListener("blur", () => setTimeout(hideSuggest, 180));
+
+        suggest.addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-country-pick]");
+          if (!btn) return;
+          const name = String(btn.getAttribute("data-country-pick") || "").trim();
+          const code = String(btn.getAttribute("data-country-code") || "").trim();
+          if (!name) return;
+          const changed = norm(name) !== norm(state.country);
+          state.country = name;
+          state.country_code = code;
+          if (changed) resetAfterCountryPick();
+          state.step = "city";
+          saveState();
+          toast(`Pays : ${name}`);
+          render();
+        });
+      }
+
       root.querySelector("[data-random-country]")?.addEventListener("click", () => {
-        const items = getCountryItems();
         if (!items.length) return;
         const pickOne = items[Math.floor(Math.random() * items.length)];
+        const changed = norm(pickOne.name) !== norm(state.country);
         state.country = pickOne.name;
         state.country_code = pickOne.code || "";
+        if (changed) resetAfterCountryPick();
+        state.step = "city";
         saveState();
+        toast(`Pays au hasard : ${state.country}`);
         render();
       });
 
       root.querySelector('form[data-step="country"]')?.addEventListener("submit", (e) => {
         e.preventDefault();
-        const input = root.querySelector("#utopiaCountry");
         const parsed = parseCountryInput(input?.value || "");
-        if (!parsed.name) return;
+        if (!parsed.name) {
+          toast("Choisis un pays pour continuer.", "error");
+          input?.focus();
+          return;
+        }
+        const changed = norm(parsed.name) !== norm(state.country);
         state.country = parsed.name;
         state.country_code = parsed.code || "";
+        if (changed) resetAfterCountryPick();
         state.step = "city";
         saveState();
         render();
@@ -945,7 +1305,10 @@
       root.querySelectorAll("[data-pick-city]")?.forEach((b) => {
         b.addEventListener("click", () => {
           const v = b.getAttribute("data-pick-city");
-          state.city = String(v || "").trim();
+          const next = String(v || "").trim();
+          const changed = norm(next) !== norm(state.city);
+          state.city = next;
+          if (changed) resetAfterCityPick();
           saveState();
           render();
         });
@@ -954,9 +1317,26 @@
       root.querySelector("[data-use-custom-city]")?.addEventListener("click", () => {
         const v = root.querySelector("#utopiaCityCustom")?.value || "";
         const name = String(v || "").trim();
-        if (!name) return;
+        if (!name) {
+          toast("Écris une ville, puis “Utiliser”.", "error");
+          root.querySelector("#utopiaCityCustom")?.focus();
+          return;
+        }
+        const changed = norm(name) !== norm(state.city);
         state.city = name;
+        if (changed) resetAfterCityPick();
         saveState();
+        render();
+      });
+
+      root.querySelector("[data-random-city]")?.addEventListener("click", () => {
+        if (!CITY_CHOICES.length) return;
+        const pickOne = CITY_CHOICES[Math.floor(Math.random() * CITY_CHOICES.length)];
+        const changed = norm(pickOne.name) !== norm(state.city);
+        state.city = pickOne.name;
+        if (changed) resetAfterCityPick();
+        saveState();
+        toast(`Ville au hasard : ${state.city}`);
         render();
       });
 
@@ -967,7 +1347,10 @@
           const name = String(v || "").trim();
           if (name) state.city = name;
         }
-        if (!String(state.city || "").trim()) return;
+        if (!String(state.city || "").trim()) {
+          toast("Choisis une ville (ou écris-la) pour continuer.", "error");
+          return;
+        }
         state.step = "culture";
         saveState();
         render();
@@ -1002,9 +1385,35 @@
           render();
           return;
         }
-        if (!String(state.culture_id || "").trim()) return;
+        if (!String(state.culture_id || "").trim()) {
+          toast("Choisis une culture/politique (ou “Créer mon monde”).", "error");
+          return;
+        }
         state.step = "result";
         saveState();
+        render();
+      });
+
+      root.querySelector("[data-random-culture]")?.addEventListener("click", () => {
+        // Une touche de hasard : modèle (majoritaire) ou création.
+        const roll = Math.random();
+        if (roll < 0.22) {
+          state.mode = "custom";
+          state.culture_id = "custom";
+          if (!String(state.custom.world_name || "").trim()) state.custom.world_name = autoWorldName();
+          state.step = "builder";
+          saveState();
+          toast("Mode création : compose ton monde.");
+          render();
+          return;
+        }
+
+        const pickOne = CULTURES[Math.floor(Math.random() * CULTURES.length)];
+        state.mode = "preset";
+        state.culture_id = pickOne?.id || "";
+        state.step = "result";
+        saveState();
+        toast(`Culture : ${pickOne?.name || "—"}`);
         render();
       });
       return;
@@ -1028,6 +1437,24 @@
         render();
       });
 
+      root.querySelector("[data-randomize-world]")?.addEventListener("click", () => {
+        const sliders = {};
+        SLIDERS.forEach((sl) => {
+          sliders[sl.key] = clamp(Math.round(18 + Math.random() * 74), 0, 100);
+        });
+
+        const shuffled = TOTEMS.slice().sort(() => Math.random() - 0.5);
+        const count = clamp(3 + Math.floor(Math.random() * 4), 1, 6);
+
+        state.custom.sliders = sliders;
+        state.custom.totems = shuffled.slice(0, count);
+        if (!String(state.custom.world_name || "").trim()) state.custom.world_name = autoWorldName();
+
+        saveState();
+        toast("Palette renouvelée.");
+        render();
+      });
+
       root.querySelector('form[data-step="builder"]')?.addEventListener("submit", (e) => {
         e.preventDefault();
         const form = e.currentTarget;
@@ -1035,7 +1462,10 @@
 
         const world_name = String(fd.get("world_name") || "").trim().slice(0, 72);
         const motto = String(fd.get("motto") || "").trim().slice(0, 90);
-        if (!world_name) return;
+        if (!world_name) {
+          toast("Donne un nom à ton monde.", "error");
+          return;
+        }
 
         const sliders = {};
         SLIDERS.forEach((sl) => {
@@ -1061,11 +1491,16 @@
     }
 
     // result step events
+    const sigilCanvas = root.querySelector("[data-sigil]");
+    if (sigilCanvas) drawSigil(sigilCanvas);
+
     root.querySelector("[data-copy]")?.addEventListener("click", async () => {
       const t = root.querySelector("[data-result-text]")?.value || "";
       try {
         await navigator.clipboard.writeText(String(t || ""));
+        toast("Manifeste copié.");
       } catch (e) {
+        toast("Copie bloquée par le navigateur.", "error");
         if (!isAbort(e)) console.warn(e);
       }
     });
@@ -1080,6 +1515,24 @@
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 1200);
+      toast("TXT téléchargé.");
+    });
+
+    root.querySelector("[data-download-png]")?.addEventListener("click", async () => {
+      const canvas = root.querySelector("[data-sigil]");
+      if (!canvas) {
+        toast("PNG indisponible.", "error");
+        return;
+      }
+      try {
+        drawSigil(canvas);
+        const name = safeFilename(resultTitle());
+        await downloadCanvasPng(canvas, `${name}.png`);
+        toast("PNG téléchargé.");
+      } catch (e) {
+        toast("Impossible de télécharger le PNG.", "error");
+        if (!isAbort(e)) console.warn(e);
+      }
     });
 
     root.querySelector("[data-share]")?.addEventListener("click", async () => {
@@ -1087,7 +1540,11 @@
       const url = location.href;
       try {
         await navigator.clipboard.writeText(url);
-      } catch {}
+        toast("Lien copié.");
+      } catch (e) {
+        toast("Copie du lien bloquée par le navigateur.", "error");
+        if (!isAbort(e)) console.warn(e);
+      }
     });
 
     root.querySelector("[data-edit]")?.addEventListener("click", () => {
@@ -1101,6 +1558,25 @@
     countryCache = { locale: "", items: [] };
     render();
   });
+
+  // Keep the sigil crisp on resize / theme toggles.
+  const requestSigilRedraw = (() => {
+    let raf = 0;
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const canvas = root.querySelector("[data-sigil]");
+        if (canvas) drawSigil(canvas);
+      });
+    };
+  })();
+
+  window.addEventListener("resize", requestSigilRedraw);
+  try {
+    const mo = new MutationObserver(() => requestSigilRedraw());
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  } catch {}
 
   render();
 })();

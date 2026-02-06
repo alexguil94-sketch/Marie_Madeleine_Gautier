@@ -251,6 +251,32 @@ html[data-theme="light"] .utopia-lawsbox{background:rgba(0,0,0,.03)}
 .utopia-lawslist{margin:8px 0 0 18px; padding:0}
 .utopia-lawslist li{margin:6px 0}
 
+.utopia-rightcol{display:grid; gap:12px}
+.utopia-sigilcard{
+  border:1px solid var(--stroke);
+  background:rgba(0,0,0,.14);
+  border-radius:18px;
+  padding:12px;
+}
+html[data-theme="light"] .utopia-sigilcard{background:rgba(0,0,0,.03)}
+.utopia-sigil{
+  width:100%;
+  aspect-ratio: 16 / 10;
+  display:block;
+  border-radius:16px;
+  border:1px solid rgba(197,160,89,.25);
+  background:
+    radial-gradient(640px 320px at 18% 0%, rgba(197,160,89,.14), transparent 60%),
+    rgba(0,0,0,.12);
+  margin-top:8px;
+}
+html[data-theme="light"] .utopia-sigil{
+  background:
+    radial-gradient(640px 320px at 18% 0%, rgba(197,160,89,.12), transparent 60%),
+    rgba(255,255,255,.75);
+}
+.utopia-sigil__meta{margin-top:8px; font-size:13px; line-height:1.35}
+
 .utopia-sr{
   position:absolute;
   width:1px;
@@ -263,3 +289,94 @@ html[data-theme="light"] .utopia-lawsbox{background:rgba(0,0,0,.03)}
   border:0;
 }
 
+/* Country search */
+.utopia-countrybox{display:grid; gap:10px}
+.utopia-suggest{
+  border:1px solid var(--stroke);
+  background:var(--glass2);
+  border-radius:18px;
+  padding:10px;
+  max-height:260px;
+  overflow:auto;
+}
+html[data-theme="light"] .utopia-suggest{background:rgba(255,255,255,.78)}
+.utopia-suggest__meta{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:baseline;
+  font-weight:800;
+  letter-spacing:.2px;
+  padding:0 4px 8px;
+}
+.utopia-suggest__list{display:grid; gap:6px}
+.utopia-suggest__opt{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:center;
+  width:100%;
+  text-align:left;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(0,0,0,.10);
+  padding:10px 10px;
+  cursor:pointer;
+  color:inherit;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+html[data-theme="light"] .utopia-suggest__opt{background:rgba(0,0,0,.02); border-color:rgba(0,0,0,.10)}
+.utopia-suggest__opt:hover{
+  transform:translateY(-1px);
+  border-color:rgba(197,160,89,.45);
+  background:rgba(197,160,89,.10);
+}
+.utopia-suggest__code{
+  font-variant-numeric: tabular-nums;
+  opacity:.72;
+}
+.utopia-suggest__empty{padding:10px 4px}
+
+/* Toasts */
+.utopia-toasts{
+  position:fixed;
+  left:50%;
+  bottom:18px;
+  transform:translateX(-50%);
+  z-index:9999;
+  display:grid;
+  gap:8px;
+  width:min(560px, calc(100vw - 24px));
+  pointer-events:none;
+}
+.utopia-toast{
+  border:1px solid var(--stroke);
+  background:rgba(0,0,0,.55);
+  border-radius:16px;
+  padding:10px 12px;
+  backdrop-filter: blur(10px);
+  box-shadow:0 16px 40px rgba(0,0,0,.35);
+  opacity:0;
+  transform:translateY(6px) scale(.98);
+  transition:opacity 180ms ease, transform 180ms ease;
+}
+html[data-theme="light"] .utopia-toast{background:rgba(255,255,255,.88)}
+.utopia-toast.is-on{opacity:1; transform:translateY(0) scale(1)}
+.utopia-toast--error{border-color:rgba(255,90,90,.35)}
+.utopia-toast--info{border-color:rgba(197,160,89,.30)}
+
+/* Transitions */
+@keyframes utopiaIn{
+  from{opacity:0; transform:translateY(8px)}
+  to{opacity:1; transform:translateY(0)}
+}
+.utopia-progress{animation: utopiaIn 220ms ease both}
+.utopia-cardblock{animation: utopiaIn 220ms ease both}
+
+@media (prefers-reduced-motion: reduce){
+  .utopia-progress{animation:none}
+  .utopia-cardblock{animation:none}
+  .utopia-pick{transition:none}
+  .utopia-suggest__opt{transition:none}
+  .utopia-toast{transition:none}
+}
