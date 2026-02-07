@@ -556,30 +556,58 @@ html[data-theme="light"] .lang-grid{background:rgba(0,0,0,.04)}
   margin:0 auto;
 }
 
-/* Dark mode: improve contrast on bright hero background */
+/* Dark mode: no grey framing; CTAs matched to the nebula header image */
 html[data-theme="dark"] .hero--welcome .hero-welcome__overlay > p.muted{
-  color:rgba(255,255,255,.92);
-  text-shadow:0 14px 46px rgba(0,0,0,.70);
-  background:rgba(0,0,0,.34);
-  border:1px solid rgba(255,255,255,.14);
-  padding:10px 14px;
-  border-radius:18px;
-  display:inline-block;
-  backdrop-filter: blur(10px);
+  opacity:1;
+  color:rgba(250,252,255,.94);
+  text-shadow:
+    0 18px 46px rgba(0,0,0,.62),
+    0 2px 10px rgba(0,0,0,.28);
+  background:transparent;
+  border:0;
+  padding:0;
+  border-radius:0;
+  display:block;
+  backdrop-filter:none;
 }
 html[data-theme="dark"] .hero--welcome .hero-ctas .btn{
-  color:rgba(255,255,255,.96);
-  text-shadow:0 14px 46px rgba(0,0,0,.70);
-  background:rgba(0,0,0,.34);
-  border-color:rgba(255,255,255,.18);
+  color:rgba(246,248,255,.98);
+  text-shadow:0 12px 34px rgba(0,0,0,.52);
+  background:
+    radial-gradient(140% 160% at 22% 18%, rgba(210,196,255,.42), transparent 56%),
+    radial-gradient(140% 160% at 86% 64%, rgba(140,222,255,.32), transparent 62%),
+    linear-gradient(180deg, rgba(22,30,72,.68), rgba(10,14,34,.58));
+  border-color:rgba(228,236,255,.30);
+  box-shadow:
+    0 18px 44px rgba(0,0,0,.36),
+    0 0 0 1px rgba(255,255,255,.06) inset;
+  backdrop-filter: blur(12px) saturate(155%);
 }
 html[data-theme="dark"] .hero--welcome .hero-ctas .btn:hover{
-  background:rgba(0,0,0,.40);
-  border-color:rgba(255,255,255,.26);
+  transform:translateY(-1px);
+  border-color:rgba(242,247,255,.46);
+  box-shadow:
+    0 22px 56px rgba(0,0,0,.42),
+    0 0 0 1px rgba(255,255,255,.10) inset;
 }
+html[data-theme="dark"] .hero--welcome .hero-ctas .btn:active{transform:translateY(0)}
 html[data-theme="dark"] .hero--welcome .hero-ctas .btn.ghost{
-  background:rgba(0,0,0,.22);
-  border-color:rgba(255,255,255,.18);
+  color:rgba(236,244,255,.96);
+  background:
+    radial-gradient(140% 160% at 22% 18%, rgba(210,196,255,.22), transparent 60%),
+    radial-gradient(140% 160% at 86% 64%, rgba(140,222,255,.18), transparent 66%),
+    linear-gradient(180deg, rgba(12,16,38,.34), rgba(8,10,24,.28));
+  border-color:rgba(228,236,255,.22);
+  box-shadow:
+    0 16px 40px rgba(0,0,0,.30),
+    0 0 0 1px rgba(255,255,255,.05) inset;
+}
+html[data-theme="dark"] .hero--welcome .hero-ctas .btn.ghost:hover{
+  border-color:rgba(242,247,255,.34);
+  background:
+    radial-gradient(140% 160% at 22% 18%, rgba(210,196,255,.26), transparent 60%),
+    radial-gradient(140% 160% at 86% 64%, rgba(140,222,255,.22), transparent 66%),
+    linear-gradient(180deg, rgba(16,22,50,.38), rgba(10,12,28,.32));
 }
 .hero-ctas{
   display:flex;

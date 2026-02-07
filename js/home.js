@@ -80,8 +80,15 @@
     // Header background (Accueil)
     const hero = qs(".hero--welcome");
     if (hero) {
-      const p = await loadSitePhoto("home_hero");
-      if (p?.url) hero.style.backgroundImage = `url("${p.url}")`;
+      // Keep the original CSS header image by default.
+      // Opt-in to a Supabase override by setting: data-hero-source="supabase"
+      const src = String(hero.getAttribute("data-hero-source") || "").trim().toLowerCase();
+      if (src === "supabase") {
+        const p = await loadSitePhoto("home_hero");
+        if (p?.url) hero.style.backgroundImage = `url("${p.url}")`;
+      } else {
+        hero.style.backgroundImage = "";
+      }
     }
 
     // Exposition du moment (image)

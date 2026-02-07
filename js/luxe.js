@@ -448,6 +448,19 @@
         e?.name === 'AbortError' || /signal is aborted/i.test(String(e?.message || e || ''));
 
       const getSB = ()=> window.mmgSupabase || null;
+      const getBucket = ()=> (window.MMG_SUPABASE?.bucket || window.SUPABASE_BUCKET || 'media');
+
+      const resolveUrl = (uOrPath)=>{
+        const v = String(uOrPath || '').trim();
+        if(!v) return '';
+        if(v.startsWith('http://') || v.startsWith('https://') || v.startsWith('/')) return v;
+        if(v.startsWith('assets/')) return '/' + v;
+
+        const sb = getSB();
+        if(!sb?.storage) return v;
+        const { data } = sb.storage.from(getBucket()).getPublicUrl(v);
+        return data?.publicUrl || v;
+      };
 
       const waitForSB = async (timeoutMs = 3500)=>{
         if(getSB()) return getSB();
