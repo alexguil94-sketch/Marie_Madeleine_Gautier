@@ -206,7 +206,10 @@
     return data?.publicUrl || "";
   }
 
-  async function renderHeader() {
+  let headerRenderPromise = null;
+  let headerRenderAgain = false;
+
+  async function renderHeaderOnce() {
     const slot = qs("#mmgProfileSlot");
     if (!slot) return;
 
@@ -247,6 +250,26 @@
       <span class="mmg-profname">${name}</span>
     `;
     slot.appendChild(a);
+  }
+
+  async function renderHeader() {
+    if (headerRenderPromise) {
+      headerRenderAgain = true;
+      return headerRenderPromise;
+    }
+
+    headerRenderPromise = (async () => {
+      try {
+        do {
+          headerRenderAgain = false;
+          await renderHeaderOnce();
+        } while (headerRenderAgain);
+      } finally {
+        headerRenderPromise = null;
+      }
+    })();
+
+    return headerRenderPromise;
   }
 
   async function fillModal() {

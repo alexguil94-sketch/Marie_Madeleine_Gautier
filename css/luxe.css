@@ -9,7 +9,7 @@
    - Profile UI (header slot + modal)
 ========================================= */
 
-@import url("https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Permanent+Marker&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Permanent+Marker&family=Sedgwick+Ave+Display&display=swap");
 
 /* -----------------------------
    Theme variables
@@ -630,9 +630,13 @@ html[data-theme="dark"] .hero--welcome .hero-ctas .btn.ghost:hover{
 }
 .hero-welcome__sigle{
   margin-top:clamp(8px, 2vw, 16px);
-  font-family:"Permanent Marker", system-ui, sans-serif;
-  font-size:clamp(78px, 10vw, 160px);
-  letter-spacing:.02em;
+  font-family:"Sedgwick Ave Display","Permanent Marker", system-ui, sans-serif;
+  font-size:clamp(86px, 11vw, 180px);
+  letter-spacing:-.04em;
+  text-shadow:
+    10px 10px 0 rgba(70,220,235,.55),
+    18px 18px 0 rgba(70,220,235,.18),
+    0 26px 90px rgba(0,0,0,.24);
 }
 body.is-loaded .hero-welcome__title .drop{
   animation: dropSoft 1.45s cubic-bezier(.18,.9,.2,1) both;
