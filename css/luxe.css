@@ -11,6 +11,16 @@
 
 @import url("https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Permanent+Marker&family=Sedgwick+Ave+Display&display=swap");
 
+@font-face{
+  font-family:"Lost in South";
+  src:
+    url("../assets/fonts/lost-in-south.woff2") format("woff2"),
+    url("../assets/fonts/lost-in-south.woff") format("woff");
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+}
+
 /* -----------------------------
    Theme variables
 ----------------------------- */
@@ -630,7 +640,7 @@ html[data-theme="dark"] .hero--welcome .hero-ctas .btn.ghost:hover{
 }
 .hero-welcome__sigle{
   margin-top:clamp(8px, 2vw, 16px);
-  font-family:"Sedgwick Ave Display","Permanent Marker", system-ui, sans-serif;
+  font-family:"Lost in South","Sedgwick Ave Display","Permanent Marker", system-ui, sans-serif;
   font-size:clamp(86px, 11vw, 180px);
   letter-spacing:-.04em;
   text-shadow:
@@ -874,22 +884,57 @@ html[data-theme="light"] .site-footer{
   color:rgba(255,255,255,.82);
   text-decoration:none;
 }
+.footer-grid a.social{
+  display:flex;
+  margin:0;
+}
 html[data-theme="light"] .footer-grid a{color:rgba(0,0,0,.70)}
 .footer-grid a:hover{color:rgba(212,175,55,.95)}
-.social-row{display:flex; flex-wrap:wrap; gap:10px}
+.social-row{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(72px, 1fr));
+  gap:14px;
+  align-items:start;
+}
+.social-row--contact{
+  margin-top:12px;
+  max-width:430px;
+}
 .social{
-  display:inline-flex;
+  display:flex;
+  flex-direction:column;
   align-items:center;
+  justify-content:flex-start;
   gap:8px;
   margin:0;
-  padding:8px 12px;
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:999px;
-  background:rgba(0,0,0,.28);
+  padding:0;
+  border:0;
+  background:transparent;
+  text-align:center;
 }
-.social .ico{flex:0 0 auto; display:block; opacity:1}
-html[data-theme="light"] .social{background:rgba(255,255,255,.70); border-color:rgba(0,0,0,.12)}
-.social:hover{border-color:rgba(212,175,55,.55)}
+.social .ico{
+  width:34px;
+  height:34px;
+  flex:0 0 34px;
+  display:block;
+  opacity:1;
+  transition:transform .18s ease;
+}
+.social img.ico{object-fit:contain}
+.social span{
+  display:block;
+  margin:0;
+  font-size:16px;
+  line-height:1.2;
+  color:rgba(255,255,255,.84);
+  letter-spacing:.01em;
+}
+html[data-theme="light"] .social span{color:rgba(0,0,0,.72)}
+.social:hover .ico{transform:translateY(-2px)}
+.social:hover span{color:rgba(212,175,55,.95)}
+@media (max-width:420px){
+  .social-row{grid-template-columns:repeat(2, minmax(72px, 1fr))}
+}
 .footer-bottom{
   margin-top:18px;
   padding-top:14px;

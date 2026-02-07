@@ -523,26 +523,29 @@
 
         const byPlatform = new Map(configs.map((c)=> [c.platform, c]));
 
-        // Apply config to existing anchors: set href/label, and hide missing links.
+        const officialPlatforms = new Set(['facebook', 'instagram', 'linkedin', 'youtube']);
+
+        // Apply config to existing anchors: set href/label and keep defaults for missing platforms.
         anchors.forEach((a)=>{
           const k = norm(a.getAttribute('data-social'));
           const cfg = byPlatform.get(k);
 
-          // Query succeeded: hide anything not configured/published
-          a.hidden = !cfg;
+          // Keep default markup when a platform is not configured in DB.
+          a.hidden = false;
           if(!cfg) return;
 
           a.setAttribute('href', cfg.url);
           if(!a.getAttribute('target')) a.setAttribute('target', '_blank');
           if(!a.getAttribute('rel')) a.setAttribute('rel', 'noopener noreferrer');
 
-          if(cfg.title){
+          const cleanTitle = String(cfg.title || '').trim();
+          if(cleanTitle && !cleanTitle.startsWith('@')){
             const labelEl = a.querySelector('span');
             if(labelEl){
-              labelEl.textContent = cfg.title;
+              labelEl.textContent = cleanTitle;
               labelEl.removeAttribute('data-i18n');
             }
-            a.setAttribute('aria-label', cfg.title);
+            a.setAttribute('aria-label', cleanTitle);
           }
 
           // Custom icons (optional): replace the default inline SVG with images.
@@ -555,7 +558,7 @@
           const useL = iconL || iconD;
           const useD = iconD || iconL;
 
-          if(useL || useD){
+          if((useL || useD) && !officialPlatforms.has(k)){
             const w = Number(baseIco?.getAttribute?.('width')) || 16;
             const h = Number(baseIco?.getAttribute?.('height')) || w;
 
@@ -595,6 +598,11 @@
         parents.forEach((p)=>{
           const kids = Array.from(p.children || []).filter((el)=> el?.matches?.('[data-social]'));
           if(!kids.length) return;
+
+          // Keep original order unless every link has a DB config.
+          const hasFullConfig = kids.every((el)=> byPlatform.has(norm(el.getAttribute('data-social'))));
+          if(!hasFullConfig) return;
+
           const kidByPlatform = new Map();
           kids.forEach((el)=> kidByPlatform.set(norm(el.getAttribute('data-social')), el));
           configs.forEach((c)=>{
