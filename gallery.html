@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Galerie — Marie-Madeleine Gautier</title>
+  <title data-i18n="titles.gallery">Galerie — Marie-Madeleine Gautier</title>
 
   <script>
     (function () {
@@ -28,21 +28,18 @@
     <section class="section">
       <div class="container">
         <div class="card card-pad reveal">
-          <div class="kicker">Galerie</div>
-          <h1 style="margin:10px 0 0">Œuvres</h1>
-          <p class="muted" style="max-width:820px">
-            Explore les œuvres, filtre par titre ou catégorie, puis clique pour agrandir.
+          <div class="kicker" data-i18n="gallery.kicker">Galerie</div>
+          <h1 style="margin:10px 0 0" data-i18n="gallery.title">Œuvres</h1>
+          <p class="muted" style="max-width:820px" data-i18n="gallery.subtitle">
+            Explore les œuvres, recherche par titre ou année, puis clique pour agrandir.
           </p>
 
           <div class="hr"></div>
 
           <!-- Filtres -->
           <div class="toolbar" style="margin-top:10px">
-            <input id="q" class="field" type="search" placeholder="Rechercher (titre, année, catégorie)..." style="flex:1; min-width:220px" />
-            <select id="cat" class="field" style="min-width:220px">
-              <option value="all">Toutes les catégories</option>
-            </select>
-            <button id="loadMore" class="btn" type="button">Charger plus</button>
+            <input id="q" class="field" type="search" placeholder="Rechercher (titre, année)..." data-i18n-placeholder="gallery.search" style="flex:1; min-width:220px" />
+            <button id="loadMore" class="btn" type="button" data-i18n="gallery.loadMore">Charger plus</button>
           </div>
 
           <div id="workCount" class="muted small-note" style="margin-top:10px"></div>
@@ -56,7 +53,7 @@
 
   <!-- Lightbox -->
   <div id="lightbox" class="lightbox" aria-hidden="true" hidden>
-    <div class="lightbox-panel" role="dialog" aria-modal="true" aria-label="Aperçu image">
+    <div class="lightbox-panel" role="dialog" aria-modal="true" aria-label="Aperçu image" data-i18n-attr="aria-label:gallery.lightboxLabel">
       <div class="lightbox-top">
         <div style="display:flex; align-items:center; gap:10px; min-width:0">
           <strong id="lbTitle" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis">—</strong>
@@ -64,22 +61,22 @@
         </div>
 
         <div style="display:flex; gap:8px; align-items:center">
-          <button class="pill" type="button" data-zoom="out" aria-label="Zoom arrière">−</button>
-          <button class="pill" type="button" data-zoom="in" aria-label="Zoom avant">+</button>
-          <button class="pill" type="button" data-zoom="reset" aria-label="Réinitialiser">Reset</button>
-          <button class="pill" type="button" data-close aria-label="Fermer">×</button>
+          <button class="pill" type="button" data-zoom="out" aria-label="Zoom arrière" data-i18n-attr="aria-label:gallery.zoomOut">−</button>
+          <button class="pill" type="button" data-zoom="in" aria-label="Zoom avant" data-i18n-attr="aria-label:gallery.zoomIn">+</button>
+          <button class="pill" type="button" data-zoom="reset" aria-label="Réinitialiser" data-i18n-attr="aria-label:gallery.resetZoom" data-i18n="gallery.resetZoom">Reset</button>
+          <button class="pill" type="button" data-close aria-label="Fermer" data-i18n-attr="aria-label:common.close">×</button>
         </div>
       </div>
 
       <div id="lbCanvas" class="lightbox-canvas">
         <img id="lbImg" alt="" draggable="false" />
-        <button class="lb-nav prev" type="button" data-nav="prev" aria-label="Image précédente">‹</button>
-        <button class="lb-nav next" type="button" data-nav="next" aria-label="Image suivante">›</button>
+        <button class="lb-nav prev" type="button" data-nav="prev" aria-label="Image précédente" data-i18n-attr="aria-label:gallery.prevImage">‹</button>
+        <button class="lb-nav next" type="button" data-nav="next" aria-label="Image suivante" data-i18n-attr="aria-label:gallery.nextImage">›</button>
       </div>
 
       <div class="lightbox-bot">
-        <span class="muted small-note">← → : naviguer • ESC : fermer</span>
-        <span class="muted small-note">Zoom : + / −</span>
+        <span class="muted small-note" data-i18n="gallery.hintNav">← → : naviguer • ESC : fermer</span>
+        <span class="muted small-note" data-i18n="gallery.hintZoom">Zoom : + / −</span>
       </div>
     </div>
   </div>

@@ -6,6 +6,8 @@
   window.__MMG_GALLERY_INIT__ = true;
 
   const qs = (s, r = document) => r.querySelector(s);
+  const t = (key, fallback, vars) =>
+    typeof window.__t === "function" ? window.__t(key, fallback, vars) : fallback ?? key;
 
   const getSB = () => window.mmgSupabase || null;
   const getBucket = () => (window.MMG_SUPABASE?.bucket || window.SUPABASE_BUCKET || "media");
@@ -60,6 +62,7 @@
     hasMore: true,
     loading: false,
     error: "",
+    errorKey: "",
     isAdmin: false,
     user: null,
     adminMenuEl: null,
@@ -68,6 +71,21 @@
     zoom: 1,
     panX: 0,
     panY: 0,
+  };
+
+  const countText = (shown, loaded) => {
+    const shownText =
+      shown === 1
+        ? t("gallery.countShownOne", "{n} œuvre affichée", { n: shown })
+        : t("gallery.countShownMany", "{n} œuvres affichées", { n: shown });
+
+    const loadedText =
+      loaded === 1
+        ? t("gallery.countLoadedOne", "{n} œuvre chargée", { n: loaded })
+        : t("gallery.countLoadedMany", "{n} œuvres chargées", { n: loaded });
+
+    const sep = t("gallery.countSep", " • ");
+    return `${shownText}${sep}${loadedText}`;
   };
 
   const safeName = (fileName) =>
@@ -172,8 +190,9 @@
     ).sort((a, b) => a.localeCompare(b, "fr"));
 
     const current = sel.value || "all";
-    sel.innerHTML = `<option value="all">Toutes les catégories</option>` +
-      cats.map((c) => `<option value="${c}">${c}</option>`).join("");
+    const allLabel = String(t("gallery.allCategories", "Toutes les catégories") || "");
+    sel.innerHTML =
+      `<option value="all">${allLabel}</option>` + cats.map((c) => `<option value="${c}">${c}</option>`).join("");
 
     sel.value = cats.includes(current) ? current : "all";
   }
@@ -192,14 +211,15 @@
       const shown = state.view.length;
       const loaded = state.all.length;
       count.textContent = state.loading
-        ? "Chargement…"
-        : `${shown} œuvre${shown > 1 ? "s" : ""} affichée${shown > 1 ? "s" : ""} • ${loaded} chargée${loaded > 1 ? "s" : ""}`;
+        ? t("common.loading", "Chargement…")
+        : countText(shown, loaded);
     }
 
     if (state.error) {
+      const err = state.errorKey ? t(state.errorKey, state.error) : state.error;
       grid.innerHTML = `
         <div class="muted" style="padding:14px 0">
-          ${state.error}
+          ${err}
         </div>
       `;
       return;
@@ -208,7 +228,7 @@
     if (state.loading && !state.all.length) {
       grid.innerHTML = `
         <div class="muted" style="padding:14px 0">
-          Chargement…
+          ${t("common.loading", "Chargement…")}
         </div>
       `;
       return;
@@ -217,7 +237,11 @@
     if (!state.view.length) {
       grid.innerHTML = `
         <div class="muted" style="padding:14px 0">
-          ${state.isAdmin ? "Aucune œuvre à afficher pour le moment." : "Aucune œuvre publiée pour le moment."}
+          ${
+            state.isAdmin
+              ? t("gallery.emptyAdmin", "Aucune œuvre à afficher pour le moment.")
+              : t("gallery.emptyPublic", "Aucune œuvre publiée pour le moment.")
+          }
         </div>
       `;
       return;
@@ -231,7 +255,7 @@
 
       const card = document.createElement("article");
       card.className = "work work--gallery";
-      card.setAttribute("aria-label", w.title || "Œuvre");
+      card.setAttribute("aria-label", w.title || t("gallery.work", "œuvre"));
       card.setAttribute("role", "button");
       card.tabIndex = 0;
       card.dataset.workId = String(w.id);
@@ -636,6 +660,7 @@
 
     state.loading = true;
     state.error = "";
+    state.errorKey = "";
     renderGrid();
 
     const sb = await waitForSB();
@@ -657,6 +682,7 @@
       state.loading = false;
       state.hasMore = false;
       state.error = "Connexion indisponible. Impossible de charger la galerie.";
+      state.errorKey = "gallery.offlineError";
       renderGrid();
       return;
     }
@@ -692,6 +718,7 @@
       }
       state.loading = false;
       state.error = error.message || "Erreur de chargement.";
+      state.errorKey = error.message ? "" : "gallery.loadError";
       renderGrid();
       return;
     }
@@ -745,7 +772,7 @@
       renderGrid();
     } catch (e) {
       console.error(e);
-      alert("Erreur : " + errText(e));
+      alert(t("common.errorPrefix", "Erreur : ") + errText(e));
     }
   }
 
@@ -756,7 +783,8 @@
     const w = getWorkById(id);
     if (!w) return;
 
-    const ok = confirm(`Supprimer "${w.title || "œuvre"}" ?`);
+    const title = w.title || t("gallery.work", "œuvre");
+    const ok = confirm(t("common.deleteConfirm", 'Supprimer "{title}" ?', { title }));
     if (!ok) return;
 
     const bucket = getBucket();
@@ -796,7 +824,7 @@
       }
     } catch (e) {
       console.error(e);
-      alert("Erreur : " + errText(e));
+      alert(t("common.errorPrefix", "Erreur : ") + errText(e));
     }
   }
 
@@ -889,5 +917,11 @@
       if (isAbort(err)) return;
       console.error(err);
     });
+  });
+
+  // Re-render UI strings when language changes
+  window.addEventListener("i18n:changed", () => {
+    renderCategories();
+    renderGrid();
   });
 })();

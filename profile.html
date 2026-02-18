@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mon profil — Marie-Madeleine Gautier</title>
+  <title data-i18n="titles.profile">Mon profil — Marie-Madeleine Gautier</title>
 
   <script>
     (function () {
@@ -24,9 +24,9 @@
     <section class="section">
       <div class="container">
         <div class="card card-pad">
-          <div class="kicker">Compte</div>
-          <h1 style="margin:10px 0 0">Mon profil</h1>
-          <p class="muted" style="max-width:820px">
+          <div class="kicker" data-i18n="footer.accountTitle">Compte</div>
+          <h1 style="margin:10px 0 0" data-i18n="footer.profile">Mon profil</h1>
+          <p class="muted" style="max-width:820px" data-i18n="profile.pageIntro">
             Ici, tu peux définir ton pseudo et ton avatar. Ces infos servent pour les commentaires et l’affichage du profil.
           </p>
 
@@ -35,16 +35,16 @@
           <div id="profileRoot" class="pf-card" style="margin:0 auto">
             <div class="pf-head">
               <div>
-                <div class="pf-kicker">Profil</div>
-                <div class="pf-muted" style="margin-top:4px">Pseudo (max 32) + avatar (image)</div>
+                <div class="pf-kicker" data-i18n="profile.kicker">Profil</div>
+                <div class="pf-muted" style="margin-top:4px" data-i18n="profile.hint">Pseudo (max 32) + avatar (image)</div>
               </div>
             </div>
 
-            <div id="ppLoading" class="pf-muted" style="margin-top:12px">Chargement…</div>
+            <div id="ppLoading" class="pf-muted" style="margin-top:12px" data-i18n="common.loading">Chargement…</div>
 
             <div id="ppSignedOut" class="pf-muted" style="margin-top:12px" hidden>
-              <p style="margin:0 0 12px">Tu dois être connecté pour modifier ton profil.</p>
-              <a id="ppLoginLink" class="pf-btn pf-primary" href="/login.html">Se connecter</a>
+              <p style="margin:0 0 12px" data-i18n="profile.mustSignIn">Tu dois être connecté pour modifier ton profil.</p>
+              <a id="ppLoginLink" class="pf-btn pf-primary" href="/login.html" data-i18n="auth.signIn">Se connecter</a>
             </div>
 
             <div id="ppSignedIn" style="margin-top:12px" hidden>
@@ -54,25 +54,25 @@
                 </div>
 
                 <div style="flex:1; min-width:0">
-                  <div class="pf-muted">Compte</div>
+                  <div class="pf-muted" data-i18n="footer.accountTitle">Compte</div>
                   <div id="ppEmail" style="font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap"></div>
                 </div>
 
-                <button id="ppSignOut" class="pf-btn" type="button">Se déconnecter</button>
+                <button id="ppSignOut" class="pf-btn" type="button" data-i18n="auth.signOut">Se déconnecter</button>
               </div>
 
               <div style="margin-top:14px">
-                <label class="pf-label" for="ppName">Pseudo</label>
-                <input id="ppName" class="pf-input" placeholder="Ton pseudo" maxlength="32" />
+                <label class="pf-label" for="ppName" data-i18n="profile.displayName">Pseudo</label>
+                <input id="ppName" class="pf-input" placeholder="Ton pseudo" data-i18n-placeholder="profile.displayNamePlaceholder" maxlength="32" />
               </div>
 
               <div style="margin-top:14px">
-                <label class="pf-label" for="ppAvatar">Avatar</label>
+                <label class="pf-label" for="ppAvatar" data-i18n="profile.avatar">Avatar</label>
                 <input id="ppAvatar" class="pf-input" type="file" accept="image/*" />
 
                 <div class="pf-row" style="margin-top:10px">
-                  <button id="ppRemoveAvatar" class="pf-btn" type="button">Retirer l’avatar</button>
-                  <button id="ppSave" class="pf-btn pf-primary" type="button">Enregistrer</button>
+                  <button id="ppRemoveAvatar" class="pf-btn" type="button" data-i18n="profile.removeAvatar">Retirer l’avatar</button>
+                  <button id="ppSave" class="pf-btn pf-primary" type="button" data-i18n="profile.save">Enregistrer</button>
                 </div>
               </div>
 

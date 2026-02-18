@@ -218,9 +218,19 @@
     { id: "cite-nacre", name: "Cité Nacre", hint: "Tout y est nacré, même les décisions." },
     { id: "delta-atelier", name: "Delta Atelier", hint: "Des canaux, des ateliers flottants, des accords." },
     { id: "clairiere-suspendue", name: "Clairière Suspendue", hint: "Une place au milieu des nuages." },
+    { id: "canal-brumes", name: "Canal des Brumes", hint: "Eau douce, lampes basses, conversations lentes." },
+    { id: "serres-oracles", name: "Serres des Oracles", hint: "Des plantes rares : ici, les décisions mûrissent sous verre." },
+    { id: "quai-lanternes", name: "Quai des Lanternes", hint: "La nuit y est douce : la lumière n’écrase personne." },
+    { id: "mont-patines", name: "Mont des Patines", hint: "On y apprend à faire vieillir l’or sans l’abîmer." },
+    { id: "atoll-echos", name: "Atoll des Échos", hint: "Îles sonores, marées d’accords, sel sur la peau." },
+    { id: "dunes-vermeil", name: "Dunes de Vermeil", hint: "Un désert rouge qui réchauffe les voix et les pactes." },
+    { id: "cite-bains", name: "Cité des Bains", hint: "Sources chaudes et seuils tranquilles : on s’y répare." },
+    { id: "faubourg-fibres", name: "Faubourg des Fibres", hint: "Textiles, cordes, tissages : on fabrique des liens." },
+    { id: "voute-minerale", name: "Voûte Minérale", hint: "Une ville-grotte : la pierre garde la mémoire des pas." },
+    { id: "horizon-argent", name: "Horizon d’Argent", hint: "Un plateau clair : le ciel y prend toute la place." },
   ];
 
-  // 15 cultures / politiques (choix “preset”)
+  // Cultures / politiques (choix “preset”)
   const CULTURES = [
     {
       id: "republique_ateliers",
@@ -327,6 +337,241 @@
       laws: ["Ne pas s’installer dans l’habitude.", "Voyager léger.", "Faire de la route une école."],
       palette: ["mouvement", "regard", "route"],
     },
+    {
+      id: "academie_rues",
+      name: "Académie des Rues",
+      desc: "L’éducation est partout : on apprend en marchant, en parlant, en faisant.",
+      laws: ["Enseigner est un devoir joyeux.", "Nul ne garde le savoir pour soi.", "Le diplôme, c’est le geste."],
+      palette: ["transmission", "rue", "atelier"],
+    },
+    {
+      id: "tribunal_nuances",
+      name: "Tribunal des Nuances",
+      desc: "On juge rarement : on répare souvent. La nuance a un protocole.",
+      laws: ["On écoute avant de condamner.", "Le conflit se soigne.", "On répare ce qu’on abîme."],
+      palette: ["nuance", "justice", "réparation"],
+    },
+    {
+      id: "cosmopolis_traductions",
+      name: "Cosmopolis des Traductions",
+      desc: "On vit en plusieurs langues : traduire est un acte politique.",
+      laws: ["Traduire avant d’interdire.", "Chaque culture est invitée.", "Aucun mot n’est supérieur."],
+      palette: ["langue", "traduction", "accueil"],
+    },
+    {
+      id: "commune_refuges",
+      name: "Commune des Refuges",
+      desc: "On protège l’abri : maisons ouvertes, seuils sûrs, solidarités simples.",
+      laws: ["Personne ne reste seul.", "Le refuge est prioritaire.", "La peur ne gouverne pas."],
+      palette: ["refuge", "solidarité", "seuil"],
+    },
+    {
+      id: "diplomatie_jardins",
+      name: "Diplomatie des Jardins",
+      desc: "On négocie comme on jardine : avec patience, compost et attention.",
+      laws: ["La patience est une méthode.", "On soigne les relations.", "On préfère l’accord à la victoire."],
+      palette: ["patience", "accord", "jardin"],
+    },
+  ];
+
+  // Économie / échanges (choix)
+  const ECONOMIES = [
+    {
+      id: "eco_don",
+      name: "Économie du Don",
+      desc: "La richesse se mesure à la qualité des liens, pas aux stocks.",
+      laws: ["Donner sans humilier.", "Recevoir sans dette.", "Chacun a sa place."],
+      palette: ["don", "lien", "hospitalité"],
+      line: "L’échange circule comme une fête : on donne, on reçoit, on transmet.",
+    },
+    {
+      id: "eco_banque_temps",
+      name: "Banque de Temps",
+      desc: "Une heure de soin vaut une heure de jardin : l’unité d’échange est le temps.",
+      laws: ["Le temps appartient à tous.", "Aucun métier n’est “mineur”.", "Chaque heure a la même dignité."],
+      palette: ["temps", "équité", "soin"],
+      line: "Ici, la monnaie est une heure : le temps devient un commun.",
+    },
+    {
+      id: "eco_ateliers",
+      name: "Troc des Ateliers",
+      desc: "On échange en fabriquant : la valeur est un geste partagé.",
+      laws: ["Apprendre avant d’acheter.", "Réparer avant de remplacer.", "Tout outil se prête."],
+      palette: ["atelier", "outil", "apprentissage"],
+      line: "On échange en se mettant à l’établi : la valeur naît du faire.",
+    },
+    {
+      id: "eco_communs",
+      name: "Commun des Outils",
+      desc: "Une bibliothèque d’objets : on emprunte, on rend, on prend soin.",
+      laws: ["Posséder moins, partager plus.", "Entretenir est un honneur.", "Le commun est prioritaire."],
+      palette: ["commun", "soin", "sobriété"],
+      line: "Les outils circulent comme des livres : rien ne dort au fond d’un placard.",
+    },
+    {
+      id: "eco_monnaie_poetique",
+      name: "Monnaie Poétique",
+      desc: "On paie aussi en récits : un poème vaut une course, une chanson vaut un repas.",
+      laws: ["La beauté a une valeur réelle.", "Le geste compte autant que l’objet.", "On ne monnaye pas la détresse."],
+      palette: ["poésie", "récit", "joie"],
+      line: "Les mots deviennent des pièces : une phrase peut ouvrir une porte.",
+    },
+    {
+      id: "eco_frugal",
+      name: "Abondance Frugale",
+      desc: "Peu de choses, mais justes : on vise le nécessaire et l’élégant.",
+      laws: ["Le superflu se partage.", "La simplicité libère.", "Le luxe est dans la durée."],
+      palette: ["durée", "justesse", "clarté"],
+      line: "Ici, l’abondance ressemble à la simplicité : juste ce qu’il faut, vraiment.",
+    },
+    {
+      id: "eco_coop_matiere",
+      name: "Coopérative des Matières",
+      desc: "Bois, argile, bronze, pierre : les matières sont gérées comme un bien commun.",
+      laws: ["Tracer l’origine des matières.", "Régénérer ce qu’on prélève.", "Transformer sans détruire."],
+      palette: ["matière", "trace", "origine"],
+      line: "On se met d’accord sur la matière : d’où elle vient, où elle revient.",
+    },
+    {
+      id: "eco_reparation",
+      name: "Réparation joyeuse",
+      desc: "Chaque objet a plusieurs vies : l’atelier de réparation est un lieu central.",
+      laws: ["Tout se répare, ou se transforme.", "Réparer enseigne la patience.", "La casse n’est pas une honte."],
+      palette: ["réparer", "patience", "seconde-vie"],
+      line: "On célèbre la réparation : recoudre, ressouder, recommencer.",
+    },
+    {
+      id: "eco_hospitalite",
+      name: "Hospitalité circulaire",
+      desc: "On accueille, puis on est accueilli : le voyage est une économie du lien.",
+      laws: ["Personne ne dort dehors.", "On partage la table.", "L’étranger est un voisin en devenir."],
+      palette: ["accueil", "table", "route"],
+      line: "L’échange commence par l’hospitalité : ouvrir une porte, offrir un siège.",
+    },
+    {
+      id: "eco_ressources_partagees",
+      name: "Ressources partagées",
+      desc: "Eau, énergie, ateliers : les ressources vitales sont mutualisées.",
+      laws: ["Le vital est gratuit.", "La rareté se gère ensemble.", "On évite la spéculation."],
+      palette: ["vital", "partage", "équilibre"],
+      line: "Le vital se partage : eau, chaleur, lumière — personne n’est exclu.",
+    },
+    {
+      id: "eco_artisanat",
+      name: "Artisanat local",
+      desc: "On fabrique près de chez soi : lentement, proprement, durablement.",
+      laws: ["La proximité est une vertu.", "La qualité prime sur la quantité.", "Transmettre fait partie du prix."],
+      palette: ["local", "qualité", "durable"],
+      line: "On fabrique près, on garde longtemps : la main remplace la hâte.",
+    },
+    {
+      id: "eco_saisons",
+      name: "Marché des Saisons",
+      desc: "On suit le rythme du vivant : l’économie respecte les cycles.",
+      laws: ["Ne pas forcer la saison.", "Stocker sans gaspiller.", "Le repos est productif."],
+      palette: ["saison", "cycle", "repos"],
+      line: "On échange au rythme des saisons : le cycle devient la règle.",
+    },
+  ];
+
+  // Environnement / énergie (choix)
+  const ENVIRONMENTS = [
+    {
+      id: "env_eau_droit",
+      name: "Eau commune",
+      desc: "L’eau est un droit : on la protège comme un texte sacré.",
+      laws: ["L’eau n’appartient à personne.", "On restaure les rivières.", "Le bassin versant décide."],
+      palette: ["eau", "source", "soin"],
+      line: "L’eau est tenue en commun : chaque goutte compte, chaque rive compte.",
+    },
+    {
+      id: "env_foret_vote",
+      name: "Forêt votante",
+      desc: "La forêt siège au conseil : le vivant a une voix.",
+      laws: ["Un arbre vaut une promesse.", "On plante plus qu’on ne coupe.", "La forêt a un vote."],
+      palette: ["forêt", "vivant", "vote"],
+      line: "Le vivant siège avec nous : la forêt parle, et on l’écoute.",
+    },
+    {
+      id: "env_solaire",
+      name: "Solaire partagé",
+      desc: "L’énergie appartient à tous : la lumière se met en commun.",
+      laws: ["L’énergie est un service public.", "On consomme avec élégance.", "Nul ne reste dans le froid."],
+      palette: ["lumière", "chaleur", "partage"],
+      line: "La lumière devient énergie : on partage le soleil comme on partage le pain.",
+    },
+    {
+      id: "env_vent",
+      name: "Vents chantants",
+      desc: "Éoliennes discrètes, souffle respecté : le vent est un allié.",
+      laws: ["Le vent ne se capture pas, il se négocie.", "La nuit reste noire.", "Le paysage est un droit."],
+      palette: ["vent", "souffle", "paysage"],
+      line: "On écoute le vent : on prend juste ce qu’il donne, sans le blesser.",
+    },
+    {
+      id: "env_terre_commune",
+      name: "Terre commune",
+      desc: "Le sol est un patrimoine vivant : on régénère avant de produire.",
+      laws: ["Le sol se repose.", "On nourrit sans épuiser.", "Le compost est une politique."],
+      palette: ["sol", "humus", "patient"],
+      line: "La terre est un commun : on la régénère, on la remercie, on la garde.",
+    },
+    {
+      id: "env_amphibie",
+      name: "Ville amphibie",
+      desc: "Au rythme des eaux : des quartiers qui flottent, s’adaptent et s’entraident.",
+      laws: ["Construire léger.", "Le rivage est un bien commun.", "Prévenir plutôt que réparer."],
+      palette: ["marée", "souplesse", "eau"],
+      line: "On vit avec l’eau : la ville devient souple, et la solidarité devient un réflexe.",
+    },
+    {
+      id: "env_zero_extraction",
+      name: "Zéro extraction",
+      desc: "On cesse de creuser : on transforme l’existant, on récupère, on réemploie.",
+      laws: ["Ne plus ouvrir de nouvelles blessures.", "Le recyclage est une création.", "Tout déchet est une ressource."],
+      palette: ["réemploi", "trace", "réparer"],
+      line: "On ne creuse plus : on invente à partir de ce qui est déjà là.",
+    },
+    {
+      id: "env_serres",
+      name: "Serres hautes",
+      desc: "Des jardins suspendus : la ville respire par des canopées cultivées.",
+      laws: ["Planter partout.", "Cultiver l’ombre.", "La verdure est une infrastructure."],
+      palette: ["jardin", "canopée", "air"],
+      line: "La ville respire : des serres en hauteur, des ponts de lierre, des îlots frais.",
+    },
+    {
+      id: "env_pollinisateurs",
+      name: "Refuge des pollinisateurs",
+      desc: "On protège les petites vies : abeilles, papillons, bourdons — le monde tient à eux.",
+      laws: ["Zéro pesticide.", "Fleurs pour tous.", "La moindre vie compte."],
+      palette: ["fleur", "abeille", "fragile"],
+      line: "On protège les minuscules : le monde se reconstruit par les petites ailes.",
+    },
+    {
+      id: "env_nuit",
+      name: "Nuit intacte",
+      desc: "La nuit est un bien commun : on protège l’obscurité pour laisser vivre le ciel.",
+      laws: ["Éclairer sans aveugler.", "Respecter les cycles.", "Le ciel est un patrimoine."],
+      palette: ["nuit", "ciel", "silence"],
+      line: "On garde la nuit noire : les étoiles reviennent, le sommeil revient.",
+    },
+    {
+      id: "env_bains",
+      name: "Bains publics",
+      desc: "La chaleur est partagée : des bains, des sources, des lieux pour se réparer.",
+      laws: ["Prendre soin est un service public.", "La chaleur n’est pas un luxe.", "On se retrouve sans pression."],
+      palette: ["bain", "chaleur", "soin"],
+      line: "On se répare ensemble : des bains pour délier, des sources pour recommencer.",
+    },
+    {
+      id: "env_mineral",
+      name: "Minéral patient",
+      desc: "La pierre enseigne la lenteur : on construit durable, on écoute ce qui résiste.",
+      laws: ["La matière a droit au temps.", "Ne pas forcer ce qui résiste.", "La trace raconte."],
+      palette: ["pierre", "lenteur", "durée"],
+      line: "On écoute le minéral : la lenteur devient une méthode, la durée devient une morale.",
+    },
   ];
 
   const TOTEMS = [
@@ -342,6 +587,18 @@
     "Argile",
     "Marbre",
     "Pigment",
+    "Lanternes",
+    "Pont",
+    "Source",
+    "Serre",
+    "Bains",
+    "Horloge",
+    "Corail",
+    "Vent",
+    "Mosaïque",
+    "Voûte",
+    "Patine",
+    "Écho",
   ];
 
   const SLIDERS = [
@@ -354,11 +611,13 @@
 
   // ---------- State ----------
   const blankState = () => ({
-    step: "country", // country | city | culture | builder | result
+    step: "country", // country | city | culture | economy | environment | result
     country: "",
     country_code: "",
     city: "",
     culture_id: "",
+    economy_id: "",
+    environment_id: "",
     mode: "preset", // preset | custom
     custom: {
       world_name: "",
@@ -371,6 +630,8 @@
   function resetAfterCountryPick() {
     state.city = "";
     state.culture_id = "";
+    state.economy_id = "";
+    state.environment_id = "";
     state.mode = "preset";
     state.custom.world_name = "";
     state.custom.motto = "";
@@ -378,6 +639,8 @@
 
   function resetAfterCityPick() {
     state.culture_id = "";
+    state.economy_id = "";
+    state.environment_id = "";
     state.mode = "preset";
     state.custom.world_name = "";
     state.custom.motto = "";
@@ -423,8 +686,10 @@
       country_code: state.country_code,
       city: state.city,
       culture_id: state.culture_id,
+      economy_id: state.economy_id,
+      environment_id: state.environment_id,
       mode: state.mode,
-      custom: state.mode === "custom" ? state.custom : null,
+      custom: state.custom,
     };
   }
 
@@ -439,6 +704,8 @@
       if (typeof s.country_code === "string") out.country_code = s.country_code;
       if (typeof s.city === "string") out.city = s.city;
       if (typeof s.culture_id === "string") out.culture_id = s.culture_id;
+      if (typeof s.economy_id === "string") out.economy_id = s.economy_id;
+      if (typeof s.environment_id === "string") out.environment_id = s.environment_id;
       if (s.mode === "custom") out.mode = "custom";
 
       if (s.custom && typeof s.custom === "object") {
@@ -458,8 +725,9 @@
 
     if (out.country) out.step = "city";
     if (out.country && out.city) out.step = "culture";
-    if (out.country && out.city && out.culture_id) out.step = out.mode === "custom" ? "builder" : "result";
-    if (out.step === "builder" && out.mode !== "custom") out.step = "result";
+    if (out.country && out.city && out.culture_id) out.step = "economy";
+    if (out.country && out.city && out.culture_id && out.economy_id) out.step = "environment";
+    if (out.country && out.city && out.culture_id && out.economy_id && out.environment_id) out.step = "result";
 
     return out;
   }
@@ -527,10 +795,18 @@
     return CULTURES.find((c) => c.id === id) || null;
   }
 
+  function economyById(id) {
+    return ECONOMIES.find((c) => c.id === id) || null;
+  }
+
+  function environmentById(id) {
+    return ENVIRONMENTS.find((c) => c.id === id) || null;
+  }
+
   function autoWorldName() {
     const country = state.country || state.country_code || "Monde";
     const city = state.city || "Utopie";
-    const seed = hash32([country, city, state.culture_id].join("|"));
+    const seed = hash32([country, city, state.culture_id, state.economy_id, state.environment_id].join("|"));
     const rng = mulberry32(seed);
     const a = ["Nacre", "Argile", "Lumière", "Ocres", "Marée", "Constance", "Sillage", "Matière"];
     const b = ["Atelier", "Jardins", "Bibliothèque", "Rives", "Constellation", "Place", "Forêt", "Port"];
@@ -539,6 +815,8 @@
 
   function buildManifesto() {
     const c = state.mode === "custom" ? null : cultureById(state.culture_id);
+    const eco = economyById(state.economy_id);
+    const env = environmentById(state.environment_id);
     const sliders = state.custom.sliders || {};
     const totems = uniq(state.custom.totems || []);
 
@@ -547,6 +825,8 @@
       state.country_code,
       state.city,
       state.culture_id,
+      state.economy_id,
+      state.environment_id,
       state.mode,
       state.custom.world_name,
       state.custom.motto,
@@ -575,7 +855,7 @@
       "— un atelier de formes, de textes et de constellations.",
     ];
 
-    const laws = (() => {
+    const baseLaws = (() => {
       if (state.mode !== "custom") return c?.laws || [];
 
       const lum = Number(sliders.lumiere);
@@ -593,6 +873,8 @@
       return out;
     })();
 
+    const laws = uniq([...(baseLaws || []), ...(eco?.laws || []), ...(env?.laws || [])]);
+
     const pickLaws = (() => {
       const src = laws.slice();
       const out = [];
@@ -603,11 +885,18 @@
       return out;
     })();
 
-    const palette = uniq([...(c?.palette || []), ...totems.map((t) => t.toLowerCase())]).slice(0, 8);
+    const palette = uniq([
+      ...(c?.palette || []),
+      ...(eco?.palette || []),
+      ...(env?.palette || []),
+      ...totems.map((t) => t.toLowerCase()),
+    ]).slice(0, 10);
 
     const lines = [];
     lines.push(pick(rng, openers));
     lines.push(`Dans ${place}, nous voulons ${pick(rng, verbs)} ${pick(rng, nouns)} — un monde à hauteur de main.`);
+    if (eco?.line) lines.push(eco.line);
+    if (env?.line) lines.push(env.line);
     if (palette.length) lines.push(`Couleurs du monde : ${palette.join(" • ")}.`);
     if (state.custom.motto) lines.push(`Devise : “${state.custom.motto.trim()}”.`);
     lines.push(pick(rng, signature));
@@ -616,7 +905,7 @@
   }
 
   function resultTitle() {
-    if (state.mode === "custom" && String(state.custom.world_name || "").trim()) return state.custom.world_name.trim();
+    if (String(state.custom.world_name || "").trim()) return state.custom.world_name.trim();
     const c = cultureById(state.culture_id);
     const base = c?.name || "Monde utopique";
     return `${base} — ${state.city || "Utopie"}`.replace(/\s+/g, " ").trim();
@@ -641,6 +930,8 @@
       state.country_code,
       state.city,
       state.culture_id,
+      state.economy_id,
+      state.environment_id,
       state.mode,
       state.custom.world_name,
       state.custom.motto,
@@ -649,21 +940,26 @@
     ].join("|");
   }
 
-  function drawSigil(canvas) {
+  function drawSigil(canvas, opts = {}) {
     const ctx = canvas?.getContext?.("2d");
     if (!ctx) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const w = Math.max(1, rect.width);
-    const h = Math.max(1, rect.height);
+    const rect = canvas.getBoundingClientRect?.() || { width: 0, height: 0 };
+    const w = Math.max(1, Number(opts.width) || rect.width || 0);
+    const h = Math.max(1, Number(opts.height) || rect.height || 0);
     if (!Number.isFinite(w) || !Number.isFinite(h) || w < 10 || h < 10) return;
 
-    const dpr = clamp(window.devicePixelRatio || 1, 1, 2.5);
+    const dpr = clamp(Number(opts.dpr) || window.devicePixelRatio || 1, 1, 2.5);
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    const theme = document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+    const theme =
+      opts.theme === "light" || opts.theme === "dark"
+        ? opts.theme
+        : document.documentElement.getAttribute("data-theme") === "light"
+        ? "light"
+        : "dark";
     const seedStr = sigilSeedString();
     const rng = mulberry32(hash32(seedStr + "|sigil"));
 
@@ -806,15 +1102,237 @@
     });
   }
 
+  function canvasToBlob(canvas, type = "image/png", quality = 0.92) {
+    return new Promise((resolve, reject) => {
+      if (!canvas?.toBlob) {
+        reject(new Error("canvas.toBlob unavailable"));
+        return;
+      }
+      try {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("blob empty"));
+              return;
+            }
+            resolve(blob);
+          },
+          type,
+          quality
+        );
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
+  function roundRectPath(ctx, x, y, w, h, r) {
+    const rr = clamp(Number(r) || 0, 0, Math.min(w, h) / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
+  }
+
+  function wrapLines(ctx, text, maxWidth) {
+    const out = [];
+    const src = String(text || "").replace(/\s+/g, " ").trim();
+    if (!src) return out;
+
+    const words = src.split(" ");
+    let line = "";
+    for (const w of words) {
+      const next = line ? `${line} ${w}` : w;
+      if (ctx.measureText(next).width <= maxWidth || !line) {
+        line = next;
+      } else {
+        out.push(line);
+        line = w;
+      }
+    }
+    if (line) out.push(line);
+    return out;
+  }
+
+  function drawShareCard(canvas) {
+    const ctx = canvas?.getContext?.("2d");
+    if (!ctx) return;
+
+    const W = 1080;
+    const H = 1350;
+    canvas.width = W;
+    canvas.height = H;
+
+    const theme = document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+
+    const gold = "rgba(197,160,89,.98)";
+    const text = theme === "light" ? "rgba(15,15,15,.92)" : "rgba(255,255,255,.92)";
+    const muted = theme === "light" ? "rgba(15,15,15,.66)" : "rgba(255,255,255,.70)";
+    const panel = theme === "light" ? "rgba(255,255,255,.78)" : "rgba(0,0,0,.30)";
+    const stroke = theme === "light" ? "rgba(0,0,0,.10)" : "rgba(197,160,89,.30)";
+
+    ctx.clearRect(0, 0, W, H);
+
+    const bg = ctx.createLinearGradient(0, 0, W, H);
+    if (theme === "light") {
+      bg.addColorStop(0, "rgba(255,255,255,1)");
+      bg.addColorStop(1, "rgba(241,236,226,1)");
+    } else {
+      bg.addColorStop(0, "rgba(18,18,18,1)");
+      bg.addColorStop(1, "rgba(9,9,9,1)");
+    }
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    const glow1 = ctx.createRadialGradient(W * 0.22, H * 0.14, 0, W * 0.22, H * 0.14, W * 0.85);
+    glow1.addColorStop(0, theme === "light" ? "rgba(197,160,89,.20)" : "rgba(197,160,89,.24)");
+    glow1.addColorStop(1, "rgba(197,160,89,0)");
+    ctx.fillStyle = glow1;
+    ctx.fillRect(0, 0, W, H);
+
+    const glow2 = ctx.createRadialGradient(W * 0.86, H * 0.20, 0, W * 0.86, H * 0.20, W * 0.75);
+    glow2.addColorStop(0, theme === "light" ? "rgba(0,0,0,.06)" : "rgba(255,255,255,.06)");
+    glow2.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = glow2;
+    ctx.fillRect(0, 0, W, H);
+
+    const pad = 78;
+    const panelX = 48;
+    const panelY = 48;
+    const panelW = W - 96;
+    const panelH = H - 96;
+
+    roundRectPath(ctx, panelX, panelY, panelW, panelH, 56);
+    ctx.fillStyle = panel;
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = stroke;
+    ctx.stroke();
+
+    const c = state.mode === "custom" ? null : cultureById(state.culture_id);
+    const eco = economyById(state.economy_id);
+    const env = environmentById(state.environment_id);
+    const man = buildManifesto();
+    const title = resultTitle();
+    const subtitle = state.mode === "custom" ? "Monde créé" : c?.name || "Monde";
+
+    let x = pad;
+    let y = pad + 18;
+    const maxW = W - pad * 2;
+
+    ctx.fillStyle = gold;
+    ctx.font = '800 26px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+    ctx.fillText(subtitle.toUpperCase(), x, y);
+    y += 48;
+
+    ctx.fillStyle = text;
+    let titleSize = 64;
+    ctx.font = `600 ${titleSize}px Cinzel, "Playfair Display", Georgia, serif`;
+    let titleLines = wrapLines(ctx, title, maxW);
+    if (titleLines.length > 2) {
+      titleSize = 56;
+      ctx.font = `600 ${titleSize}px Cinzel, "Playfair Display", Georgia, serif`;
+      titleLines = wrapLines(ctx, title, maxW);
+    }
+    titleLines = titleLines.slice(0, 2);
+    const titleLH = Math.round(titleSize * 1.12);
+    titleLines.forEach((ln) => {
+      ctx.fillText(ln, x, y);
+      y += titleLH;
+    });
+    y += 10;
+
+    ctx.fillStyle = muted;
+    ctx.font = '650 30px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+    ctx.fillText(man.place, x, y);
+    y += 40;
+
+    const meta = `${eco?.name || "—"} • ${env?.name || "—"}`;
+    ctx.font = '650 26px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+    const metaLines = wrapLines(ctx, meta, maxW).slice(0, 2);
+    metaLines.forEach((ln) => {
+      ctx.fillText(ln, x, y);
+      y += 34;
+    });
+    y += 10;
+
+    const excerpt = (man.lines || []).find(Boolean) || "";
+    if (excerpt) {
+      ctx.fillStyle = theme === "light" ? "rgba(15,15,15,.72)" : "rgba(255,255,255,.76)";
+      ctx.font = '500 28px "Playfair Display", Georgia, serif';
+      const ex = wrapLines(ctx, excerpt, maxW).slice(0, 2);
+      ex.forEach((ln) => {
+        ctx.fillText(ln, x, y);
+        y += 36;
+      });
+      y += 12;
+    }
+
+    const sigilW = maxW;
+    const sigilH = Math.round((sigilW * 10) / 16);
+    const sigilY = Math.max(y, 430);
+
+    roundRectPath(ctx, x, sigilY, sigilW, sigilH, 42);
+    ctx.fillStyle = theme === "light" ? "rgba(255,255,255,.86)" : "rgba(0,0,0,.22)";
+    ctx.fill();
+    ctx.strokeStyle = theme === "light" ? "rgba(0,0,0,.08)" : "rgba(255,255,255,.10)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    const inset = 14;
+    const sig = document.createElement("canvas");
+    drawSigil(sig, { width: sigilW - inset * 2, height: sigilH - inset * 2, dpr: 1, theme });
+    ctx.drawImage(sig, x + inset, sigilY + inset, sigilW - inset * 2, sigilH - inset * 2);
+
+    y = sigilY + sigilH + 40;
+
+    ctx.fillStyle = gold;
+    ctx.font = '800 26px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+    ctx.fillText("Trois lois", x, y);
+    y += 36;
+
+    ctx.fillStyle = text;
+    ctx.font = '500 30px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+    const bullet = "•";
+    const bulletW = ctx.measureText(bullet + " ").width;
+    const lawMaxW = maxW - bulletW;
+    const lawLH = 38;
+
+    const laws = (man.laws || []).slice(0, 3);
+    laws.forEach((law) => {
+      const lines = wrapLines(ctx, law, lawMaxW).slice(0, 3);
+      lines.forEach((ln, idx) => {
+        if (idx === 0) ctx.fillText(`${bullet} ${ln}`, x, y);
+        else ctx.fillText(ln, x + bulletW, y);
+        y += lawLH;
+      });
+      y += 10;
+    });
+
+    const footerY = H - 70;
+    ctx.fillStyle = theme === "light" ? "rgba(15,15,15,.58)" : "rgba(255,255,255,.62)";
+    ctx.font = '700 22px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+    ctx.fillText("Marie-Madeleine Gautier — Monde utopique", x, footerY);
+  }
+
   // ---------- Rendering ----------
   function mainStepIndex() {
     if (state.step === "country") return 1;
     if (state.step === "city") return 2;
-    return 3;
+    if (state.step === "culture") return 3;
+    if (state.step === "economy") return 4;
+    return 5;
+  }
+
+  function totalSteps() {
+    return 5;
   }
 
   function percent() {
-    return clamp(Math.round((mainStepIndex() / 3) * 100), 0, 100);
+    return clamp(Math.round((mainStepIndex() / totalSteps()) * 100), 0, 100);
   }
 
   function renderHeader() {
@@ -823,11 +1341,13 @@
       state.step === "country"
         ? "Choisis un pays (tous les pays sont possibles)."
         : state.step === "city"
-        ? "Choisis une ville (15 propositions) ou écris la tienne."
+        ? `Choisis une ville (${CITY_CHOICES.length} propositions) ou écris la tienne.`
         : state.step === "culture"
-        ? "Choisis une culture/politique (15) ou passe en mode création."
-        : state.step === "builder"
-        ? "Ajuste ton monde : nom, devise, intensités, totems."
+        ? `Choisis une culture/politique (${CULTURES.length}) ou passe en mode création.`
+        : state.step === "economy"
+        ? "Choisis comment on échange : matières, temps, don, ateliers…"
+        : state.step === "environment"
+        ? "Choisis un pacte avec le vivant, puis signe ton monde."
         : "Voici ton monde — tu peux copier ou partager le manifeste.";
 
     return `
@@ -846,7 +1366,7 @@
       <div class="utopia-progress" role="progressbar" aria-valuenow="${percent()}" aria-valuemin="0" aria-valuemax="100">
         <div class="utopia-progress__bar" style="width:${percent()}%"></div>
         <div class="utopia-progress__meta">
-          <span>Étape ${idx}/3</span>
+          <span>Étape ${idx}/${totalSteps()}</span>
           <span class="muted">${esc(state.country || "—")} • ${esc(state.city || "—")}</span>
         </div>
       </div>
@@ -912,7 +1432,7 @@
       <div class="utopia-cardblock">
         <div class="utopia-stephead">
           <div class="utopia-stephead__k">2 — Ville</div>
-          <div class="utopia-stephead__t">Choisis une ville (15 propositions) dans ${esc(titleCountry)}.</div>
+          <div class="utopia-stephead__t">Choisis une ville (${CITY_CHOICES.length} propositions) dans ${esc(titleCountry)}.</div>
         </div>
 
         <div class="utopia-grid">${cards}</div>
@@ -1006,7 +1526,96 @@
     `;
   }
 
-  function renderBuilderStep() {
+  function renderEconomyStep() {
+    const picks = ECONOMIES.map((c) => {
+      const on = state.economy_id === c.id;
+      return `
+        <button class="utopia-pick ${on ? "is-on" : ""}" type="button" data-pick-economy="${esc(c.id)}">
+          <div class="utopia-pick__t">${esc(c.name)}</div>
+          <div class="utopia-pick__d muted">${esc(c.desc)}</div>
+        </button>
+      `;
+    }).join("");
+
+    const selected = economyById(state.economy_id);
+    const info = selected
+      ? `
+        <div class="utopia-info">
+          <div class="kicker">Sélection</div>
+          <div class="utopia-info__title">${esc(selected.name)}</div>
+          <div class="muted" style="margin-top:6px">${esc(selected.desc)}</div>
+          <div class="utopia-laws">
+            ${(selected.laws || [])
+              .slice(0, 3)
+              .map((x) => `<div class="utopia-law">• ${esc(x)}</div>`)
+              .join("")}
+          </div>
+        </div>
+      `
+      : `
+        <div class="utopia-info">
+          <div class="kicker">Sélection</div>
+          <div class="utopia-info__title">Choisis une économie</div>
+          <div class="muted" style="margin-top:6px">Comment circule la valeur ? Le temps ? Les outils ?</div>
+        </div>
+      `;
+
+    return `
+      <div class="utopia-cardblock">
+        <div class="utopia-stephead">
+          <div class="utopia-stephead__k">4 — Économie / échanges</div>
+          <div class="utopia-stephead__t">Comment circule la valeur dans ${esc(state.city || "ta ville")} ?</div>
+        </div>
+
+        <div class="utopia-two">
+          <div class="utopia-grid utopia-grid--tight">
+            ${picks}
+          </div>
+          ${info}
+        </div>
+
+        <div class="utopia-row" style="margin-top:14px">
+          <button class="btn" type="button" data-continue-economy>Continuer</button>
+          <button class="btn ghost" type="button" data-random-economy>Au hasard</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderEnvironmentStep() {
+    const picks = ENVIRONMENTS.map((c) => {
+      const on = state.environment_id === c.id;
+      return `
+        <button class="utopia-pick ${on ? "is-on" : ""}" type="button" data-pick-environment="${esc(c.id)}">
+          <div class="utopia-pick__t">${esc(c.name)}</div>
+          <div class="utopia-pick__d muted">${esc(c.desc)}</div>
+        </button>
+      `;
+    }).join("");
+
+    const selectedEnv = environmentById(state.environment_id);
+    const envInfo = selectedEnv
+      ? `
+        <div class="utopia-info">
+          <div class="kicker">Sélection</div>
+          <div class="utopia-info__title">${esc(selectedEnv.name)}</div>
+          <div class="muted" style="margin-top:6px">${esc(selectedEnv.desc)}</div>
+          <div class="utopia-laws">
+            ${(selectedEnv.laws || [])
+              .slice(0, 3)
+              .map((x) => `<div class="utopia-law">• ${esc(x)}</div>`)
+              .join("")}
+          </div>
+        </div>
+      `
+      : `
+        <div class="utopia-info">
+          <div class="kicker">Sélection</div>
+          <div class="utopia-info__title">Choisis un pacte avec le vivant</div>
+          <div class="muted" style="margin-top:6px">Énergie, eau, nuit, forêt… quelle écologie porte ton monde ?</div>
+        </div>
+      `;
+
     const worldName = state.custom.world_name || autoWorldName();
     const motto = state.custom.motto || "";
 
@@ -1040,11 +1649,20 @@
     return `
       <div class="utopia-cardblock">
         <div class="utopia-stephead">
-          <div class="utopia-stephead__k">Création — ton monde</div>
-          <div class="utopia-stephead__t">Compose une utopie “à la matière” : simple, sensible, vivante.</div>
+          <div class="utopia-stephead__k">5 — Environnement / signature</div>
+          <div class="utopia-stephead__t">Quel pacte lie ${esc(state.city || "ta ville")} au vivant ?</div>
         </div>
 
-        <form class="utopia-form" data-step="builder">
+        <div class="utopia-two" style="margin-top:10px">
+          <div class="utopia-grid utopia-grid--tight">
+            ${picks}
+          </div>
+          ${envInfo}
+        </div>
+
+        <div class="hr"></div>
+
+        <form class="utopia-form" data-step="environment">
           <div class="utopia-two">
             <div>
               <label class="utopia-label" for="utopiaWorldName">Nom du monde</label>
@@ -1073,6 +1691,7 @@
             <button class="btn" type="submit">Générer le manifeste</button>
             <button class="btn ghost" type="button" data-reroll-name>Proposer un autre nom</button>
             <button class="btn ghost" type="button" data-randomize-world>Palette au hasard</button>
+            <button class="btn ghost" type="button" data-random-environment>Pacte au hasard</button>
           </div>
         </form>
       </div>
@@ -1081,6 +1700,8 @@
 
   function renderResultStep() {
     const c = state.mode === "custom" ? null : cultureById(state.culture_id);
+    const eco = economyById(state.economy_id);
+    const env = environmentById(state.environment_id);
     const title = resultTitle();
     const subtitle = state.mode === "custom" ? "Monde créé" : c?.name || "Monde";
     const man = buildManifesto();
@@ -1095,6 +1716,8 @@
       `Pays : ${state.country || state.country_code || "—"}`,
       `Ville : ${state.city || "—"}`,
       state.mode === "custom" ? "Culture : (personnalisée)" : `Culture : ${c?.name || "—"}`,
+      `Économie : ${eco?.name || "—"}`,
+      `Pacte : ${env?.name || "—"}`,
       "",
       ...(man.lines || []),
       "",
@@ -1110,6 +1733,7 @@
               <div class="kicker">${esc(subtitle)}</div>
               <div class="utopia-poster__title">${esc(title)}</div>
               <div class="muted" style="margin-top:6px">${esc(man.place)}</div>
+              <div class="muted small-note" style="margin-top:6px">${esc(eco?.name || "—")} • ${esc(env?.name || "—")}</div>
             </div>
             <div class="utopia-row">
               <button class="btn" type="button" data-copy>Copier</button>
@@ -1137,8 +1761,19 @@
             </div>
           </div>
 
+          <div class="utopia-share" style="margin-top:12px">
+            <div class="kicker">Carte à partager</div>
+            <div class="muted small-note" style="margin-top:6px">Une image générée à partir de tes choix.</div>
+            <canvas class="utopia-sharecard" data-share-card role="img" aria-label="Carte à partager"></canvas>
+            <div class="utopia-row" style="margin-top:12px">
+              <button class="btn ghost" type="button" data-download-card>Carte PNG</button>
+              <button class="btn ghost" type="button" data-share-card-file>Partager</button>
+            </div>
+          </div>
+
           <div class="utopia-row" style="margin-top:12px">
-            <button class="btn ghost" type="button" data-edit>${state.mode === "custom" ? "Modifier" : "Changer de culture"}</button>
+            <button class="btn ghost" type="button" data-edit>Modifier</button>
+            <button class="btn ghost" type="button" data-change-culture>Changer de culture</button>
             <button class="btn ghost" type="button" data-reset>Rejouer</button>
           </div>
         </div>
@@ -1152,7 +1787,8 @@
     if (state.step === "country") return renderCountryStep();
     if (state.step === "city") return renderCityStep();
     if (state.step === "culture") return renderCultureStep();
-    if (state.step === "builder") return renderBuilderStep();
+    if (state.step === "economy") return renderEconomyStep();
+    if (state.step === "environment") return renderEnvironmentStep();
     return renderResultStep();
   }
 
@@ -1177,13 +1813,14 @@
     root.querySelector("[data-back]")?.addEventListener("click", () => {
       if (state.step === "city") state.step = "country";
       else if (state.step === "culture") state.step = "city";
-      else if (state.step === "builder") state.step = "culture";
-      else if (state.step === "result") state.step = state.mode === "custom" ? "builder" : "culture";
+      else if (state.step === "economy") state.step = "culture";
+      else if (state.step === "environment") state.step = "economy";
+      else if (state.step === "result") state.step = "environment";
       saveState();
       render();
     });
 
-    const step = root.querySelector("[data-step]")?.getAttribute("data-step") || "";
+    const step = state.step;
 
     if (step === "country") {
       const items = getCountryItems();
@@ -1365,6 +2002,8 @@
           if (!id) return;
           state.mode = "preset";
           state.culture_id = id;
+          state.economy_id = "";
+          state.environment_id = "";
           saveState();
           render();
         });
@@ -1373,23 +2012,19 @@
       root.querySelector("[data-pick-custom]")?.addEventListener("click", () => {
         state.mode = "custom";
         state.culture_id = "custom";
+        state.economy_id = "";
+        state.environment_id = "";
         if (!String(state.custom.world_name || "").trim()) state.custom.world_name = autoWorldName();
         saveState();
         render();
       });
 
       root.querySelector("[data-continue-culture]")?.addEventListener("click", () => {
-        if (state.mode === "custom") {
-          state.step = "builder";
-          saveState();
-          render();
-          return;
-        }
-        if (!String(state.culture_id || "").trim()) {
+        if (state.mode !== "custom" && !String(state.culture_id || "").trim()) {
           toast("Choisis une culture/politique (ou “Créer mon monde”).", "error");
           return;
         }
-        state.step = "result";
+        state.step = "economy";
         saveState();
         render();
       });
@@ -1400,8 +2035,10 @@
         if (roll < 0.22) {
           state.mode = "custom";
           state.culture_id = "custom";
+          state.economy_id = "";
+          state.environment_id = "";
           if (!String(state.custom.world_name || "").trim()) state.custom.world_name = autoWorldName();
-          state.step = "builder";
+          state.step = "economy";
           saveState();
           toast("Mode création : compose ton monde.");
           render();
@@ -1411,7 +2048,9 @@
         const pickOne = CULTURES[Math.floor(Math.random() * CULTURES.length)];
         state.mode = "preset";
         state.culture_id = pickOne?.id || "";
-        state.step = "result";
+        state.economy_id = "";
+        state.environment_id = "";
+        state.step = "economy";
         saveState();
         toast(`Culture : ${pickOne?.name || "—"}`);
         render();
@@ -1419,7 +2058,51 @@
       return;
     }
 
-    if (step === "builder") {
+    if (step === "economy") {
+      root.querySelectorAll("[data-pick-economy]")?.forEach((b) => {
+        b.addEventListener("click", () => {
+          const id = String(b.getAttribute("data-pick-economy") || "").trim();
+          if (!id) return;
+          state.economy_id = id;
+          state.environment_id = "";
+          saveState();
+          render();
+        });
+      });
+
+      root.querySelector("[data-continue-economy]")?.addEventListener("click", () => {
+        if (!String(state.economy_id || "").trim()) {
+          toast("Choisis une économie (ou utilise “Au hasard”).", "error");
+          return;
+        }
+        state.step = "environment";
+        saveState();
+        render();
+      });
+
+      root.querySelector("[data-random-economy]")?.addEventListener("click", () => {
+        const pickOne = ECONOMIES[Math.floor(Math.random() * ECONOMIES.length)];
+        state.economy_id = pickOne?.id || "";
+        state.environment_id = "";
+        state.step = "environment";
+        saveState();
+        toast(`Économie : ${pickOne?.name || "—"}`);
+        render();
+      });
+      return;
+    }
+
+    if (step === "environment") {
+      root.querySelectorAll("[data-pick-environment]")?.forEach((b) => {
+        b.addEventListener("click", () => {
+          const id = String(b.getAttribute("data-pick-environment") || "").trim();
+          if (!id) return;
+          state.environment_id = id;
+          saveState();
+          render();
+        });
+      });
+
       root.querySelectorAll(".utopia-range").forEach((range) => {
         range.addEventListener("input", () => {
           const key = range.getAttribute("name") || "";
@@ -1455,10 +2138,23 @@
         render();
       });
 
-      root.querySelector('form[data-step="builder"]')?.addEventListener("submit", (e) => {
+      root.querySelector("[data-random-environment]")?.addEventListener("click", () => {
+        const pickOne = ENVIRONMENTS[Math.floor(Math.random() * ENVIRONMENTS.length)];
+        state.environment_id = pickOne?.id || "";
+        saveState();
+        toast(`Pacte : ${pickOne?.name || "—"}`);
+        render();
+      });
+
+      root.querySelector('form[data-step="environment"]')?.addEventListener("submit", (e) => {
         e.preventDefault();
         const form = e.currentTarget;
         const fd = new FormData(form);
+
+        if (!String(state.environment_id || "").trim()) {
+          toast("Choisis un pacte avec le vivant (ou “Pacte au hasard”).", "error");
+          return;
+        }
 
         const world_name = String(fd.get("world_name") || "").trim().slice(0, 72);
         const motto = String(fd.get("motto") || "").trim().slice(0, 90);
@@ -1494,6 +2190,9 @@
     const sigilCanvas = root.querySelector("[data-sigil]");
     if (sigilCanvas) drawSigil(sigilCanvas);
 
+    const shareCardCanvas = root.querySelector("[data-share-card]");
+    if (shareCardCanvas) drawShareCard(shareCardCanvas);
+
     root.querySelector("[data-copy]")?.addEventListener("click", async () => {
       const t = root.querySelector("[data-result-text]")?.value || "";
       try {
@@ -1501,6 +2200,73 @@
         toast("Manifeste copié.");
       } catch (e) {
         toast("Copie bloquée par le navigateur.", "error");
+        if (!isAbort(e)) console.warn(e);
+      }
+    });
+
+    root.querySelector("[data-download-card]")?.addEventListener("click", async () => {
+      const canvas = root.querySelector("[data-share-card]");
+      if (!canvas) {
+        toast("Carte indisponible.", "error");
+        return;
+      }
+      try {
+        drawShareCard(canvas);
+        const name = safeFilename(resultTitle(), "monde-utopique");
+        await downloadCanvasPng(canvas, `${name}-carte.png`);
+        toast("Carte PNG téléchargée.");
+      } catch (e) {
+        toast("Impossible de télécharger la carte.", "error");
+        if (!isAbort(e)) console.warn(e);
+      }
+    });
+
+    root.querySelector("[data-share-card-file]")?.addEventListener("click", async () => {
+      const canvas = root.querySelector("[data-share-card]");
+      if (!canvas) {
+        toast("Carte indisponible.", "error");
+        return;
+      }
+
+      try {
+        writeHashState(state);
+        const url = location.href;
+        drawShareCard(canvas);
+
+        const blob = await canvasToBlob(canvas, "image/png", 0.92);
+        const filename = `${safeFilename(resultTitle(), "monde-utopique")}-carte.png`;
+
+        let didShare = false;
+        if (typeof navigator.share === "function" && typeof File === "function") {
+          const file = new File([blob], filename, { type: "image/png" });
+          const can =
+            typeof navigator.canShare !== "function" ? true : navigator.canShare({ files: [file] });
+          if (can) {
+            await navigator.share({
+              title: resultTitle(),
+              text: "Monde utopique",
+              url,
+              files: [file],
+            });
+            didShare = true;
+          }
+        }
+
+        if (didShare) {
+          toast("Carte partagée.");
+          return;
+        }
+
+        // Fallback: download + copy link.
+        await downloadCanvasPng(canvas, filename);
+        try {
+          await navigator.clipboard.writeText(url);
+          toast("PNG téléchargé + lien copié.");
+        } catch {
+          toast("PNG téléchargé.");
+        }
+      } catch (e) {
+        toast("Partage indisponible.", "error");
         if (!isAbort(e)) console.warn(e);
       }
     });
@@ -1548,7 +2314,13 @@
     });
 
     root.querySelector("[data-edit]")?.addEventListener("click", () => {
-      state.step = state.mode === "custom" ? "builder" : "culture";
+      state.step = "environment";
+      saveState();
+      render();
+    });
+
+    root.querySelector("[data-change-culture]")?.addEventListener("click", () => {
+      state.step = "culture";
       saveState();
       render();
     });
@@ -1568,6 +2340,8 @@
         raf = 0;
         const canvas = root.querySelector("[data-sigil]");
         if (canvas) drawSigil(canvas);
+        const card = root.querySelector("[data-share-card]");
+        if (card) drawShareCard(card);
       });
     };
   })();

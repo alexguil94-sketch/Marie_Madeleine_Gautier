@@ -126,7 +126,7 @@
     root.innerHTML = "";
 
     if (!list?.length) {
-      root.innerHTML = `<div class="muted">Aucune œuvre à afficher pour le moment.</div>`;
+      root.innerHTML = `<div class="muted" data-i18n="home.noWorks">Aucune œuvre à afficher pour le moment.</div>`;
       return;
     }
 
@@ -199,7 +199,7 @@
 
     if (!upcoming.length) {
       root.innerHTML = `
-        <div class="muted" style="padding:6px 0">
+        <div class="muted" style="padding:6px 0" data-i18n="home.noUpcoming">
           Aucune date à venir pour l’instant. Ajoute tes expositions depuis la page Agenda.
         </div>
       `;
@@ -215,7 +215,7 @@
               <div class="muted">${[x.city, x.date].filter(Boolean).join(" • ")}${x.venue ? " • " + x.venue : ""}</div>
               ${x.link ? `<div><a class="muted" href="${x.link}" target="_blank" rel="noreferrer">${x.link}</a></div>` : ""}
             </div>
-            <span class="badge">À venir</span>
+            <span class="badge" data-i18n="expo.badgeUpcoming">À venir</span>
           </div>
         `
       )
@@ -224,7 +224,7 @@
 
   async function init() {
     const worksRoot = qs("#homeWorks");
-    if (worksRoot) worksRoot.innerHTML = `<div class="muted">Chargement…</div>`;
+    if (worksRoot) worksRoot.innerHTML = `<div class="muted" data-i18n="common.loading">Chargement…</div>`;
     renderAgendaPreview();
     applyHomeSitePhotos().catch(() => {});
 

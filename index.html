@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Marie-Madeleine Gautier — Accueil</title>
+  <title data-i18n="titles.home">Marie-Madeleine Gautier — Accueil</title>
 
   <script>
     (function () {
@@ -18,7 +18,7 @@
 
   <link rel="icon" href="/favicon.ico"/>
   <link rel="stylesheet" href="/css/style.css?v=2"/>
-  <link rel="stylesheet" href="/css/luxe.css?v=14"/>
+  <link rel="stylesheet" href="/css/luxe.css?v=15"/>
 </head>
 
 <body>
@@ -26,17 +26,17 @@
 
   <header class="hero hero--welcome">
     <div class="hero-welcome__overlay">
-      <h1 class="hero-welcome__title" aria-label="Là où naissent les mondes — MMG">
-        <span class="drop d1">Là où naissent les</span>
-        <span class="drop d2">mondes</span>
-        <span class="hero-welcome__sigle drop d3">MMG</span>
+      <h1 class="hero-welcome__title" aria-label="Là où naissent les mondes — MMG" data-i18n-attr="aria-label:home.heroAria">
+        <span class="drop d1" data-i18n="home.heroLine1">Là où naissent les</span>
+        <span class="drop d2" data-i18n="home.heroLine2">mondes</span>
+        <span class="hero-welcome__sigle drop d3" data-i18n="home.heroSigle">MMG</span>
       </h1>
-      <p class="muted" style="margin-top:18px; max-width:820px; margin-inline:auto">
+      <p class="muted" style="margin-top:18px; max-width:820px; margin-inline:auto" data-i18n="footer.tagline">
         Sculptures, textes et expositions — une signature où la matière rencontre l’utopie.
       </p>
-      <div class="hero-ctas" role="group" aria-label="Actions principales">
-        <a class="btn" href="/gallery.html">Découvrir la galerie</a>
-        <a class="btn ghost" href="/agenda.html">Voir l’agenda</a>
+      <div class="hero-ctas" role="group" aria-label="Actions principales" data-i18n-attr="aria-label:common.primaryActions">
+        <a class="btn" href="/gallery.html" data-i18n="home.heroCta">Découvrir la galerie</a>
+        <a class="btn ghost" href="/agenda.html" data-i18n="home.heroCtaAgenda">Voir l’agenda</a>
       </div>
     </div>
   </header>
@@ -45,28 +45,28 @@
 
   <main class="page">
     <!-- Highlight -->
-    <section class="section section--after-hero" aria-label="Exposition du moment">
+    <section class="section section--after-hero" aria-label="Exposition du moment" data-i18n-attr="aria-label:home.featureSectionLabel">
       <div class="container">
         <div class="section-shell reveal">
-          <div class="kicker">Exposition du moment</div>
+          <div class="kicker" data-i18n="home.featureKicker">Exposition du moment</div>
           <div class="post" style="margin-top:14px">
             <div class="post__media">
               <img data-home-feature src="/assets/ui/hero-bg.webp" alt="" loading="lazy" decoding="async"/>
               <div style="display:flex; gap:10px; flex-wrap:wrap">
-                <span class="badge">Sélection</span>
+                <span class="badge" data-i18n="common.selection">Sélection</span>
                 <span class="badge">2026</span>
               </div>
             </div>
 
             <div class="post__content">
-              <h3>Une galerie vivante</h3>
-              <p>
+              <h3 data-i18n="home.featureTitle">Une galerie vivante</h3>
+              <p data-i18n="home.featureText">
                 Une sélection en mouvement : œuvres, textes, fragments et expositions — à parcourir comme une
                 constellation.
               </p>
               <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px">
-                <a class="btn" href="/gallery.html">Voir les œuvres</a>
-                <a class="btn ghost" href="/contact.html">Prendre contact</a>
+                <a class="btn" href="/gallery.html" data-i18n="home.featureCtaWorks">Voir les œuvres</a>
+                <a class="btn ghost" href="/contact.html" data-i18n="footer.getInTouch">Prendre contact</a>
               </div>
             </div>
           </div>
@@ -78,18 +78,18 @@
     <section class="section" id="selection">
       <div class="container">
         <div class="card card-pad reveal">
-          <div class="kicker">Sélection</div>
-          <h2 style="margin:10px 0 0">Œuvres en vitrine</h2>
-          <p class="muted" style="max-width:860px">
+          <div class="kicker" data-i18n="common.selection">Sélection</div>
+          <h2 style="margin:10px 0 0" data-i18n="home.selectionTitle">Œuvres en vitrine</h2>
+          <p class="muted" style="max-width:860px" data-i18n="home.selectionText">
             Un aperçu rapide — puis plonge dans la galerie complète pour filtrer, zoomer et explorer.
           </p>
 
           <div class="hr"></div>
 
-          <div id="homeWorks" class="grid" aria-label="Sélection d’œuvres"></div>
+          <div id="homeWorks" class="grid" aria-label="Sélection d’œuvres" data-i18n-attr="aria-label:home.selectionAria"></div>
 
           <div style="margin-top:18px; display:flex; justify-content:center">
-            <a class="btn" href="/gallery.html">Voir toute la galerie</a>
+            <a class="btn" href="/gallery.html" data-i18n="home.selectionCta">Voir toute la galerie</a>
           </div>
         </div>
       </div>
@@ -99,9 +99,9 @@
     <section class="section" id="actualites">
       <div class="container">
         <div class="card card-pad reveal">
-          <div class="kicker">Journal</div>
-          <h2 style="margin:10px 0 0">Vidéos, images et petites nouvelles</h2>
-          <p class="muted" style="max-width:860px">
+          <div class="kicker" data-i18n="home.newsKicker">Journal</div>
+          <h2 style="margin:10px 0 0" data-i18n="home.newsHeading">Vidéos, images et petites nouvelles</h2>
+          <p class="muted" style="max-width:860px" data-i18n="home.newsIntro">
             Une vitrine vivante : publications, coulisses et annonces.
             Les commentaires sont réservés aux personnes connectées.
           </p>
@@ -112,13 +112,51 @@
       </div>
     </section>
 
-    <!-- Agenda preview -->
-    <section class="section" aria-label="Agenda">
+    <!-- Facebook -->
+    <section class="section" id="facebook">
       <div class="container">
         <div class="card card-pad reveal">
-          <div class="kicker">Agenda</div>
-          <h2 style="margin:10px 0 0">Expositions & rendez-vous</h2>
-          <p class="muted" style="max-width:860px">
+          <div class="fb-grid">
+            <div>
+              <div class="kicker" data-i18n="fb.kicker">Réseaux</div>
+              <h2 style="margin:10px 0 0" data-i18n="fb.title">Facebook</h2>
+              <p class="muted" style="max-width:860px" data-i18n="fb.subtitle">
+                Les dernières publications de la page, directement ici.
+              </p>
+
+              <div class="fb-actions">
+                <a
+                  class="btn ghost"
+                  href="https://www.facebook.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-fb-link
+                  data-social="facebook"
+                  data-i18n="fb.open">Voir sur Facebook</a>
+              </div>
+
+              <p class="muted small-note" style="margin:12px 0 0" data-i18n="fb.note">
+                Si le module ne s’affiche pas (bloqueur / confidentialité), ouvrez Facebook dans un nouvel onglet.
+              </p>
+            </div>
+
+            <div class="fb-embed" data-fb-embed data-fb-page="">
+              <div class="fb-frame" data-fb-frame>
+                <div class="fb-fallback muted" data-i18n="common.loading">Chargement…</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Agenda preview -->
+    <section class="section" aria-label="Agenda" data-i18n-attr="aria-label:nav.agenda">
+      <div class="container">
+        <div class="card card-pad reveal">
+          <div class="kicker" data-i18n="agenda.kicker">Agenda</div>
+          <h2 style="margin:10px 0 0" data-i18n="home.agendaHeading">Expositions & rendez-vous</h2>
+          <p class="muted" style="max-width:860px" data-i18n="home.agendaIntro">
             Les prochaines dates en un coup d’œil — et le calendrier complet sur la page Agenda.
           </p>
 
@@ -126,8 +164,8 @@
           <div id="homeAgenda" class="list"></div>
 
           <div style="margin-top:18px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap">
-            <a class="btn" href="/agenda.html">Ouvrir l’agenda</a>
-            <a class="btn ghost" href="/contact.html">Visiter / acheter</a>
+            <a class="btn" href="/agenda.html" data-i18n="home.agendaCtaOpen">Ouvrir l’agenda</a>
+            <a class="btn ghost" href="/contact.html" data-i18n="home.agendaCtaVisit">Visiter / acheter</a>
           </div>
         </div>
       </div>
@@ -153,6 +191,7 @@
   <script defer src="js/i18n.js?v=3"></script>
   <script defer src="js/app.js?v=1"></script>
   <script defer src="js/luxe.js?v=8"></script>
+  <script defer src="js/facebook.js?v=1"></script>
 
 
 </body>

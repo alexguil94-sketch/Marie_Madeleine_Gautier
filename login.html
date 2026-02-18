@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Se connecter — Marie-Madeleine Gautier</title>
+  <title data-i18n="titles.login">Se connecter — Marie-Madeleine Gautier</title>
 
   <script>
     (function () {
@@ -24,9 +24,9 @@
     <section class="section">
       <div class="container">
         <div class="card card-pad">
-          <div class="kicker">Compte</div>
-          <h1 style="margin:10px 0 0">Se connecter</h1>
-          <p class="muted" style="max-width:820px">
+          <div class="kicker" data-i18n="footer.accountTitle">Compte</div>
+          <h1 style="margin:10px 0 0" data-i18n="auth.signIn">Se connecter</h1>
+          <p class="muted" style="max-width:820px" data-i18n="auth.sub">
             Connecte-toi pour commenter, gérer ton profil et accéder à l’administration si autorisé.
           </p>
 
@@ -34,27 +34,27 @@
 
           <div class="toolbar" style="justify-content:flex-start; gap:12px">
             <div id="who" class="muted" style="min-height:18px"></div>
-            <button id="btnSignOut" class="btn ghost" type="button" style="display:none">Se déconnecter</button>
-            <button id="btnGoAdmin" class="btn" type="button" style="display:none">Administration</button>
+            <button id="btnSignOut" class="btn ghost" type="button" style="display:none" data-i18n="auth.signOut">Se déconnecter</button>
+            <button id="btnGoAdmin" class="btn" type="button" style="display:none" data-i18n="admin.kicker">Administration</button>
           </div>
 
           <div id="msg" class="muted" style="margin-top:10px; min-height:18px"></div>
 
           <form id="loginForm" style="max-width:520px; margin-top:14px">
             <div style="display:grid; gap:10px">
-              <input class="input" name="email" type="email" autocomplete="email" placeholder="Email" required />
-              <input class="input" name="password" type="password" autocomplete="current-password" placeholder="Mot de passe" required />
+              <input class="input" name="email" type="email" autocomplete="email" placeholder="Email" data-i18n-placeholder="auth.email" required />
+              <input class="input" name="password" type="password" autocomplete="current-password" placeholder="Mot de passe" data-i18n-placeholder="auth.password" required />
 
               <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
-                <button class="btn" type="submit">Se connecter</button>
-                <button id="btnForgot" class="btn ghost" type="button">Mot de passe oublié</button>
+                <button class="btn" type="submit" data-i18n="auth.signIn">Se connecter</button>
+                <button id="btnForgot" class="btn ghost" type="button" data-i18n="auth.forgot">Mot de passe oublié</button>
               </div>
             </div>
           </form>
 
           <div class="hr"></div>
 
-          <div class="muted" style="margin:0 0 10px">Ou continuer avec</div>
+          <div class="muted" style="margin:0 0 10px" data-i18n="auth.continueWith">Ou continuer avec</div>
           <div style="display:flex; gap:10px; flex-wrap:wrap">
             <button class="btn ghost" type="button" data-oauth="google">Google</button>
             <button class="btn ghost" type="button" data-oauth="github">GitHub</button>
@@ -62,25 +62,25 @@
 
           <div id="accountBox" style="display:none; margin-top:22px">
             <div class="hr"></div>
-            <h2 style="margin:0 0 10px">Mon compte</h2>
+            <h2 style="margin:0 0 10px" data-i18n="auth.myAccount">Mon compte</h2>
 
-            <div class="muted" style="margin:0 0 8px">Identités liées</div>
+            <div class="muted" style="margin:0 0 8px" data-i18n="auth.linkedIdentities">Identités liées</div>
             <div id="identitiesList" class="muted"></div>
 
-            <div class="muted" style="margin:18px 0 8px">Lier une identité</div>
+            <div class="muted" style="margin:18px 0 8px" data-i18n="auth.linkIdentity">Lier une identité</div>
             <div style="display:flex; gap:10px; flex-wrap:wrap">
-              <button class="btn ghost" type="button" data-link="google">Lier Google</button>
-              <button class="btn ghost" type="button" data-link="github">Lier GitHub</button>
+              <button class="btn ghost" type="button" data-link="google" data-i18n="auth.linkGoogle">Lier Google</button>
+              <button class="btn ghost" type="button" data-link="github" data-i18n="auth.linkGithub">Lier GitHub</button>
             </div>
 
             <div class="hr"></div>
-            <h3 style="margin:0 0 10px">Changer le mot de passe</h3>
+            <h3 style="margin:0 0 10px" data-i18n="auth.changePasswordTitle">Changer le mot de passe</h3>
 
             <form id="pwdForm" style="max-width:520px">
               <div style="display:grid; gap:10px">
-                <input class="input" name="newPassword" type="password" autocomplete="new-password" placeholder="Nouveau mot de passe (min 8)" required />
-                <input class="input" name="newPassword2" type="password" autocomplete="new-password" placeholder="Confirmer le nouveau mot de passe" required />
-                <button class="btn" type="submit">Mettre à jour</button>
+                <input class="input" name="newPassword" type="password" autocomplete="new-password" placeholder="Nouveau mot de passe (min 8)" data-i18n-placeholder="auth.newPassword" required />
+                <input class="input" name="newPassword2" type="password" autocomplete="new-password" placeholder="Confirmer le nouveau mot de passe" data-i18n-placeholder="auth.newPassword2" required />
+                <button class="btn" type="submit" data-i18n="auth.updatePassword">Mettre à jour</button>
               </div>
               <div id="pwdMsg" class="muted" style="margin-top:10px; min-height:18px"></div>
             </form>

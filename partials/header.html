@@ -5,12 +5,13 @@
       type="button"
       data-burger
       aria-label="Menu"
+      data-i18n-attr="aria-label:common.menu"
       aria-controls="siteNav"
       aria-expanded="false">
       <span></span><span></span><span></span>
     </button>
 
-    <a class="brand brand--center" href="/index.html" aria-label="Marie-Madeleine Gautier">
+    <a class="brand brand--center" href="/index.html" aria-label="Marie-Madeleine Gautier" data-i18n-attr="aria-label:brand.name">
       <img class="brand-logo logo--light" data-site-logo-light src="/assets/ui/logo-light.png" alt="" />
       <img class="brand-logo logo--dark" data-site-logo-dark src="/assets/ui/logo-dark.png" alt="" />
       <span class="brand-text" data-i18n="brand.name">Marie-Madeleine Gautier</span>
@@ -23,7 +24,7 @@
       <!-- (optionnel) Admin link injecté par JS si role=admin -->
       <div id="mmgAdminSlot"></div>
 
-      <button class="pill" type="button" data-theme-toggle title="Theme">
+      <button class="pill" type="button" data-theme-toggle title="Theme" data-i18n-attr="title:common.themeToggle">
         <span class="icon" aria-hidden="true">☾</span>
       </button>
 
@@ -33,13 +34,14 @@
           type="button"
           data-lang-toggle
           aria-label="Language"
+          data-i18n-attr="aria-label:common.language"
           aria-haspopup="menu"
           aria-expanded="false">
           <span class="icon" aria-hidden="true">🌐</span>
           <span class="label" data-lang-label>FR</span>
         </button>
 
-        <div class="lang-menu" data-lang-menu role="menu" aria-label="Language">
+        <div class="lang-menu" data-lang-menu role="menu" aria-label="Language" data-i18n-attr="aria-label:common.language">
           <div class="lang-grid">
             <button class="lang-btn" data-lang="fr" role="menuitemradio" aria-checked="false">FR</button>
             <button class="lang-btn" data-lang="en" role="menuitemradio" aria-checked="false">EN</button>
@@ -52,7 +54,7 @@
 
   <nav class="nav-links nav-drawer" id="siteNav" data-nav aria-hidden="true" aria-label="Navigation">
     <div class="nav-drawer__head">
-      <button class="nav-close" type="button" data-nav-close aria-label="Fermer">×</button>
+      <button class="nav-close" type="button" data-nav-close aria-label="Fermer" data-i18n-attr="aria-label:common.close">×</button>
     </div>
 
     <div class="nav-drawer__links">
@@ -66,7 +68,7 @@
       <a href="/contact.html" data-i18n="nav.contact">Contact</a>
     </div>
 
-    <div class="nav-carousel" data-nav-carousel aria-label="Aperçu">
+    <div class="nav-carousel" data-nav-carousel aria-label="Aperçu" data-i18n-attr="aria-label:common.preview">
       <div class="nav-carousel__viewport">
         <div class="nav-carousel__track">
           <div class="nav-carousel__slide"><img src="/assets/ui/hero-bg.webp" alt="" loading="lazy" decoding="async"></div>
@@ -75,8 +77,8 @@
         </div>
       </div>
 
-      <button class="nav-carousel__btn prev" type="button" data-carousel-prev aria-label="Précédent">‹</button>
-      <button class="nav-carousel__btn next" type="button" data-carousel-next aria-label="Suivant">›</button>
+      <button class="nav-carousel__btn prev" type="button" data-carousel-prev aria-label="Précédent" data-i18n-attr="aria-label:common.prev">‹</button>
+      <button class="nav-carousel__btn next" type="button" data-carousel-next aria-label="Suivant" data-i18n-attr="aria-label:common.next">›</button>
       <div class="nav-carousel__dots" data-carousel-dots aria-hidden="true"></div>
       <div class="nav-carousel__count" data-carousel-count aria-hidden="true"></div>
     </div>

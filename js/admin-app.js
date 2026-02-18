@@ -409,7 +409,7 @@
         return;
       }
 
-      worksCache.forEach((w) => {
+      worksCache.forEach((w, idx) => {
         const row = document.createElement("div");
         row.className = "admin-item";
 
@@ -476,14 +476,53 @@
           await deleteWorkById(w.id);
         });
 
+        const btnUp = document.createElement("button");
+        btnUp.type = "button";
+        btnUp.className = "btn";
+        btnUp.textContent = "Monter";
+        btnUp.disabled = idx === 0;
+        btnUp.addEventListener("click", async () => moveWork(idx, -1));
+
+        const btnDown = document.createElement("button");
+        btnDown.type = "button";
+        btnDown.className = "btn";
+        btnDown.textContent = "Descendre";
+        btnDown.disabled = idx === worksCache.length - 1;
+        btnDown.addEventListener("click", async () => moveWork(idx, +1));
+
         actions.appendChild(btnEdit);
         actions.appendChild(btnPub);
+        actions.appendChild(btnUp);
+        actions.appendChild(btnDown);
         actions.appendChild(btnDel);
 
         row.appendChild(left);
         row.appendChild(actions);
         listEl.appendChild(row);
       });
+    }
+
+    async function moveWork(idx, delta) {
+      const cur = worksCache[idx];
+      const other = worksCache[idx + delta];
+      if (!cur?.id || !other?.id) return;
+
+      try {
+        const aSort = Number.isFinite(Number(cur.sort)) ? Number(cur.sort) : 1000;
+        const bSort = Number.isFinite(Number(other.sort)) ? Number(other.sort) : 1000;
+        const nextASort = aSort === bSort ? bSort + (delta > 0 ? 1 : -1) : bSort;
+
+        const { error: e1 } = await sb.from("works").update({ sort: nextASort }).eq("id", cur.id);
+        if (e1) throw e1;
+        const { error: e2 } = await sb.from("works").update({ sort: aSort }).eq("id", other.id);
+        if (e2) throw e2;
+
+        toast("Ordre mis à jour ✅", "ok");
+        await refreshWorks();
+      } catch (e) {
+        console.error(e);
+        toast(errText(e), "err");
+      }
     }
 
     async function uploadImageToWork(workId, file) {
