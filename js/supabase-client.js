@@ -84,7 +84,7 @@
     };
   } catch {}
 
-  console.log("[SB] client ready", {
+  console.debug("[SB] client ready", {
     url: cfg.url,
     keyPrefix: String(cfg.anonKey).slice(0, 12),
     keyLength: String(cfg.anonKey).length,
