@@ -1007,9 +1007,30 @@ html[data-theme="light"] .social span{color:rgba(0,0,0,.72)}
   display:flex;
   justify-content:space-between;
   align-items:center;
+  gap:10px 16px;
+  flex-wrap:wrap;
   border-top:1px solid rgba(255,255,255,.08);
 }
 html[data-theme="light"] .footer-bottom{border-top-color:rgba(0,0,0,.10)}
+.footer-bottom__meta{
+  display:flex;
+  gap:10px 14px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+.footer-legal-links{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+.footer-legal-links a{
+  color:rgba(255,255,255,.72);
+  text-decoration:none;
+}
+html[data-theme="light"] .footer-legal-links a{color:rgba(0,0,0,.70)}
+.footer-legal-links a:hover{color:rgba(212,175,55,.95)}
+.footer-legal-links .sep{opacity:.55}
 @media (max-width:980px){
   .footer-grid{grid-template-columns:1fr}
 }

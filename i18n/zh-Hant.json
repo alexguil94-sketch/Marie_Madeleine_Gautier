@@ -38,7 +38,10 @@
     "utopia": "Marie-Madeleine Gautier — 烏托邦",
     "contact": "Marie-Madeleine Gautier — 聯絡",
     "login": "登入 — Marie-Madeleine Gautier",
-    "profile": "我的個人檔案 — Marie-Madeleine Gautier"
+    "profile": "我的個人檔案 — Marie-Madeleine Gautier",
+    "legal": "法律聲明 — Marie-Madeleine Gautier",
+    "privacy": "隱私權政策 — Marie-Madeleine Gautier",
+    "cookies": "Cookies — Marie-Madeleine Gautier"
   },
   "footer": {
     "rights": "版權所有。",
@@ -56,6 +59,9 @@
     "youtube": "YouTube",
     "whatsapp": "WhatsApp",
     "pinterest": "Pinterest",
+    "legal": "法律聲明",
+    "privacy": "隱私權政策",
+    "cookies": "Cookies",
     "siteOfficial": "官方網站",
     "location": "法國 • 預約制"
   },

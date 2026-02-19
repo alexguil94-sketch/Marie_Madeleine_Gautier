@@ -38,7 +38,10 @@
     "utopia": "Marie-Madeleine Gautier — Monde utopique",
     "contact": "Marie-Madeleine Gautier — Contact",
     "login": "Se connecter — Marie-Madeleine Gautier",
-    "profile": "Mon profil — Marie-Madeleine Gautier"
+    "profile": "Mon profil — Marie-Madeleine Gautier",
+    "legal": "Mentions légales — Marie-Madeleine Gautier",
+    "privacy": "Politique de confidentialité — Marie-Madeleine Gautier",
+    "cookies": "Cookies — Marie-Madeleine Gautier"
   },
   "footer": {
     "rights": "Tous droits réservés.",
@@ -56,6 +59,9 @@
     "youtube": "YouTube",
     "whatsapp": "WhatsApp",
     "pinterest": "Pinterest",
+    "legal": "Mentions légales",
+    "privacy": "Politique de confidentialité",
+    "cookies": "Cookies",
     "siteOfficial": "Site officiel",
     "location": "France • Sur rendez-vous"
   },
