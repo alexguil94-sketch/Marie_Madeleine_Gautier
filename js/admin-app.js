@@ -2935,6 +2935,31 @@
       modMsg.textContent = t || "";
     };
 
+    async function aiModerateText(input) {
+      const { data, error } = await sb.auth.getSession();
+      if (error) throw error;
+
+      const token = data?.session?.access_token || "";
+      if (!token) throw new Error("Session invalide. Reconnecte-toi.");
+
+      const res = await fetch("/.netlify/functions/ai-moderate", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ input }),
+      });
+
+      let out = null;
+      try { out = await res.json(); } catch { out = null; }
+      if (!res.ok || !out?.ok) {
+        const detail = out?.detail || out?.error || `IA erreur (${res.status})`;
+        throw new Error(detail);
+      }
+      return out;
+    }
+
     async function refreshModeration() {
       if (!moderationList) return;
       moderationList.innerHTML = "";
@@ -2983,8 +3008,10 @@
             ${String(c.name || "—")} • ${when} • ${titlesById[c.post_id] ? titlesById[c.post_id] : String(c.post_id || "").slice(0, 8)}
           </div>
           <div class="admin-item__text"></div>
+          <div class="admin-item__ai muted small-note" style="margin-top:6px" hidden></div>
         `;
         left.querySelector(".admin-item__text").textContent = c.message || "";
+        const aiInfo = left.querySelector(".admin-item__ai");
 
         const actions = document.createElement("div");
         actions.className = "admin-actions";
@@ -3005,6 +3032,51 @@
             toast(errText(e), "err");
           } finally {
             btnApprove.disabled = false;
+          }
+        });
+
+        const btnAiApprove = document.createElement("button");
+        btnAiApprove.type = "button";
+        btnAiApprove.className = "btn";
+        btnAiApprove.textContent = "IA approuver";
+        btnAiApprove.addEventListener("click", async () => {
+          btnAiApprove.disabled = true;
+          btnApprove.disabled = true;
+          btnDel.disabled = true;
+          if (aiInfo) aiInfo.hidden = true;
+
+          try {
+            const r = await aiModerateText(c.message || "");
+            const cats = r?.categories || {};
+            const hits = Object.entries(cats)
+              .filter(([, v]) => v === true)
+              .map(([k]) => String(k).replace(/_/g, " "));
+
+            const hint = r.flagged
+              ? `IA : à revoir${hits.length ? " — " + hits.slice(0, 3).join(", ") + (hits.length > 3 ? "…" : "") : ""}`
+              : "IA : OK";
+
+            if (aiInfo) {
+              aiInfo.hidden = false;
+              aiInfo.textContent = hint;
+            }
+
+            if (r.flagged) {
+              toast("IA : commentaire à revoir (signalé)", "err");
+              return;
+            }
+
+            const { error: upErr } = await sb.from("news_comments").update({ approved: true }).eq("id", c.id);
+            if (upErr) throw upErr;
+            toast("IA : approuvé ✅", "ok");
+            await refreshModeration();
+          } catch (e) {
+            console.error(e);
+            toast(errText(e), "err");
+          } finally {
+            btnAiApprove.disabled = false;
+            btnApprove.disabled = false;
+            btnDel.disabled = false;
           }
         });
 
@@ -3032,6 +3104,7 @@
         });
 
         actions.appendChild(btnApprove);
+        actions.appendChild(btnAiApprove);
         actions.appendChild(btnDel);
 
         row.appendChild(left);

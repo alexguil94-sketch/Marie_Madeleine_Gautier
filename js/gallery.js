@@ -71,7 +71,145 @@
     zoom: 1,
     panX: 0,
     panY: 0,
+    aiActive: false,
+    aiBackup: null,
   };
+
+  const setAiStatus = (msg) => {
+    const el = qs("#aiStatus");
+    if (!el) return;
+    el.textContent = msg || "";
+  };
+
+  const setAiUI = (active) => {
+    const btnAi = qs("#aiSearch");
+    const btnClear = qs("#aiClear");
+    const loadMore = qs("#loadMore");
+    if (btnAi) btnAi.hidden = !!active;
+    if (btnClear) btnClear.hidden = !active;
+    if (loadMore) loadMore.hidden = !!active;
+  };
+
+  async function runAiSearch() {
+    const input = qs("#q");
+    const query = String(input?.value || "").trim();
+    if (!query) {
+      setAiStatus(t("gallery.aiEmpty", "Tape une recherche (thème, émotion, matière…) puis clique sur Recherche IA."));
+      return;
+    }
+
+    const btnAi = qs("#aiSearch");
+    const btnClear = qs("#aiClear");
+    if (btnAi) btnAi.disabled = true;
+    if (btnClear) btnClear.disabled = true;
+
+    setAiStatus(t("gallery.aiSearching", "Recherche IA…"));
+
+    try {
+      const res = await fetch("/.netlify/functions/ai-search", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ q: query, limit: 24 }),
+      });
+
+      let out = null;
+      try { out = await res.json(); } catch { out = null; }
+      if (!res.ok || !out?.ok) {
+        const detail = out?.detail || out?.error || `IA erreur (${res.status})`;
+        throw new Error(detail);
+      }
+
+      const results = Array.isArray(out.results) ? out.results : [];
+      const normalized = results.map((w, i) => ({
+        id: w.id,
+        title: w.title || "",
+        year: w.year || "",
+        category: w.category || "",
+        description: w.description || "",
+        cover_url: w.cover_url || "",
+        thumb_url: w.thumb_url || "",
+        images: Array.isArray(w.images) ? w.images : [],
+        sort: i,
+        is_published: true,
+        created_at: "",
+        _imgs: normalizeImages(w, []),
+        _ai_score: w.score ?? null,
+      }));
+
+      if (!state.aiActive) {
+        state.aiBackup = {
+          page: state.page,
+          pageSize: state.pageSize,
+          all: state.all,
+          view: state.view,
+          q: state.q,
+          cat: state.cat,
+          hasMore: state.hasMore,
+          loading: state.loading,
+          error: state.error,
+          errorKey: state.errorKey,
+        };
+      }
+
+      state.aiActive = true;
+      setAiUI(true);
+
+      state.page = 1;
+      state.pageSize = normalized.length || 24;
+      state.all = normalized;
+      state.view = normalized;
+      state.q = "";
+      state.cat = "all";
+      state.hasMore = false;
+      state.loading = false;
+      state.error = "";
+      state.errorKey = "";
+
+      renderGrid();
+
+      setAiStatus(
+        results.length
+          ? t("gallery.aiResults", "Résultats IA :") + ` ${results.length}`
+          : t("gallery.aiNoResults", "Aucun résultat IA pour cette recherche.")
+      );
+    } catch (e) {
+      console.error(e);
+      setAiStatus(t("gallery.aiError", "IA indisponible : ") + errText(e));
+    } finally {
+      if (btnAi) btnAi.disabled = false;
+      if (btnClear) btnClear.disabled = false;
+    }
+  }
+
+  function clearAiSearch() {
+    if (!state.aiActive || !state.aiBackup) {
+      setAiUI(false);
+      setAiStatus("");
+      state.aiActive = false;
+      state.aiBackup = null;
+      return;
+    }
+
+    state.aiActive = false;
+    setAiUI(false);
+    setAiStatus("");
+
+    const b = state.aiBackup;
+    state.aiBackup = null;
+    state.page = b.page;
+    state.pageSize = b.pageSize;
+    state.all = b.all;
+    state.view = b.view;
+    state.q = b.q;
+    state.cat = b.cat;
+    state.hasMore = b.hasMore;
+    state.loading = b.loading;
+    state.error = b.error;
+    state.errorKey = b.errorKey;
+
+    applyFilters();
+    renderGrid();
+  }
 
   const countText = (shown, loaded) => {
     const shownText =
@@ -852,6 +990,7 @@
 
   function bindUI() {
     qs("#q")?.addEventListener("input", (e) => {
+      if (state.aiActive) return;
       state.q = e.target.value || "";
       applyFilters();
       renderGrid();
@@ -864,6 +1003,9 @@
     });
 
     qs("#loadMore")?.addEventListener("click", fetchPage);
+
+    qs("#aiSearch")?.addEventListener("click", runAiSearch);
+    qs("#aiClear")?.addEventListener("click", clearAiSearch);
 
     // Lightbox
     qs("[data-close]")?.addEventListener("click", closeLightbox);
