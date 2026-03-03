@@ -6,6 +6,8 @@
 
   const STORAGE_KEY = "mmg_veille_v1";
   const UI_KEY = "mmg_veille_ui_v1";
+  const ARTIST_NAME = "Marie-Madeleine Gautier";
+  const DEFAULT_PUBLIC_SITE = "https://marie-madeleine-gautier-world.com";
 
   const qs = (s, r = document) => r.querySelector(s);
 
@@ -57,6 +59,17 @@
     return String(v ?? "").trim();
   }
 
+  function extractEmail(raw) {
+    const s = normStr(raw);
+    if (!s) return "";
+    const m = s.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+    return m ? m[0] : "";
+  }
+
+  function itemEmail(x) {
+    return extractEmail(x?.email) || extractEmail(x?.contact);
+  }
+
   function normUrl(v) {
     const s = normStr(v);
     if (!s) return "";
@@ -72,6 +85,22 @@
     if (/^assets\//i.test(s)) return s;
     if (/^[\w.-]+\.[a-z]{2,}(\/|$)/i.test(s)) return "https://" + s.replace(/^\/+/, "");
     return s;
+  }
+
+  function publicSiteUrl() {
+    const origin = normStr(location?.origin);
+    if (!origin || origin === "null" || /^file:/i.test(origin)) return DEFAULT_PUBLIC_SITE;
+    if (/localhost|127\.0\.0\.1/i.test(origin)) return DEFAULT_PUBLIC_SITE;
+    return origin;
+  }
+
+  function mailtoHref(to, subject, body) {
+    const email = extractEmail(to);
+    if (!email) return "";
+    const params = [];
+    if (subject) params.push(`subject=${encodeURIComponent(subject)}`);
+    if (body) params.push(`body=${encodeURIComponent(body)}`);
+    return `mailto:${email}${params.length ? "?" + params.join("&") : ""}`;
   }
 
   function hostLabel(rawUrl) {
@@ -257,6 +286,7 @@
         country: normStr(x.country),
         url: normStr(x.url),
         image_url: normStr(x.image_url ?? x.imageUrl ?? x.image ?? x.cover ?? ""),
+        email: extractEmail(normStr(x.email ?? x.mail ?? x.e_mail ?? x.eMail ?? "")) || extractEmail(normStr(x.contact)),
         contact: normStr(x.contact),
         links: normStr(x.links),
         status: normStr(x.status) || "todo",
@@ -306,6 +336,12 @@
     autoMeta: null,
     autoEmpty: null,
     autoList: null,
+    gallerySearch: null,
+    galleryMeta: null,
+    galleryEmpty: null,
+    galleryList: null,
+    btnGalleryAdd: null,
+    btnGalleryShowAll: null,
     search: null,
     type: null,
     status: null,
@@ -402,6 +438,7 @@
           x.country,
           x.url,
           x.image_url,
+          x.email,
           x.contact,
           x.links,
           x.notes,
@@ -444,6 +481,7 @@
     set("country", item?.country || "");
     set("url", item?.url || "");
     set("image_url", item?.image_url || "");
+    set("email", item?.email || "");
     set("contact", item?.contact || "");
     set("links", item?.links || "");
     set("deadline", item?.deadline || "");
@@ -761,11 +799,206 @@
       country: it.country_or_region,
       url: it.url,
       image_url: it.image_url,
+      email: "",
       links: it.source_url ? `${t("veille.autoSource", "Source")}: ${it.source_url}` : "",
       deadline,
       tags,
       notes,
       status: "todo",
+    });
+  }
+
+  function buildEmailForItem(x) {
+    const to = itemEmail(x);
+    if (!to) return null;
+
+    const vars = {
+      my_name: ARTIST_NAME,
+      my_site: publicSiteUrl(),
+      name: normStr(x?.name),
+      url: normUrl(x?.url),
+      city: normStr(x?.city),
+      country: normStr(x?.country),
+      contact: normStr(x?.contact),
+    };
+
+    const subject = t("veille.emailSubject", "Proposition — {my_name}", vars);
+    let body = t(
+      "veille.emailBody",
+      "Bonjour,\n\nJe me permets de vous contacter afin de vous présenter mon travail.\n\nPortfolio : {my_site}\n\nBien cordialement,\n{my_name}",
+      vars
+    );
+
+    body = String(body || "").replace(/\r\n/g, "\n");
+    if (body.length > 1800) body = body.slice(0, 1799) + "…";
+
+    return { to, subject, body };
+  }
+
+  function sendEmailForItem(x) {
+    const mail = buildEmailForItem(x);
+    if (!mail) {
+      alert(t("veille.emailMissing", "Ajoute un email (dans la fiche) avant d’envoyer."));
+      return;
+    }
+
+    const href = mailtoHref(mail.to, mail.subject, mail.body);
+    if (!href) {
+      alert(t("veille.emailMissing", "Ajoute un email (dans la fiche) avant d’envoyer."));
+      return;
+    }
+
+    window.location.href = href;
+  }
+
+  function renderGallerySection() {
+    if (!dom.galleryList) return;
+
+    const q = normStr(dom.gallerySearch?.value).toLowerCase();
+
+    const base = items
+      .filter((x) => x.type === "gallery")
+      .filter((x) => !x.archived)
+      .slice()
+      .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+
+    const filtered = base.filter((x) => {
+      if (!q) return true;
+      const hay = [
+        x.name,
+        x.city,
+        x.country,
+        x.url,
+        x.email,
+        x.contact,
+        x.links,
+        x.notes,
+        (x.tags || []).join(" "),
+      ]
+        .join(" \n ")
+        .toLowerCase();
+      return hay.includes(q);
+    });
+
+    const shown = Math.min(12, filtered.length);
+    if (dom.galleryMeta)
+      dom.galleryMeta.textContent = t("veille.galleryMeta", "{shown} / {total} galeries", {
+        shown,
+        total: filtered.length,
+      });
+
+    dom.galleryList.innerHTML = "";
+    if (dom.galleryEmpty) dom.galleryEmpty.hidden = filtered.length !== 0;
+
+    filtered.slice(0, 12).forEach((x) => {
+      const row = document.createElement("div");
+      row.className = "item veille-item";
+      row.dataset.id = x.id;
+      const email = itemEmail(x);
+
+      const thumbSrc = normImageUrl(x.image_url);
+      if (thumbSrc) {
+        const thumb = document.createElement("img");
+        thumb.className = "veille-thumb";
+        thumb.loading = "lazy";
+        thumb.decoding = "async";
+        thumb.alt = "";
+        thumb.src = thumbSrc;
+        thumb.addEventListener(
+          "error",
+          () => {
+            try {
+              thumb.remove();
+            } catch {}
+          },
+          { once: true }
+        );
+        row.appendChild(thumb);
+      }
+
+      const main = document.createElement("div");
+      main.className = "veille-main";
+
+      const titleRow = document.createElement("div");
+      titleRow.className = "veille-titleRow";
+
+      const name = document.createElement("div");
+      name.className = "veille-name";
+      name.textContent = x.name;
+      titleRow.appendChild(name);
+
+      const status = document.createElement("span");
+      status.className = "badge " + statusBadgeClass(x.status);
+      status.textContent = statusLabel(x.status);
+      titleRow.appendChild(status);
+
+      main.appendChild(titleRow);
+
+      const meta = document.createElement("div");
+      meta.className = "muted veille-meta";
+
+      let had = false;
+      const sep = () => {
+        if (had) meta.appendChild(document.createTextNode(" • "));
+        had = true;
+      };
+      const addText = (text) => {
+        const s = normStr(text);
+        if (!s) return;
+        sep();
+        meta.appendChild(document.createTextNode(s));
+      };
+      const addLink = (label, url) => {
+        const s = normStr(url);
+        if (!s) return;
+        sep();
+        const a = document.createElement("a");
+        a.href = normUrl(s);
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = label || s;
+        meta.appendChild(a);
+      };
+
+      const place = [x.city, x.country].filter(Boolean).join(", ");
+      addText(place);
+      if (email) addText(email);
+      if (x.url) addLink(hostLabel(x.url), x.url);
+      main.appendChild(meta);
+
+      row.appendChild(main);
+
+      const actions = document.createElement("div");
+      actions.className = "veille-actions";
+
+      if (x.url) {
+        const a = document.createElement("a");
+        a.className = "icon-btn";
+        a.href = normUrl(x.url);
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = t("veille.actionOpen", "Ouvrir");
+        actions.appendChild(a);
+      }
+
+      if (email) {
+        const btnEmail = document.createElement("button");
+        btnEmail.className = "icon-btn";
+        btnEmail.type = "button";
+        btnEmail.dataset.action = "email";
+        btnEmail.textContent = t("veille.actionEmail", "Email");
+        actions.appendChild(btnEmail);
+      }
+
+      const btnEdit = document.createElement("button");
+      btnEdit.className = "icon-btn";
+      btnEdit.type = "button";
+      btnEdit.dataset.action = "edit";
+      btnEdit.textContent = t("veille.actionEdit", "Éditer");
+      actions.appendChild(btnEdit);
+
+      row.appendChild(actions);
+      dom.galleryList?.appendChild(row);
     });
   }
 
@@ -948,6 +1181,16 @@
         const actions = document.createElement("div");
         actions.className = "veille-card__actions";
 
+        const mail = itemEmail(x);
+        if (mail) {
+          const btnEmail = document.createElement("button");
+          btnEmail.className = "icon-btn";
+          btnEmail.type = "button";
+          btnEmail.dataset.action = "email";
+          btnEmail.textContent = t("veille.actionEmail", "Email");
+          actions.appendChild(btnEmail);
+        }
+
         const btnEdit = document.createElement("button");
         btnEdit.className = "icon-btn";
         btnEdit.type = "button";
@@ -1115,6 +1358,16 @@
         actions.appendChild(a);
       }
 
+      const mail = itemEmail(x);
+      if (mail) {
+        const btnEmail = document.createElement("button");
+        btnEmail.className = "icon-btn";
+        btnEmail.type = "button";
+        btnEmail.dataset.action = "email";
+        btnEmail.textContent = t("veille.actionEmail", "Email");
+        actions.appendChild(btnEmail);
+      }
+
       const btnEdit = document.createElement("button");
       btnEdit.className = "icon-btn";
       btnEdit.type = "button";
@@ -1141,6 +1394,8 @@
       row.appendChild(actions);
       dom.list.appendChild(row);
     });
+
+    renderGallerySection();
   }
 
   function upsertItemFromForm() {
@@ -1155,6 +1410,7 @@
       country: normStr(fd.get("country")),
       url: normStr(fd.get("url")),
       image_url: normImageUrl(fd.get("image_url")),
+      email: extractEmail(fd.get("email")),
       contact: normStr(fd.get("contact")),
       links: normStr(fd.get("links")),
       deadline: normStr(fd.get("deadline")),
@@ -1253,6 +1509,7 @@
           city: normStr(raw.city),
           country: normStr(raw.country),
           url: normStr(raw.url),
+          email: extractEmail(normStr(raw.email ?? raw.mail ?? raw.e_mail ?? raw.eMail ?? "")) || extractEmail(normStr(raw.contact)),
           contact: normStr(raw.contact),
           image_url: normStr(raw.image_url ?? raw.imageUrl ?? raw.image ?? raw.cover ?? ""),
           links: normStr(raw.links),
@@ -1292,6 +1549,13 @@
     dom.autoMeta = qs("#aMeta");
     dom.autoEmpty = qs("#aEmpty");
     dom.autoList = qs("#aList");
+
+    dom.gallerySearch = qs("#gSearch");
+    dom.galleryMeta = qs("#gMeta");
+    dom.galleryEmpty = qs("#gEmpty");
+    dom.galleryList = qs("#gList");
+    dom.btnGalleryAdd = qs("#btnGalleryAdd");
+    dom.btnGalleryShowAll = qs("#btnGalleryShowAll");
 
     dom.search = qs("#vSearch");
     dom.type = qs("#vType");
@@ -1387,6 +1651,18 @@
       openAutoAsNewVeille(it);
     });
 
+    dom.gallerySearch?.addEventListener("input", () => renderGallerySection());
+    dom.btnGalleryAdd?.addEventListener("click", () => openModal({ type: "gallery" }));
+    dom.btnGalleryShowAll?.addEventListener("click", () => {
+      if (dom.type) dom.type.value = "gallery";
+      syncUiFromControls();
+      render();
+      setTimeout(() => {
+        const target = ui.view === "board" ? dom.board : dom.list;
+        target?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      }, 0);
+    });
+
     const onItemAction = (e) => {
       const btn = e.target.closest("[data-action]");
       if (!btn) return;
@@ -1397,6 +1673,9 @@
       if (btn.dataset.action === "edit") {
         const item = items.find((x) => x.id === id);
         if (item) openModal(item);
+      } else if (btn.dataset.action === "email") {
+        const item = items.find((x) => x.id === id);
+        if (item) sendEmailForItem(item);
       } else if (btn.dataset.action === "archive") {
         toggleArchive(id);
       } else if (btn.dataset.action === "delete") {
@@ -1406,6 +1685,7 @@
 
     dom.list.addEventListener("click", onItemAction);
     dom.board?.addEventListener("click", onItemAction);
+    dom.galleryList?.addEventListener("click", onItemAction);
 
     dom.close.addEventListener("click", closeModal);
     dom.btnCancel.addEventListener("click", closeModal);

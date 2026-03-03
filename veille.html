@@ -14,7 +14,7 @@
   <link rel="icon" href="favicon.ico?v=1"/>
   <link rel="stylesheet" href="css/style.css"/>
   <link rel="stylesheet" href="css/luxe.css?v=10"/>
-  <link rel="stylesheet" href="css/veille.css?v=3"/>
+  <link rel="stylesheet" href="css/veille.css?v=4"/>
 </head>
 <body>
   <div id="siteHeader"></div>
@@ -60,6 +60,34 @@
               Aucun résultat pour l’instant.
             </div>
             <div id="aList" class="veille-auto__list" aria-label="Résultats de recherche auto" data-i18n-attr="aria-label:veille.autoListAria"></div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="veille-auto veille-gallery" aria-label="Recherche galeries" data-i18n-attr="aria-label:veille.galleryAria">
+            <div class="veille-auto__head">
+              <div>
+                <div class="kicker" data-i18n="veille.galleryKicker">Galeries</div>
+                <h2 class="veille-auto__title" data-i18n="veille.galleryTitle">Recherche de galeries</h2>
+                <p class="muted veille-auto__subtitle" data-i18n="veille.gallerySubtitle">
+                  Tes galeries (type “Galerie”) en un coup d’œil — avec photo + email.
+                </p>
+              </div>
+              <div class="veille-gallery__headActions">
+                <button id="btnGalleryAdd" class="btn" type="button" data-i18n="veille.galleryAdd">Ajouter une galerie</button>
+                <button id="btnGalleryShowAll" class="btn ghost" type="button" data-i18n="veille.galleryShowAll">Voir tout</button>
+              </div>
+            </div>
+
+            <div class="toolbar veille-auto__toolbar" aria-label="Recherche galeries" data-i18n-attr="aria-label:veille.galleryToolbarAria">
+              <input id="gSearch" class="input" type="search" autocomplete="off" spellcheck="false" data-i18n-placeholder="veille.gallerySearchPlaceholder" placeholder="Rechercher une galerie…"/>
+            </div>
+
+            <div id="gMeta" class="muted veille-auto__meta" aria-live="polite"></div>
+            <div id="gEmpty" class="muted veille-auto__empty" hidden data-i18n="veille.galleryEmpty">
+              Aucune galerie pour l’instant.
+            </div>
+            <div id="gList" class="list" aria-label="Liste galeries" data-i18n-attr="aria-label:veille.galleryListAria"></div>
           </div>
 
           <div class="hr"></div>
@@ -195,6 +223,11 @@
           </div>
         </div>
 
+        <div>
+          <label class="mmg-label" for="fEmail" data-i18n="veille.fieldEmail">Email</label>
+          <input id="fEmail" name="email" class="input" inputmode="email" autocomplete="email" maxlength="160" data-i18n-placeholder="veille.emailPlaceholder" placeholder="contact@…"/>
+        </div>
+
         <div class="columns" style="gap:12px">
           <div>
             <label class="mmg-label" for="fImageUrl" data-i18n="veille.fieldImageUrl">Photo (URL)</label>
@@ -258,6 +291,6 @@
   <script defer src="js/i18n.js?v=3"></script>
   <script defer src="js/app.js?v=1"></script>
   <script defer src="js/luxe.js?v=8"></script>
-  <script defer src="js/veille.js?v=3"></script>
+  <script defer src="js/veille.js?v=4"></script>
 </body>
 </html>

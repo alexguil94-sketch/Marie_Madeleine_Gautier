@@ -37,6 +37,13 @@
   justify-content:space-between;
   flex-wrap:wrap;
 }
+.veille-gallery__headActions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-end;
+}
 .veille-auto__title{margin:10px 0 0; font-size:20px}
 .veille-auto__subtitle{margin:8px 0 0; max-width:980px}
 .veille-auto__toolbar{margin-top:12px; gap:10px; flex-wrap:wrap}
