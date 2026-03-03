@@ -119,26 +119,84 @@
     return "";
   }
 
+  const prefersReducedMotion = () =>
+    !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function updateHomeWorksCarouselState() {
+    const wrap = qs("[data-home-works-carousel]");
+    if (!wrap) return;
+
+    const viewport = qs(".home-works-carousel__viewport", wrap);
+    const prev = qs("[data-home-carousel-prev]", wrap);
+    const next = qs("[data-home-carousel-next]", wrap);
+    if (!viewport || !prev || !next) return;
+
+    const canScroll = viewport.scrollWidth > viewport.clientWidth + 8;
+    wrap.classList.toggle("is-static", !canScroll);
+
+    const max = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+    prev.disabled = !canScroll || viewport.scrollLeft <= 2;
+    next.disabled = !canScroll || viewport.scrollLeft >= max - 2;
+  }
+
+  function initHomeWorksCarouselControls() {
+    const wrap = qs("[data-home-works-carousel]");
+    if (!wrap || wrap.dataset.carouselInited === "1") return;
+
+    const viewport = qs(".home-works-carousel__viewport", wrap);
+    const prev = qs("[data-home-carousel-prev]", wrap);
+    const next = qs("[data-home-carousel-next]", wrap);
+    if (!viewport || !prev || !next) return;
+
+    const scrollByPage = (dir) => {
+      const behavior = prefersReducedMotion() ? "auto" : "smooth";
+      const amount = Math.max(240, Math.floor(viewport.clientWidth * 0.9));
+      viewport.scrollBy({ left: dir * amount, behavior });
+    };
+
+    prev.addEventListener("click", () => scrollByPage(-1));
+    next.addEventListener("click", () => scrollByPage(1));
+
+    let raf = 0;
+    viewport.addEventListener(
+      "scroll",
+      () => {
+        if (raf) return;
+        raf = requestAnimationFrame(() => {
+          raf = 0;
+          updateHomeWorksCarouselState();
+        });
+      },
+      { passive: true }
+    );
+
+    window.addEventListener("resize", () => updateHomeWorksCarouselState());
+    wrap.dataset.carouselInited = "1";
+  }
+
   function renderHomeWorks(list) {
     const root = qs("#homeWorks");
     if (!root) return;
 
+    initHomeWorksCarouselControls();
     root.innerHTML = "";
 
     if (!list?.length) {
       root.innerHTML = `<div class="muted" data-i18n="home.noWorks">Aucune œuvre à afficher pour le moment.</div>`;
+      updateHomeWorksCarouselState();
       return;
     }
 
-    list.slice(0, 8).forEach((w) => {
+    list.slice(0, 12).forEach((w) => {
       const img = pickWorkImage(w);
       const title = w.title || "—";
       const sub = [w.year, w.category].filter(Boolean).join(" • ");
 
       const a = document.createElement("a");
-      a.className = "work";
+      a.className = "work work--home";
       a.href = "gallery.html";
       a.setAttribute("aria-label", title);
+      a.setAttribute("role", "listitem");
 
       a.innerHTML = `
         ${img ? `<img loading="lazy" decoding="async" src="${img}" alt="">` : ""}
@@ -150,6 +208,8 @@
 
       root.appendChild(a);
     });
+
+    requestAnimationFrame(() => updateHomeWorksCarouselState());
   }
 
   async function loadWorksFallback() {
@@ -173,7 +233,7 @@
       .eq("is_published", true)
       .order("sort", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false })
-      .limit(8);
+      .limit(12);
 
     if (error) return [];
     return data || [];
@@ -224,7 +284,9 @@
 
   async function init() {
     const worksRoot = qs("#homeWorks");
+    initHomeWorksCarouselControls();
     if (worksRoot) worksRoot.innerHTML = `<div class="muted" data-i18n="common.loading">Chargement…</div>`;
+    updateHomeWorksCarouselState();
     renderAgendaPreview();
     applyHomeSitePhotos().catch(() => {});
 

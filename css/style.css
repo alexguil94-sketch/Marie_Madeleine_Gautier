@@ -63,6 +63,89 @@ textarea{resize:vertical}
 .work:hover img{transform: scale(1.08)}
 .work .meta{position:absolute; left:0; right:0; bottom:0; padding:10px 12px; background: linear-gradient(to top, rgba(0,0,0,.72), transparent); font-size:13px}
 
+/* Home: works carousel (selection) */
+.home-works-carousel{position:relative}
+.home-works-carousel__viewport{
+  overflow-x:auto;
+  overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;
+  scroll-snap-type:x mandatory;
+  scroll-behavior:smooth;
+  padding:6px 52px 10px;
+  border-radius:18px;
+  scroll-padding:0 52px;
+  scrollbar-color: rgba(197,160,89,.55) transparent;
+}
+.home-works-carousel__viewport:focus-visible{
+  outline:2px solid rgba(197,160,89,.65);
+  outline-offset:4px;
+}
+.home-works-carousel__track{
+  display:flex;
+  gap:14px;
+  align-items:stretch;
+  padding:2px;
+}
+.home-works-carousel__track::after{content:""; flex:0 0 8px}
+
+.home-works-carousel .work--home{
+  flex:0 0 auto;
+  width:clamp(210px, 24vw, 290px);
+  scroll-snap-align:start;
+  display:flex;
+  flex-direction:column;
+}
+.home-works-carousel .work--home img{
+  height:280px;
+  object-fit:contain;
+  padding:12px;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(197,160,89,.10), rgba(0,0,0,0) 60%),
+    linear-gradient(to bottom, rgba(255,255,255,.04), rgba(0,0,0,0));
+}
+.home-works-carousel .work--home:hover img{transform: scale(1.03)}
+.home-works-carousel .work--home .meta{
+  position:static;
+  background:transparent;
+  padding:12px 12px 14px;
+  border-top:1px solid rgba(255,255,255,.08);
+  font-size:13px;
+}
+
+.home-works-carousel__btn{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  width:40px; height:40px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(0,0,0,.32);
+  color:inherit;
+  cursor:pointer;
+  display:grid;
+  place-items:center;
+  font-size:22px;
+  z-index:2;
+}
+.home-works-carousel__btn:hover{border-color:rgba(197,160,89,.38)}
+.home-works-carousel__btn:disabled{opacity:.25; cursor:default}
+.home-works-carousel__btn.prev{left:8px}
+.home-works-carousel__btn.next{right:8px}
+.home-works-carousel.is-static .home-works-carousel__btn{display:none}
+.home-works-carousel.is-static .home-works-carousel__viewport{padding:6px 4px 10px; scroll-padding:0}
+
+@media (max-width:740px){
+  .home-works-carousel__btn{display:none}
+  .home-works-carousel__viewport{padding:4px 0 8px; scroll-padding:0}
+  .home-works-carousel__track{gap:12px}
+  .home-works-carousel .work--home{width:clamp(220px, 76vw, 340px)}
+  .home-works-carousel .work--home img{height:260px; padding:10px}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .home-works-carousel__viewport{scroll-behavior:auto}
+}
+
 /* Gallery: masonry layout (keeps tall portrait photos intact, no forced crop) */
 .gallery-grid{
   columns: 4 240px;
