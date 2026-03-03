@@ -1,0 +1,10 @@
+# Une URL par ligne.
+# Conseils : vise des pages qui listent des appels / opportunités.
+
+https://www.curatorspace.com/opportunities/?orderBy=deadline
+https://www.curatorspace.com/opportunities/index/page/2?orderBy=deadline
+https://www.curatorspace.com/opportunities/index/page/3?orderBy=deadline
+
+# (Optionnel) Autres sources à tester :
+# https://www.transartists.org/open-call
+# https://www.artjobs.com/open-calls

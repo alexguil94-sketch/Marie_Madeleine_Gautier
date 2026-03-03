@@ -14,7 +14,7 @@
   <link rel="icon" href="favicon.ico?v=1"/>
   <link rel="stylesheet" href="css/style.css"/>
   <link rel="stylesheet" href="css/luxe.css?v=10"/>
-  <link rel="stylesheet" href="css/veille.css?v=2"/>
+  <link rel="stylesheet" href="css/veille.css?v=3"/>
 </head>
 <body>
   <div id="siteHeader"></div>
@@ -29,6 +29,38 @@
             Un espace personnel pour suivre tes pistes : contacts, appels à projets, relances et notes.
             Les données restent sur ton appareil (localStorage).
           </p>
+
+          <div class="hr"></div>
+
+          <div class="veille-auto" aria-label="Recherche automatique" data-i18n-attr="aria-label:veille.autoAria">
+            <div class="veille-auto__head">
+              <div>
+                <div class="kicker" data-i18n="veille.autoKicker">Recherche automatique</div>
+                <h2 class="veille-auto__title" data-i18n="veille.autoTitle">Idées & opportunités repérées</h2>
+                <p class="muted veille-auto__subtitle" data-i18n="veille.autoSubtitle">
+                  Mise à jour toutes les 7 jours (Python). Filtre, ouvre les liens et ajoute ce qui t’inspire dans ta veille.
+                </p>
+              </div>
+              <button id="btnAutoRefresh" class="btn ghost" type="button" data-i18n="veille.autoRefresh">Rafraîchir</button>
+            </div>
+
+            <div class="toolbar veille-auto__toolbar" aria-label="Recherche auto" data-i18n-attr="aria-label:veille.autoToolbarAria">
+              <input id="aSearch" class="input" type="search" autocomplete="off" spellcheck="false" data-i18n-placeholder="veille.autoSearchPlaceholder" placeholder="Rechercher dans les résultats…"/>
+
+              <select id="aMinScore" class="input" aria-label="Score minimum" data-i18n-attr="aria-label:veille.autoMinScoreAria">
+                <option value="0" data-i18n="veille.autoMinScore0">Score min : 0</option>
+                <option value="40" data-i18n="veille.autoMinScore40">Score min : 40</option>
+                <option value="60" data-i18n="veille.autoMinScore60">Score min : 60</option>
+                <option value="80" data-i18n="veille.autoMinScore80">Score min : 80</option>
+              </select>
+            </div>
+
+            <div id="aMeta" class="muted veille-auto__meta" aria-live="polite"></div>
+            <div id="aEmpty" class="muted veille-auto__empty" hidden data-i18n="veille.autoEmpty">
+              Aucun résultat pour l’instant.
+            </div>
+            <div id="aList" class="veille-auto__list" aria-label="Résultats de recherche auto" data-i18n-attr="aria-label:veille.autoListAria"></div>
+          </div>
 
           <div class="hr"></div>
 
@@ -226,6 +258,6 @@
   <script defer src="js/i18n.js?v=3"></script>
   <script defer src="js/app.js?v=1"></script>
   <script defer src="js/luxe.js?v=8"></script>
-  <script defer src="js/veille.js?v=2"></script>
+  <script defer src="js/veille.js?v=3"></script>
 </body>
 </html>

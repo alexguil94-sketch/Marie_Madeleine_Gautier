@@ -300,6 +300,12 @@
   }
 
   const dom = {
+    autoRefresh: null,
+    autoSearch: null,
+    autoMinScore: null,
+    autoMeta: null,
+    autoEmpty: null,
+    autoList: null,
     search: null,
     type: null,
     status: null,
@@ -328,6 +334,8 @@
   let items = [];
   let ui = readUi();
   let editingId = null;
+
+  let autoState = { generatedAt: "", items: [] };
 
   function syncControlsFromUi() {
     if (dom.search) dom.search.value = ui.q;
@@ -455,6 +463,310 @@
   function closeModal() {
     dom.modal.hidden = true;
     editingId = null;
+  }
+
+  function scoreBadgeClass(score) {
+    const s = Number(score);
+    if (!Number.isFinite(s)) return "badge--dim";
+    if (s >= 80) return "badge--ok";
+    if (s >= 60) return "badge--warn";
+    return "badge--dim";
+  }
+
+  function normalizeIsoDate(raw) {
+    const s = normStr(raw);
+    if (!s || s === "—" || s === "-") return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const m = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+    if (m) {
+      const dd = String(m[1]).padStart(2, "0");
+      const mm = String(m[2]).padStart(2, "0");
+      const yyyy = m[3];
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    return "";
+  }
+
+  function normalizeAutoItems(raw) {
+    const arr = Array.isArray(raw?.items) ? raw.items : Array.isArray(raw) ? raw : [];
+    return arr
+      .filter((x) => x && typeof x === "object")
+      .map((x) => {
+        const title = normStr(x.title ?? x.name ?? "");
+        const url = normStr(x.url ?? x.href ?? "");
+        const source_url = normStr(x.source_url ?? x.sourceUrl ?? x.source ?? "");
+        const score = Math.max(0, Math.min(100, Number(x.score) || 0));
+        let country_or_region = normStr(x.country_or_region ?? x.countryOrRegion ?? x.country ?? x.region ?? "");
+        if (country_or_region === "—" || country_or_region === "-") country_or_region = "";
+        const deadline_raw = normStr(x.deadline ?? x.deadline_raw ?? x.deadlineRaw ?? "");
+        const deadline = normalizeIsoDate(deadline_raw) || "";
+        const detected_at = normStr(x.detected_at ?? x.detectedAt ?? "");
+        const matched_keywords = Array.isArray(x.matched_keywords ?? x.matchedKeywords)
+          ? (x.matched_keywords ?? x.matchedKeywords).map((k) => normStr(k)).filter(Boolean)
+          : [];
+        const context = normStr(x.context ?? x.snippet ?? x.description ?? "");
+        const image_url = normStr(x.image_url ?? x.imageUrl ?? x.image ?? "");
+        return {
+          title,
+          url,
+          source_url,
+          score,
+          country_or_region,
+          deadline,
+          deadline_raw,
+          detected_at,
+          matched_keywords,
+          context,
+          image_url,
+        };
+      })
+      .filter((x) => x.title && x.url);
+  }
+
+  function autoMetaText(total, filtered) {
+    const ms = Date.parse(autoState.generatedAt || "");
+    const date = Number.isFinite(ms) ? fmtShortDate(ms) : "";
+    return t("veille.autoMeta", "{filtered} / {total} résultat(s) · MAJ : {date}", {
+      filtered,
+      total,
+      date: date || t("common.unknown", "—"),
+    });
+  }
+
+  function renderAuto() {
+    if (!dom.autoList) return;
+
+    const q = normStr(dom.autoSearch?.value).toLowerCase();
+    const minScore = Number(dom.autoMinScore?.value) || 0;
+
+    const filtered = autoState.items
+      .filter((it) => (Number.isFinite(it.score) ? it.score : 0) >= minScore)
+      .filter((it) => {
+        if (!q) return true;
+        const hay = [
+          it.title,
+          it.url,
+          it.source_url,
+          it.country_or_region,
+          it.deadline_raw,
+          it.deadline,
+          it.context,
+          (it.matched_keywords || []).join(" "),
+        ]
+          .join(" \n ")
+          .toLowerCase();
+        return hay.includes(q);
+      })
+      .slice()
+      .sort((a, b) => {
+        const as = Number(a.score) || 0;
+        const bs = Number(b.score) || 0;
+        if (as !== bs) return bs - as;
+        const ad = a.deadline ? Date.parse(a.deadline) : Number.POSITIVE_INFINITY;
+        const bd = b.deadline ? Date.parse(b.deadline) : Number.POSITIVE_INFINITY;
+        if (ad !== bd) return ad - bd;
+        return a.title.localeCompare(b.title, undefined, { sensitivity: "base" });
+      });
+
+    if (dom.autoMeta) dom.autoMeta.textContent = autoMetaText(autoState.items.length, filtered.length);
+
+    dom.autoList.innerHTML = "";
+    if (dom.autoEmpty) dom.autoEmpty.hidden = filtered.length !== 0;
+
+    filtered.slice(0, 60).forEach((it) => {
+      const row = document.createElement("div");
+      row.className = "item veille-item veille-auto-item";
+      row.dataset.autoUrl = it.url;
+
+      const thumbSrc = normImageUrl(it.image_url);
+      if (thumbSrc) {
+        const thumb = document.createElement("img");
+        thumb.className = "veille-thumb";
+        thumb.loading = "lazy";
+        thumb.decoding = "async";
+        thumb.alt = "";
+        thumb.src = thumbSrc;
+        thumb.addEventListener(
+          "error",
+          () => {
+            try {
+              thumb.remove();
+            } catch {}
+          },
+          { once: true }
+        );
+        row.appendChild(thumb);
+      }
+
+      const main = document.createElement("div");
+      main.className = "veille-main";
+
+      const titleRow = document.createElement("div");
+      titleRow.className = "veille-titleRow";
+
+      const name = document.createElement("div");
+      name.className = "veille-name";
+      const aTitle = document.createElement("a");
+      aTitle.href = normUrl(it.url);
+      aTitle.target = "_blank";
+      aTitle.rel = "noopener noreferrer";
+      aTitle.textContent = it.title;
+      name.appendChild(aTitle);
+      titleRow.appendChild(name);
+
+      if (it.country_or_region) {
+        const b = document.createElement("span");
+        b.className = "badge badge--dim";
+        b.textContent = it.country_or_region;
+        titleRow.appendChild(b);
+      }
+
+      if (it.deadline || it.deadline_raw) {
+        const d = document.createElement("span");
+        d.className = "badge badge--dim";
+        d.textContent = it.deadline ? fmtDate(it.deadline) : it.deadline_raw;
+        titleRow.appendChild(d);
+      }
+
+      const score = document.createElement("span");
+      score.className = "badge " + scoreBadgeClass(it.score);
+      score.textContent = t("veille.autoScore", "Score {n}", { n: Math.round(Number(it.score) || 0) });
+      titleRow.appendChild(score);
+
+      main.appendChild(titleRow);
+
+      const meta = document.createElement("div");
+      meta.className = "muted veille-meta";
+
+      let had = false;
+      const sep = () => {
+        if (had) meta.appendChild(document.createTextNode(" • "));
+        had = true;
+      };
+      const addText = (text) => {
+        const s = normStr(text);
+        if (!s) return;
+        sep();
+        meta.appendChild(document.createTextNode(s));
+      };
+      const addLink = (label, url) => {
+        const s = normStr(url);
+        if (!s) return;
+        sep();
+        const a = document.createElement("a");
+        a.href = normUrl(s);
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = label || s;
+        meta.appendChild(a);
+      };
+
+      addText(hostLabel(it.url));
+      if (it.source_url) addLink(t("veille.autoSource", "Source"), it.source_url);
+      if (it.detected_at) addText(fmtShortDate(Date.parse(it.detected_at)));
+      main.appendChild(meta);
+
+      if (it.context) {
+        const p = document.createElement("div");
+        p.className = "muted veille-auto-snippet";
+        p.textContent = it.context;
+        main.appendChild(p);
+      }
+
+      if (Array.isArray(it.matched_keywords) && it.matched_keywords.length) {
+        const kws = document.createElement("div");
+        kws.className = "veille-auto-kws";
+        it.matched_keywords.slice(0, 14).forEach((kw) => {
+          const b = document.createElement("span");
+          b.className = "badge badge--dim";
+          b.textContent = kw;
+          kws.appendChild(b);
+        });
+        main.appendChild(kws);
+      }
+
+      row.appendChild(main);
+
+      const actions = document.createElement("div");
+      actions.className = "veille-actions";
+
+      const aOpen = document.createElement("a");
+      aOpen.className = "icon-btn";
+      aOpen.href = normUrl(it.url);
+      aOpen.target = "_blank";
+      aOpen.rel = "noopener noreferrer";
+      aOpen.textContent = t("veille.actionOpen", "Ouvrir");
+      actions.appendChild(aOpen);
+
+      const btnAdd = document.createElement("button");
+      btnAdd.className = "icon-btn";
+      btnAdd.type = "button";
+      btnAdd.dataset.action = "auto_add";
+      btnAdd.textContent = t("veille.autoAdd", "Ajouter à ma veille");
+      actions.appendChild(btnAdd);
+
+      row.appendChild(actions);
+      dom.autoList.appendChild(row);
+    });
+  }
+
+  async function loadAuto({ bustCache = false } = {}) {
+    if (!dom.autoList) return;
+    if (dom.autoMeta) dom.autoMeta.textContent = t("veille.autoLoading", "Chargement…");
+
+    const url = bustCache ? `data/veille-auto.json?t=${Date.now()}` : "data/veille-auto.json";
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      autoState = {
+        generatedAt: normStr(data?.generatedAt ?? data?.updatedAt ?? ""),
+        items: normalizeAutoItems(data),
+      };
+
+      renderAuto();
+    } catch (e) {
+      autoState = { generatedAt: "", items: [] };
+      if (dom.autoList) dom.autoList.innerHTML = "";
+      if (dom.autoEmpty) dom.autoEmpty.hidden = false;
+      if (dom.autoMeta)
+        dom.autoMeta.textContent = t("veille.autoLoadError", "Impossible de charger la recherche automatique.");
+      console.warn("[veille] auto load failed", e);
+    }
+  }
+
+  function inferTypeFromAuto(it) {
+    const hay = normStr(
+      `${it.title} ${(it.matched_keywords || []).join(" ")} ${it.context} ${it.url} ${it.source_url}`
+    ).toLowerCase();
+    if (/symposium|residenc|résidenc|residence/.test(hay)) return "symposium";
+    if (/curator|commissaire/.test(hay)) return "curator";
+    if (/gallery|galerie|galería|gallerie/.test(hay)) return "gallery";
+    return "gallery";
+  }
+
+  function openAutoAsNewVeille(it) {
+    if (!it) return;
+    const deadline = it.deadline || normalizeIsoDate(it.deadline_raw) || "";
+    const tags = Array.isArray(it.matched_keywords) ? it.matched_keywords.slice(0, 18) : [];
+    const notesParts = [];
+    if (it.context) notesParts.push(it.context);
+    if (it.source_url) notesParts.push(`${t("veille.autoSource", "Source")}: ${it.source_url}`);
+    const notes = notesParts.join("\n\n").trim();
+
+    openModal({
+      type: inferTypeFromAuto(it),
+      name: it.title,
+      country: it.country_or_region,
+      url: it.url,
+      image_url: it.image_url,
+      links: it.source_url ? `${t("veille.autoSource", "Source")}: ${it.source_url}` : "",
+      deadline,
+      tags,
+      notes,
+      status: "todo",
+    });
   }
 
   function render() {
@@ -974,6 +1286,13 @@
   }
 
   function wire() {
+    dom.autoRefresh = qs("#btnAutoRefresh");
+    dom.autoSearch = qs("#aSearch");
+    dom.autoMinScore = qs("#aMinScore");
+    dom.autoMeta = qs("#aMeta");
+    dom.autoEmpty = qs("#aEmpty");
+    dom.autoList = qs("#aList");
+
     dom.search = qs("#vSearch");
     dom.type = qs("#vType");
     dom.status = qs("#vStatus");
@@ -1003,6 +1322,8 @@
 
     syncControlsFromUi();
     render();
+
+    loadAuto().catch(() => {});
 
     // Auto-refresh weekly sort even if the tab stays open.
     let lastWk = weekKey();
@@ -1047,6 +1368,23 @@
       const file = dom.importFile.files?.[0];
       dom.importFile.value = "";
       await importJsonFile(file);
+    });
+
+    const onAutoFilter = () => renderAuto();
+    dom.autoSearch?.addEventListener("input", onAutoFilter);
+    dom.autoMinScore?.addEventListener("change", onAutoFilter);
+    dom.autoRefresh?.addEventListener("click", () => loadAuto({ bustCache: true }));
+
+    dom.autoList?.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-action]");
+      if (!btn) return;
+      if (btn.dataset.action !== "auto_add") return;
+      const row = btn.closest("[data-auto-url]");
+      const url = normStr(row?.dataset?.autoUrl);
+      if (!url) return;
+      const it = autoState.items.find((x) => x.url === url);
+      if (!it) return;
+      openAutoAsNewVeille(it);
     });
 
     const onItemAction = (e) => {

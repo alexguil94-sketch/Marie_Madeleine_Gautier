@@ -1,0 +1,43 @@
+name: Veille — auto scan
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Weekly (UTC). Adjust if you want another day/time.
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: python -m pip install --upgrade pip && python -m pip install -r tools/veille/requirements.txt
+
+      - name: Generate data/veille-auto.json
+        run: python tools/veille/scan.py
+
+      - name: Commit & push (if changed)
+        run: |
+          if git diff --quiet; then
+            echo "No changes."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/veille-auto.json
+          git commit -m "chore(veille): update auto results"
+          git push
+
