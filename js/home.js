@@ -137,7 +137,7 @@
 
       const a = document.createElement("a");
       a.className = "work";
-      a.href = "/gallery.html";
+      a.href = "gallery.html";
       a.setAttribute("aria-label", title);
 
       a.innerHTML = `

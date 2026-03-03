@@ -17,7 +17,7 @@
       date: "2026-01-28",
       title: "Actualités",
       text: "Une fois Supabase configuré, vous pourrez publier des actus et gérer les images depuis l’admin.",
-      media: { type: "image", src: "/assets/ui/hero-bg.png", alt: "Fond accueil" },
+      media: { type: "image", src: "assets/ui/hero-bg.png", alt: "Fond accueil" },
     },
   ];
 
@@ -299,7 +299,7 @@
       box.className = "news-comments__login";
       box.innerHTML = `
         <p class="muted" style="margin:10px 0 10px">${t("home.commentLoginHint") || "Connectez-vous pour commenter."}</p>
-        <a class="btn" href="/login.html?redirect=${encodeURIComponent(location.pathname + location.search)}">
+        <a class="btn" href="login.html?redirect=${encodeURIComponent(location.pathname + location.search)}">
           ${t("home.commentLogin") || "Se connecter"}
         </a>
       `;

@@ -1,0 +1,246 @@
+/* Veille page (local watchlist / research) */
+.veille-toolbar{gap:12px}
+.veille-toolbar__filters{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  flex:1 1 520px;
+  min-width:260px;
+}
+.veille-toolbar__filters .input{width:auto; min-width:170px}
+.veille-toolbar__filters #vSearch{min-width:min(420px, 72vw); width:min(520px, 100%)}
+.veille-toolbar__actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-end;
+}
+.veille-check{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  user-select:none;
+}
+.veille-check input{width:18px; height:18px; accent-color:var(--gold)}
+
+.veille-stats{margin-top:12px}
+.veille-hint{margin-top:6px; font-size:13px}
+
+.veille-view{
+  display:inline-flex;
+  gap:6px;
+  padding:4px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.22);
+}
+.veille-view__btn{
+  appearance:none;
+  border:1px solid transparent;
+  background: transparent;
+  color:inherit;
+  cursor:pointer;
+  padding:10px 12px;
+  border-radius:999px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  font-size:11px;
+  opacity:.82;
+}
+.veille-view__btn:hover{background: rgba(255,255,255,.06)}
+.veille-view__btn[aria-pressed="true"]{
+  opacity:1;
+  border-color:rgba(197,160,89,.45);
+  background: rgba(197,160,89,.12);
+}
+.veille-view__btn[aria-pressed="true"]:hover{background: rgba(197,160,89,.16)}
+
+.veille-item{align-items:flex-start}
+.veille-thumb{
+  width:74px;
+  height:74px;
+  flex:0 0 auto;
+  border-radius:14px;
+  object-fit:cover;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+}
+.veille-main{min-width:0; flex:1 1 auto}
+.veille-titleRow{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+.veille-name{
+  font-weight:800;
+  letter-spacing:.02em;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  max-width:70ch;
+}
+.veille-meta{margin-top:6px; line-height:1.5}
+.veille-meta a{color:inherit; text-decoration:underline; text-underline-offset:3px}
+.veille-tags{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+.veille-tags .badge{font-size:11px; padding:3px 9px}
+.badge--dim{opacity:.75}
+.badge--ok{border-color:rgba(90,190,130,.55); color:rgb(90,190,130)}
+.badge--warn{border-color:rgba(240,190,70,.55); color:rgb(240,190,70)}
+.badge--bad{border-color:rgba(235,95,95,.55); color:rgb(235,95,95)}
+
+.veille-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  flex:0 0 auto;
+}
+.veille-actions .icon-btn,
+.veille-actions a.icon-btn{white-space:nowrap}
+
+.danger{
+  border-color:rgba(235,95,95,.45) !important;
+}
+.danger:hover{
+  background:rgba(235,95,95,.12) !important;
+}
+
+.veille-board{
+  padding:10px;
+  display:grid;
+  gap:14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+@media (max-width:980px){ .veille-board{grid-template-columns: repeat(3, minmax(0,1fr))} }
+@media (max-width:740px){ .veille-board{grid-template-columns: repeat(2, minmax(0,1fr))} }
+@media (max-width:420px){ .veille-board{grid-template-columns: 1fr} }
+
+.veille-card{
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.22);
+  border-radius:16px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  min-height:320px;
+}
+
+.veille-cover{
+  position:relative;
+  aspect-ratio: 4 / 3;
+  overflow:hidden;
+  background:
+    radial-gradient(1200px 300px at -10% -20%, rgba(197,160,89,.22), transparent 55%),
+    radial-gradient(900px 260px at 110% 0%, rgba(255,255,255,.08), transparent 55%),
+    rgba(0,0,0,.18);
+}
+.veille-cover__img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  transform:scale(1);
+  transition: transform 700ms ease, filter 700ms ease;
+}
+.veille-card:hover .veille-cover__img{
+  transform:scale(1.06);
+  filter:saturate(1.06) contrast(1.02);
+}
+.veille-cover.is-empty{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.veille-cover__placeholder{
+  font-family: "Playfair Display", "Cinzel", serif;
+  font-size:56px;
+  letter-spacing:.06em;
+  color: rgba(255,255,255,.75);
+  text-transform:uppercase;
+}
+
+.veille-badges{
+  position:absolute;
+  left:10px;
+  top:10px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  z-index:2;
+}
+.veille-badges .badge{
+  background: rgba(0,0,0,.42);
+  backdrop-filter: blur(10px);
+  text-shadow: 0 1px 0 rgba(0,0,0,.35);
+}
+
+.veille-card__body{
+  padding:12px 12px 10px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.veille-card__title{
+  font-weight:900;
+  letter-spacing:.02em;
+  line-height:1.25;
+}
+.veille-card__meta{line-height:1.45; font-size:13px}
+.veille-card .veille-tags{margin-top:2px}
+.veille-card .veille-tags .badge{font-size:10px; padding:3px 8px}
+
+.veille-card__footer{
+  margin-top:auto;
+  padding:12px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
+  justify-content:space-between;
+  border-top:1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.14);
+}
+.veille-card__links{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+}
+.veille-chip{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.04);
+  color:inherit;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  max-width:220px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.veille-chip:hover{
+  background: rgba(197,160,89,.14);
+  border-color: rgba(197,160,89,.35);
+}
+.veille-card__actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+.veille-card__actions .icon-btn{
+  padding:8px 10px;
+  border-radius:999px;
+}
+
+@media (max-width:740px){
+  .veille-item{flex-direction:column}
+  .veille-actions{justify-content:flex-start}
+  .veille-name{white-space:normal}
+  .veille-toolbar__filters .input{min-width:140px}
+  .veille-thumb{width:64px; height:64px}
+}

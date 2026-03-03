@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title data-i18n="titles.veille">Marie-Madeleine Gautier — Veille</title>
+
+  <script>(function(){const t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="icon" href="favicon.ico?v=1"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="stylesheet" href="css/luxe.css?v=10"/>
+  <link rel="stylesheet" href="css/veille.css?v=2"/>
+</head>
+<body>
+  <div id="siteHeader"></div>
+
+  <main class="page">
+    <section class="section">
+      <div class="container">
+        <div class="card card-pad reveal">
+          <div class="kicker" data-i18n="veille.kicker">Veille</div>
+          <h1 style="margin:10px 0 0" data-i18n="veille.title">Galeries, symposiums & commissaires</h1>
+          <p class="muted" style="max-width: 980px" data-i18n="veille.subtitle">
+            Un espace personnel pour suivre tes pistes : contacts, appels à projets, relances et notes.
+            Les données restent sur ton appareil (localStorage).
+          </p>
+
+          <div class="hr"></div>
+
+          <div class="toolbar veille-toolbar" aria-label="Filtres et actions" data-i18n-attr="aria-label:veille.toolbarAria">
+            <div class="veille-toolbar__filters">
+              <input id="vSearch" class="input" type="search" autocomplete="off" spellcheck="false" data-i18n-placeholder="veille.searchPlaceholder" placeholder="Rechercher…"/>
+
+              <select id="vType" class="input" aria-label="Type" data-i18n-attr="aria-label:veille.filterTypeAria">
+                <option value="all" data-i18n="veille.typeAll">Tous les types</option>
+                <option value="gallery" data-i18n="veille.typeGallery">Galerie</option>
+                <option value="symposium" data-i18n="veille.typeSymposium">Symposium</option>
+                <option value="curator" data-i18n="veille.typeCurator">Commissaire</option>
+              </select>
+
+              <select id="vStatus" class="input" aria-label="Statut" data-i18n-attr="aria-label:veille.filterStatusAria">
+                <option value="all" data-i18n="veille.statusAll">Tous les statuts</option>
+                <option value="todo" data-i18n="veille.statusTodo">À contacter</option>
+                <option value="sent" data-i18n="veille.statusSent">Candidature envoyée</option>
+                <option value="contacted" data-i18n="veille.statusContacted">Contacté</option>
+                <option value="follow_up" data-i18n="veille.statusFollowUp">Relance</option>
+                <option value="in_progress" data-i18n="veille.statusInProgress">En cours</option>
+                <option value="accepted" data-i18n="veille.statusAccepted">Accepté</option>
+                <option value="rejected" data-i18n="veille.statusRejected">Refusé</option>
+                <option value="on_hold" data-i18n="veille.statusOnHold">En veille</option>
+              </select>
+
+              <select id="vSort" class="input" aria-label="Tri" data-i18n-attr="aria-label:veille.filterSortAria">
+                <option value="updated_desc" data-i18n="veille.sortUpdated">Dernière mise à jour</option>
+                <option value="weekly" data-i18n="veille.sortWeekly">Découverte (cette semaine)</option>
+                <option value="deadline_asc" data-i18n="veille.sortDeadline">Échéance (croissant)</option>
+                <option value="name_asc" data-i18n="veille.sortName">Nom (A→Z)</option>
+              </select>
+
+              <div class="veille-view" role="group" aria-label="Affichage" data-i18n-attr="aria-label:veille.viewAria">
+                <button id="vViewList" class="veille-view__btn" type="button" aria-pressed="false" data-view="list" data-i18n="veille.viewList">Liste</button>
+                <button id="vViewBoard" class="veille-view__btn" type="button" aria-pressed="true" data-view="board" data-i18n="veille.viewBoard">Moodboard</button>
+              </div>
+
+              <label class="veille-check muted">
+                <input id="vShowArchived" type="checkbox"/>
+                <span data-i18n="veille.showArchived">Afficher archivés</span>
+              </label>
+            </div>
+
+            <div class="veille-toolbar__actions">
+              <button id="btnAdd" class="btn" type="button" data-i18n="veille.btnAdd">Ajouter</button>
+              <button id="btnExport" class="btn ghost" type="button" data-i18n="veille.btnExport">Exporter</button>
+              <button id="btnImport" class="btn ghost" type="button" data-i18n="veille.btnImport">Importer</button>
+              <button id="btnReset" class="btn ghost danger" type="button" data-i18n="veille.btnReset">Tout effacer</button>
+              <input id="importFile" type="file" accept="application/json" hidden/>
+            </div>
+          </div>
+
+          <div id="vStats" class="muted veille-stats" aria-live="polite"></div>
+          <div id="vHint" class="muted veille-hint" hidden></div>
+          <div class="hr" style="margin:16px 0"></div>
+
+          <div id="vEmpty" class="muted" hidden data-i18n="veille.empty">
+            Aucune fiche pour l’instant. Clique sur « Ajouter ».
+          </div>
+          <div id="vList" class="list" aria-label="Liste de veille" data-i18n-attr="aria-label:veille.listAria"></div>
+          <div id="vBoard" class="veille-board" hidden aria-label="Moodboard" data-i18n-attr="aria-label:veille.boardAria"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="siteFooter"></div>
+
+  <!-- Modal -->
+  <section id="veilleModal" class="mmg-modal" hidden>
+    <div class="mmg-card" role="dialog" aria-modal="true" aria-labelledby="veilleModalTitle">
+      <div class="mmg-head">
+        <div>
+          <div class="kicker" data-i18n="veille.modalKicker">Fiche</div>
+          <h2 id="veilleModalTitle" class="mmg-title" style="margin:6px 0 0"></h2>
+        </div>
+        <button id="veilleClose" class="icon-btn" type="button" aria-label="Fermer" data-i18n-attr="aria-label:common.close">×</button>
+      </div>
+
+      <form id="veilleForm" class="mmg-form" style="margin-top:12px">
+        <input type="hidden" name="id"/>
+
+        <div class="columns" style="gap:12px">
+          <div>
+            <label class="mmg-label" for="fType" data-i18n="veille.fieldType">Type</label>
+            <select id="fType" name="type" class="input">
+              <option value="gallery" data-i18n="veille.typeGallery">Galerie</option>
+              <option value="symposium" data-i18n="veille.typeSymposium">Symposium</option>
+              <option value="curator" data-i18n="veille.typeCurator">Commissaire</option>
+            </select>
+          </div>
+          <div>
+            <label class="mmg-label" for="fStatus" data-i18n="veille.fieldStatus">Statut</label>
+            <select id="fStatus" name="status" class="input">
+              <option value="todo" data-i18n="veille.statusTodo">À contacter</option>
+              <option value="sent" data-i18n="veille.statusSent">Candidature envoyée</option>
+              <option value="contacted" data-i18n="veille.statusContacted">Contacté</option>
+              <option value="follow_up" data-i18n="veille.statusFollowUp">Relance</option>
+              <option value="in_progress" data-i18n="veille.statusInProgress">En cours</option>
+              <option value="accepted" data-i18n="veille.statusAccepted">Accepté</option>
+              <option value="rejected" data-i18n="veille.statusRejected">Refusé</option>
+              <option value="on_hold" data-i18n="veille.statusOnHold">En veille</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="mmg-label" for="fName" data-i18n="veille.fieldName">Nom</label>
+          <input id="fName" name="name" class="input" required maxlength="140"/>
+        </div>
+
+        <div class="columns" style="gap:12px">
+          <div>
+            <label class="mmg-label" for="fCity" data-i18n="veille.fieldCity">Ville</label>
+            <input id="fCity" name="city" class="input" maxlength="80"/>
+          </div>
+          <div>
+            <label class="mmg-label" for="fCountry" data-i18n="veille.fieldCountry">Pays</label>
+            <input id="fCountry" name="country" class="input" maxlength="80"/>
+          </div>
+        </div>
+
+        <div class="columns" style="gap:12px">
+          <div>
+            <label class="mmg-label" for="fUrl" data-i18n="veille.fieldUrl">Lien</label>
+            <input id="fUrl" name="url" class="input" inputmode="url" autocomplete="url" maxlength="240" placeholder="https://…"/>
+          </div>
+          <div>
+            <label class="mmg-label" for="fContact" data-i18n="veille.fieldContact">Contact</label>
+            <input id="fContact" name="contact" class="input" maxlength="160" placeholder="email / nom / Instagram…"/>
+          </div>
+        </div>
+
+        <div class="columns" style="gap:12px">
+          <div>
+            <label class="mmg-label" for="fImageUrl" data-i18n="veille.fieldImageUrl">Photo (URL)</label>
+            <input id="fImageUrl" name="image_url" class="input" inputmode="url" autocomplete="url" maxlength="400" placeholder="https://…jpg"/>
+            <div class="muted" style="margin-top:6px; font-size:13px" data-i18n="veille.imageHint">Optionnel. Une image pour le moodboard.</div>
+          </div>
+          <div>
+            <label class="mmg-label" for="fLinks" data-i18n="veille.fieldLinks">Liens utiles</label>
+            <textarea id="fLinks" name="links" class="input" rows="3" maxlength="1400" placeholder="Instagram: https://…"></textarea>
+            <div class="muted" style="margin-top:6px; font-size:13px" data-i18n="veille.linksHint">Un lien par ligne. Tu peux écrire “Label: URL”.</div>
+          </div>
+        </div>
+
+        <div class="columns" style="gap:12px">
+          <div>
+            <label class="mmg-label" for="fDeadline" data-i18n="veille.fieldDeadline">Échéance</label>
+            <input id="fDeadline" name="deadline" class="input" type="date"/>
+          </div>
+          <div>
+            <label class="mmg-label" for="fNext" data-i18n="veille.fieldNextAction">Prochaine action</label>
+            <input id="fNext" name="next_action" class="input" maxlength="160" placeholder="ex. envoyer un mail / relancer…"/>
+          </div>
+        </div>
+
+        <div>
+          <label class="mmg-label" for="fTags" data-i18n="veille.fieldTags">Tags</label>
+          <input id="fTags" name="tags" class="input" maxlength="220" placeholder="ex. bronze, Paris, appel…"/>
+          <div class="muted" style="margin-top:6px; font-size:13px" data-i18n="veille.tagsHint">Sépare les tags avec des virgules.</div>
+        </div>
+
+        <div>
+          <label class="mmg-label" for="fNotes" data-i18n="veille.fieldNotes">Notes</label>
+          <textarea id="fNotes" name="notes" class="input" rows="5" maxlength="4000"></textarea>
+        </div>
+
+        <label class="mmg-check">
+          <input id="fArchived" name="archived" type="checkbox"/>
+          <span data-i18n="veille.fieldArchived">Archiver</span>
+        </label>
+
+        <div class="mmg-actions">
+          <button id="btnDelete" class="btn ghost danger" type="button" data-i18n="veille.btnDelete">Supprimer</button>
+          <div class="mmg-actions__right">
+            <button id="btnCancel" class="btn ghost" type="button" data-i18n="veille.btnCancel">Annuler</button>
+            <button class="btn" type="submit" data-i18n="veille.btnSave">Enregistrer</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <script defer src="js/layout.js?v=2"></script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script defer src="js/supabase-config.js?v=1"></script>
+  <script defer src="js/supabase-client.js?v=6"></script>
+
+  <script defer src="js/profile-ui.js?v=7"></script>
+
+  <script defer src="js/theme.js?v=1"></script>
+  <script defer src="js/i18n.js?v=3"></script>
+  <script defer src="js/app.js?v=1"></script>
+  <script defer src="js/luxe.js?v=8"></script>
+  <script defer src="js/veille.js?v=2"></script>
+</body>
+</html>

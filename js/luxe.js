@@ -140,7 +140,7 @@
         const v = String(uOrPath || '').trim();
         if(!v) return '';
         if(v.startsWith('http://') || v.startsWith('https://') || v.startsWith('/')) return v;
-        if(v.startsWith('assets/')) return '/' + v;
+        if(v.startsWith('assets/')) return v;
 
         const sb = getSB();
         if(!sb?.storage) return v;
@@ -454,7 +454,7 @@
         const v = String(uOrPath || '').trim();
         if(!v) return '';
         if(v.startsWith('http://') || v.startsWith('https://') || v.startsWith('/')) return v;
-        if(v.startsWith('assets/')) return '/' + v;
+        if(v.startsWith('assets/')) return v;
 
         const sb = getSB();
         if(!sb?.storage) return v;

@@ -49,7 +49,7 @@
   };
 
   const loginRedirectUrl = () =>
-    "/login.html?redirect=" + encodeURIComponent(location.pathname + location.search);
+    "login.html?redirect=" + encodeURIComponent(location.pathname + location.search);
 
   async function getUser(sb) {
     if (!sb?.auth) return null;
@@ -195,7 +195,7 @@
     signOutBtn?.addEventListener("click", async () => {
       await withBusy(async () => {
         try { await sb.auth.signOut(); } catch {}
-        location.href = "/login.html";
+        location.href = "login.html";
       });
     });
 

@@ -112,7 +112,7 @@
         <div id="pfSignedOut" class="pf-muted" hidden>
           Tu dois être connecté pour choisir ton pseudo et ton avatar.
           <div style="margin-top:10px">
-            <a id="pfLoginLink" class="pf-btn pf-primary" href="/login.html">Se connecter</a>
+            <a id="pfLoginLink" class="pf-btn pf-primary" href="login.html">Se connecter</a>
           </div>
         </div>
 
@@ -173,7 +173,7 @@
   }
 
   function resolveLoginRedirect() {
-    return "/login.html?redirect=" + encodeURIComponent(location.pathname + location.search);
+    return "login.html?redirect=" + encodeURIComponent(location.pathname + location.search);
   }
 
   const resolveUrl = (uOrPath) => {
@@ -235,7 +235,7 @@
     if (adminSlot && profile?.role === "admin") {
       const aAdmin = document.createElement("a");
       aAdmin.className = "pill";
-      aAdmin.href = "/studio.html";
+      aAdmin.href = "studio.html";
       aAdmin.textContent = "Studio";
       aAdmin.setAttribute("aria-label", "Studio");
       adminSlot.appendChild(aAdmin);
@@ -243,7 +243,7 @@
 
     const a = document.createElement("a");
     a.className = "mmg-profbtn";
-    a.href = "/profile.html";
+    a.href = "profile.html";
     a.setAttribute("aria-label", "Mon profil");
     a.innerHTML = `
       <span class="mmg-profavatar">${avatar ? `<img src="${avatar}" alt="">` : ""}</span>
@@ -442,7 +442,7 @@
     async open() {
       const modal = qs("#pfModal");
       if (!modal) {
-        location.href = "/profile.html";
+        location.href = "profile.html";
         return;
       }
       modal.hidden = false;

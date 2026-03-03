@@ -30,9 +30,47 @@
   const getRedirect = () => {
     const p = new URLSearchParams(location.search);
     const r = p.get("redirect") || "";
-    // sécurité anti open-redirect : on accepte seulement les URLs same-origin
+
+    // Sécurité anti open-redirect : on accepte seulement les URLs same-origin.
+    // IMPORTANT: en dev (Go Live) le site peut être servi depuis un sous-dossier (ex: /Marie_Madeleine_Gautier/).
+    // Dans ce cas, on résout /foo comme "racine du site" (dossier courant), pas comme racine du domaine.
+    const base = location.pathname.replace(/[^/]*$/, "/"); // dossier courant, ex: /site/
+    const raw = String(r || "").trim();
+    if (!raw) return "";
+
+    // Absolute URL? Allow only same-origin.
     try {
-      const u = new URL(r, location.origin);
+      const abs = new URL(raw);
+      if (abs.origin !== location.origin) return "";
+      return abs.pathname + abs.search + abs.hash;
+    } catch {
+      // not absolute
+    }
+
+    // Protocol-relative URL (//example.com)
+    if (raw.startsWith("//")) {
+      try {
+        const abs = new URL(location.protocol + raw);
+        if (abs.origin !== location.origin) return "";
+        return abs.pathname + abs.search + abs.hash;
+      } catch {
+        return "";
+      }
+    }
+
+    // Reject schemes like "javascript:" or "data:"
+    if (/^[a-zA-Z][\w+.-]*:/.test(raw)) return "";
+
+    // Resolve within the current site base.
+    let rel = raw;
+    if (rel.startsWith("/")) {
+      if (base !== "/" && !rel.startsWith(base)) rel = base + rel.replace(/^\/+/, "");
+    } else {
+      rel = base + rel;
+    }
+
+    try {
+      const u = new URL(rel, location.origin);
       if (u.origin !== location.origin) return "";
       return u.pathname + u.search + u.hash;
     } catch {
@@ -216,7 +254,7 @@
     // show "go admin" only if role=admin
     if (btnGoAdmin) {
       btnGoAdmin.style.display = profile?.role === "admin" ? "" : "none";
-      btnGoAdmin.onclick = () => (location.href = "/studio.html");
+      btnGoAdmin.onclick = () => (location.href = "studio.html");
     }
 
     // Si on arrive via un lien recovery, on met l’accent sur le changement de mot de passe
@@ -267,7 +305,7 @@
     setMsg("Envoi de l’email de récupération…");
 
     try {
-      const redirectTo = new URL("/login.html", location.origin).toString();
+      const redirectTo = new URL("login.html", location.href).toString();
       const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
 
       if (error) {
