@@ -96,6 +96,9 @@
     return data?.publicUrl || v;
   };
 
+  const isVideoPath = (uOrPath) =>
+    /\.(mp4|webm|mov|m4v|ogv)(?:[?#].*)?$/i.test(String(uOrPath || "").trim());
+
   async function loadFromSupabase(){
     const sb = await waitForSB();
     if(!sb) return null;
@@ -116,7 +119,7 @@
       id: p.id,
       title: p.title,
       body: splitParas(p.body),
-      images: Array.isArray(p.images) ? p.images : [],
+      images: Array.isArray(p.images) ? p.images.filter((x)=> typeof x === 'string') : [],
       date: p.published_at || p.created_at
     }));
   }
@@ -136,9 +139,19 @@
       const media = document.createElement('div');
       media.className = 'post__media';
 
-      const imgs = (p.images || []).slice(0, 2);
-      if(imgs.length){
-        imgs.forEach(src=>{
+      const items = (p.images || []).slice(0, 2);
+      if(items.length){
+        items.forEach(src=>{
+          if(isVideoPath(src)){
+            const v = document.createElement('video');
+            v.src = resolveUrl(src);
+            v.controls = true;
+            v.preload = 'metadata';
+            v.playsInline = true;
+            media.appendChild(v);
+            return;
+          }
+
           const img = document.createElement('img');
           img.src = resolveUrl(src);
           img.alt = p.title || '';

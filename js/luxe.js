@@ -218,11 +218,23 @@
         }
       };
 
+      const isNonImageAsset = (uOrPath)=>{
+        const s = String(uOrPath || '').trim().toLowerCase();
+        if(!s) return true;
+        if(s.includes('youtube.com') || s.includes('youtu.be')) return true;
+        if(/\.(mp4|webm|mov|m4v|ogv)(?:[?#].*)?$/i.test(s)) return true;
+        return false;
+      };
+
       const addJsonImages = (set, v)=>{
         if(!v) return;
-        if(typeof v === 'string'){ set.add(v); return; }
+        if(typeof v === 'string'){
+          if(isNonImageAsset(v)) return;
+          set.add(v);
+          return;
+        }
         if(Array.isArray(v)){ v.forEach((x)=> addJsonImages(set, x)); return; }
-        if(typeof v === 'object' && v.url) set.add(v.url);
+        if(typeof v === 'object' && v.url) addJsonImages(set, v.url);
       };
 
       const readSupabasePhotos = async ()=>{

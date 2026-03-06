@@ -58,6 +58,9 @@
     return e || "jpg";
   };
 
+  const isVideoPath = (uOrPath) =>
+    /\.(mp4|webm|mov|m4v|ogv)(?:[?#].*)?$/i.test(String(uOrPath || "").trim());
+
   const resolveUrl = (sb, uOrPath) => {
     const v = String(uOrPath || "").trim();
     if (!v) return "";
@@ -1106,9 +1109,18 @@
           const card = document.createElement("div");
           card.className = "dz-thumb";
 
-          const img = document.createElement("img");
-          img.alt = file.name;
-          img.src = URL.createObjectURL(file);
+          const isVideo = String(file?.type || "").toLowerCase().startsWith("video/");
+          const media = isVideo ? document.createElement("video") : document.createElement("img");
+          if (isVideo) {
+            media.muted = true;
+            media.playsInline = true;
+            media.preload = "metadata";
+            media.controls = true;
+            media.title = file.name;
+          } else {
+            media.alt = file.name;
+          }
+          media.src = URL.createObjectURL(file);
 
           const btn = document.createElement("button");
           btn.type = "button";
@@ -1120,7 +1132,7 @@
             renderPubPreview();
           });
 
-          card.appendChild(img);
+          card.appendChild(media);
           card.appendChild(btn);
           pubPreview.appendChild(card);
         });
@@ -1131,10 +1143,22 @@
       imgs.slice(0, 6).forEach((src) => {
         const card = document.createElement("div");
         card.className = "dz-thumb";
-        const img = document.createElement("img");
-        img.alt = "Image actuelle";
-        img.src = resolveUrl(sb, src);
-        card.appendChild(img);
+        const url = resolveUrl(sb, src);
+        if (isVideoPath(src)) {
+          const v = document.createElement("video");
+          v.src = url;
+          v.muted = true;
+          v.playsInline = true;
+          v.preload = "metadata";
+          v.controls = true;
+          v.title = "Vidéo actuelle";
+          card.appendChild(v);
+        } else {
+          const img = document.createElement("img");
+          img.alt = "Image actuelle";
+          img.src = url;
+          card.appendChild(img);
+        }
         pubPreview.appendChild(card);
       });
     };
@@ -1385,25 +1409,34 @@
         left.style.display = "flex";
         left.style.gap = "12px";
 
-        const img = document.createElement("img");
-        img.style.cssText =
+        const thumbStyle =
           "width:64px;height:64px;object-fit:cover;border-radius:14px;border:1px solid rgba(255,255,255,.12)";
 
         const first = Array.isArray(p.images) ? p.images[0] : "";
-        img.src = first ? resolveUrl(sb, first) : "";
-        if (!img.src) img.style.background = "rgba(255,255,255,.06)";
+        const firstUrl = first ? resolveUrl(sb, first) : "";
+        const thumb = isVideoPath(first) ? document.createElement("video") : document.createElement("img");
+        thumb.style.cssText = thumbStyle;
+        if (thumb.tagName === "VIDEO") {
+          thumb.src = firstUrl;
+          thumb.muted = true;
+          thumb.playsInline = true;
+          thumb.preload = "metadata";
+        } else {
+          thumb.src = firstUrl;
+        }
+        if (!firstUrl) thumb.style.background = "rgba(255,255,255,.06)";
 
         const txt = document.createElement("div");
         const status = p.is_published ? "Publié" : "Brouillon";
         const when = p.published_at || p.created_at || "";
         const count = Array.isArray(p.images) ? p.images.length : 0;
         txt.innerHTML = `
-          <div class="admin-item__meta">${status} • ${String(when).slice(0, 10)} • ${count} image(s)</div>
+          <div class="admin-item__meta">${status} • ${String(when).slice(0, 10)} • ${count} média(s)</div>
           <div><strong>${p.title || "(sans titre)"}</strong></div>
           ${p.body ? `<div class="admin-item__text">${String(p.body).slice(0, 220)}</div>` : ""}
         `;
 
-        left.appendChild(img);
+        left.appendChild(thumb);
         left.appendChild(txt);
 
         const actions = document.createElement("div");
@@ -2875,7 +2908,11 @@
           if (files.length) {
             const folder = `publications/${id}`;
             const paths = [];
-            for (const f of files) paths.push(await uploadImageToFolder(folder, f));
+            for (const f of files) {
+              const isVideo = String(f?.type || "").toLowerCase().startsWith("video/");
+              const upload = isVideo ? uploadFileToFolder : uploadImageToFolder;
+              paths.push(await upload(folder, f));
+            }
             payload.images = paths;
           }
 
@@ -2909,7 +2946,11 @@
         if (files.length) {
           const folder = `publications/${newId}`;
           const paths = [];
-          for (const f of files) paths.push(await uploadImageToFolder(folder, f));
+          for (const f of files) {
+            const isVideo = String(f?.type || "").toLowerCase().startsWith("video/");
+            const upload = isVideo ? uploadFileToFolder : uploadImageToFolder;
+            paths.push(await upload(folder, f));
+          }
           const { error: upErr } = await sb.from("publications").update({ images: paths }).eq("id", newId);
           if (upErr) throw upErr;
         }
