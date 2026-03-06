@@ -146,25 +146,22 @@ textarea{resize:vertical}
   .home-works-carousel__viewport{scroll-behavior:auto}
 }
 
-/* Gallery: masonry layout (keeps tall portrait photos intact, no forced crop) */
+/* Gallery: stable grid layout (avoids column reflow while images load) */
 .gallery-grid{
-  columns: 4 240px;
-  column-gap: 14px;
+  display:grid;
+  gap:14px;
+  align-items:start;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
-@media (max-width:980px){ .gallery-grid{columns: 3 220px;} }
-@media (max-width:740px){ .gallery-grid{columns: 2 200px;} }
-@media (max-width:420px){ .gallery-grid{columns: 1;} }
+@media (max-width:980px){ .gallery-grid{grid-template-columns: repeat(3, minmax(0,1fr))} }
+@media (max-width:740px){ .gallery-grid{grid-template-columns: repeat(2, minmax(0,1fr))} }
+@media (max-width:420px){ .gallery-grid{grid-template-columns: 1fr} }
 
-.work--gallery{
-  display: inline-block;
-  width: 100%;
-  margin: 0 0 14px;
-  break-inside: avoid;
-}
-
+.work--gallery{margin:0}
 .work--gallery img{
-  height: auto;
+  height: clamp(220px, 28vw, 360px);
   object-fit: contain;
+  background: rgba(0,0,0,.16);
 }
 
 .work--gallery:hover img{transform: scale(1.03)}
@@ -218,26 +215,3 @@ textarea{resize:vertical}
 .footer-inner{display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap}
 .muted{opacity:.78}
 
-/* -----------------------------
-   Gallery masonry (portrait-friendly)
-   - preserves vertical photos (no cropping)
-   - avoids big empty gaps
-------------------------------*/
-.gallery-grid{
-  columns: 4 240px;
-  column-gap: 14px;
-}
-@media (max-width:980px){ .gallery-grid{columns: 3 220px;} }
-@media (max-width:740px){ .gallery-grid{columns: 2 200px;} }
-@media (max-width:420px){ .gallery-grid{columns: 1;} }
-
-.work--gallery{
-  display:inline-block;
-  width:100%;
-  margin: 0 0 14px;
-  break-inside: avoid;
-}
-.work--gallery img{
-  height:auto;
-  object-fit: contain;
-}

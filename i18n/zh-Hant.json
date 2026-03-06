@@ -119,6 +119,11 @@
     "title": "Facebook",
     "subtitle": "在這裡直接查看粉專的最新貼文。",
     "open": "在 Facebook 上查看",
+    "refresh": "重新整理",
+    "tabsAria": "Facebook 分頁",
+    "tabTimeline": "貼文",
+    "tabEvents": "活動",
+    "tabMessages": "訊息",
     "note": "如果模組無法顯示（阻擋器 / 隱私），請在新分頁開啟 Facebook。",
     "missing": "尚未設定 Facebook 連結。請在社群連結中新增粉專網址，以便在此顯示貼文。",
     "frameTitle": "Facebook 貼文"

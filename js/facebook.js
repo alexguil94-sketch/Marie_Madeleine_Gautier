@@ -4,10 +4,16 @@
 
   const frameRoot = embedRoot.querySelector("[data-fb-frame]") || embedRoot;
   const openLink = document.querySelector("[data-fb-link]");
+  const tabsSelect = document.querySelector("[data-fb-tabs-select]");
+  const refreshBtn = document.querySelector("[data-fb-refresh]");
   const startedAt = Date.now();
   let retryTimer = 0;
   let moHref = null;
   let hrefEl = null;
+
+  const STORAGE_TABS_KEY = "mmg.fb.tabs";
+  const DEFAULT_TABS = "timeline";
+  const ALLOWED_TABS = new Set(["timeline", "events", "messages"]);
 
   const DEFAULT_PLACEHOLDERS = new Set([
     "",
@@ -74,10 +80,72 @@
     return window.matchMedia("(max-width: 980px)").matches ? 560 : 680;
   }
 
-  function buildSrc(url, colorscheme, height) {
+  function normalizeTabs(tabs) {
+    const raw = String(tabs || "")
+      .trim()
+      .toLowerCase();
+    if (!raw) return "";
+
+    const parts = raw
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .filter((p) => ALLOWED_TABS.has(p));
+
+    if (!parts.length) return "";
+    return Array.from(new Set(parts)).join(",");
+  }
+
+  function getStoredTabs() {
+    try {
+      return normalizeTabs(localStorage.getItem(STORAGE_TABS_KEY));
+    } catch {
+      return "";
+    }
+  }
+
+  function setStoredTabs(tabs) {
+    try {
+      localStorage.setItem(STORAGE_TABS_KEY, tabs);
+    } catch {}
+  }
+
+  function tabsValue() {
+    const fromAttr = normalizeTabs(embedRoot.getAttribute("data-fb-tabs"));
+    if (fromAttr) return fromAttr;
+
+    const fromStored = getStoredTabs();
+    if (fromStored) return fromStored;
+
+    const fromSelect = normalizeTabs(tabsSelect?.value);
+    if (fromSelect) return fromSelect;
+
+    return DEFAULT_TABS;
+  }
+
+  function syncTabsUI(tabs) {
+    if (!tabsSelect) return;
+    const v = String(tabs || "").split(",")[0] || DEFAULT_TABS;
+    if (tabsSelect.value !== v) tabsSelect.value = v;
+  }
+
+  function setTabs(tabs) {
+    const v = normalizeTabs(tabs) || DEFAULT_TABS;
+    embedRoot.setAttribute("data-fb-tabs", v);
+    setStoredTabs(v);
+    syncTabsUI(v);
+  }
+
+  // Init (persist selection across visits).
+  setTabs(embedRoot.getAttribute("data-fb-tabs") || getStoredTabs() || DEFAULT_TABS);
+
+  tabsSelect?.addEventListener("change", () => setTabs(tabsSelect.value));
+  refreshBtn?.addEventListener("click", () => render({ force: true }));
+
+  function buildSrc(url, colorscheme, height, tabs) {
     const params = new URLSearchParams({
       href: url,
-      tabs: "timeline",
+      tabs: normalizeTabs(tabs) || DEFAULT_TABS,
       width: "500",
       height: String(height),
       small_header: "false",
@@ -123,11 +191,15 @@
   let lastUrl = "";
   let lastTheme = "";
   let lastHeight = 0;
+  let lastTabs = "";
 
-  function render() {
+  function render(opts = {}) {
+    const force = !!opts.force;
     const url = bestPageUrl();
     const th = theme();
     const h = heightForViewport();
+    const tabs = tabsValue();
+    syncTabsUI(tabs);
 
     if (!url) {
       const partialsReady = !!window.__MMG_PARTIALS_LOADED__;
@@ -150,20 +222,28 @@
       return;
     }
 
-    if (url === lastUrl && th === lastTheme && h === lastHeight && frameRoot.querySelector("iframe")) {
+    if (
+      !force &&
+      url === lastUrl &&
+      th === lastTheme &&
+      h === lastHeight &&
+      tabs === lastTabs &&
+      frameRoot.querySelector("iframe")
+    ) {
       return;
     }
 
     lastUrl = url;
     lastTheme = th;
     lastHeight = h;
+    lastTabs = tabs;
 
     setOpenLink(url);
 
     frameRoot.innerHTML = "";
 
     const iframe = document.createElement("iframe");
-    iframe.src = buildSrc(url, th, h);
+    iframe.src = buildSrc(url, th, h, tabs);
     iframe.title = frameTitle();
     iframe.loading = "lazy";
     iframe.allow = "encrypted-media; clipboard-write; web-share";
@@ -197,7 +277,7 @@
 
   try {
     const moEmbed = new MutationObserver(() => render());
-    moEmbed.observe(embedRoot, { attributes: true, attributeFilter: ["data-fb-page"] });
+    moEmbed.observe(embedRoot, { attributes: true, attributeFilter: ["data-fb-page", "data-fb-tabs"] });
   } catch {}
 
   function bindSocialHrefObserver() {

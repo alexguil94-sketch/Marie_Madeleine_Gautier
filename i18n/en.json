@@ -119,6 +119,11 @@
     "title": "Facebook",
     "subtitle": "Latest posts from the page, right here.",
     "open": "Open on Facebook",
+    "refresh": "Refresh",
+    "tabsAria": "Facebook tab",
+    "tabTimeline": "Timeline",
+    "tabEvents": "Events",
+    "tabMessages": "Messages",
     "note": "If the embed doesn’t display (blocker / privacy), open Facebook in a new tab.",
     "missing": "Facebook link not configured. Add the page URL in your social links to display the feed here.",
     "frameTitle": "Facebook posts"

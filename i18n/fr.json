@@ -119,6 +119,11 @@
     "title": "Facebook",
     "subtitle": "Les dernières publications de la page, directement ici.",
     "open": "Voir sur Facebook",
+    "refresh": "Rafraîchir",
+    "tabsAria": "Onglet Facebook",
+    "tabTimeline": "Publications",
+    "tabEvents": "Événements",
+    "tabMessages": "Messages",
     "note": "Si le module ne s’affiche pas (bloqueur / confidentialité), ouvrez Facebook dans un nouvel onglet.",
     "missing": "Lien Facebook non configuré. Ajoutez l’URL de la page dans vos liens sociaux pour afficher le fil ici.",
     "frameTitle": "Publications Facebook"
