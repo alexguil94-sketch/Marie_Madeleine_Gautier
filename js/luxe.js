@@ -8,6 +8,9 @@
     const links = Array.from(document.querySelectorAll('.nav-drawer__links a'));
 
     let lastFocus = null;
+    let ensureNavCarousel = null;
+    let pauseNavCarousel = null;
+    let resumeNavCarousel = null;
 
     // ----- Header shadow on scroll
     function onScroll(){
@@ -42,10 +45,13 @@
       lockScroll(isOpen);
 
       if(isOpen){
+        ensureNavCarousel?.();
+        resumeNavCarousel?.();
         lastFocus = document.activeElement;
         const first = nav.querySelector('button, a, [tabindex]:not([tabindex="-1"])');
         first?.focus?.();
       } else {
+        pauseNavCarousel?.();
         lastFocus?.focus?.();
         lastFocus = null;
       }
@@ -220,69 +226,6 @@
         }
       };
 
-      const isNonImageAsset = (uOrPath)=>{
-        const s = String(uOrPath || '').trim().toLowerCase();
-        if(!s) return true;
-        if(s.includes('youtube.com') || s.includes('youtu.be')) return true;
-        if(/\.(mp4|webm|mov|m4v|ogv)(?:[?#].*)?$/i.test(s)) return true;
-        return false;
-      };
-
-      const addJsonImages = (set, v)=>{
-        if(!v) return;
-        if(typeof v === 'string'){
-          if(isNonImageAsset(v)) return;
-          set.add(v);
-          return;
-        }
-        if(Array.isArray(v)){ v.forEach((x)=> addJsonImages(set, x)); return; }
-        if(typeof v === 'object' && v.url) addJsonImages(set, v.url);
-      };
-
-      const readSupabasePhotos = async ()=>{
-        const sb = await waitForSB(3500);
-        if(!sb) return [];
-
-        const out = new Set();
-        const pageSize = 1000;
-
-        const fetchAll = async (table, select, build, onRow)=>{
-          let from = 0;
-          while(true){
-            const to = from + pageSize - 1;
-            const q = build ? build(sb.from(table).select(select).range(from, to)) : sb.from(table).select(select).range(from, to);
-            const { data, error } = await q;
-            if(error){
-              console.warn('[nav-carousel] fetch error', table, error);
-              break;
-            }
-            (data || []).forEach((row)=> onRow?.(row));
-            if(!data || data.length < pageSize) break;
-            from += pageSize;
-          }
-        };
-
-        // Works (cover + thumb + images)
-        await fetchAll('works', 'cover_url,thumb_url,images', null, (w)=>{
-          addJsonImages(out, w?.cover_url);
-          addJsonImages(out, w?.thumb_url);
-          addJsonImages(out, w?.images);
-        });
-
-        // Work images (optional: may not exist on all setups)
-        await fetchAll('work_images', 'path', null, (x)=> addJsonImages(out, x?.path));
-
-        // News (only images)
-        await fetchAll('news_posts', 'media_url', (q)=> q.eq('media_type', 'image'), (p)=>{
-          addJsonImages(out, p?.media_url);
-        });
-
-        // Publications (images array)
-        await fetchAll('publications', 'images', null, (p)=> addJsonImages(out, p?.images));
-
-        return Array.from(out).map(resolveUrl).filter(Boolean);
-      };
-
       const readCarouselPhotosSupabase = async ()=>{
         const sb = await waitForSB(3500);
         if(!sb) return [];
@@ -310,6 +253,8 @@
       let i = 0;
       let timer = null;
       let slides = [];
+      let carouselDataLoaded = false;
+      let carouselDataPromise = null;
 
       const readSlides = ()=>{
         slides = Array.from(carousel.querySelectorAll('.nav-carousel__slide'));
@@ -352,6 +297,8 @@
 
       const restart = ()=>{
         if(timer) clearInterval(timer);
+        timer = null;
+        if(!slides.length || slides.length <= 1 || !isOpenNow()) return;
         timer = setInterval(()=> setIndex(i + 1), 4500);
       };
 
@@ -382,41 +329,49 @@
         restart();
       };
 
+      const stop = ()=>{
+        if(!timer) return;
+        clearInterval(timer);
+        timer = null;
+      };
+
       readSlides();
       buildDots();
       setIndex(0);
-      restart();
 
       prev?.addEventListener('click', ()=>{ setIndex(i - 1); restart(); });
       next?.addEventListener('click', ()=>{ setIndex(i + 1); restart(); });
 
-      carousel.addEventListener('mouseenter', ()=> timer && clearInterval(timer));
-      carousel.addEventListener('mouseleave', restart);
+      carousel.addEventListener('mouseenter', stop);
+      carousel.addEventListener('mouseleave', ()=> isOpenNow() && restart());
 
-      // Carrousel:
-      // 1) If admin configured public.site_photos (slot=drawer_carousel) => use it.
-      // 2) Otherwise fallback to local JSON + best-effort Supabase scan.
-      (async ()=>{
-        try{
-          const curated = await readCarouselPhotosSupabase();
-          if(curated.length){
-            mount(curated);
-            return;
+      pauseNavCarousel = stop;
+      resumeNavCarousel = restart;
+      ensureNavCarousel = ()=>{
+        if(carouselDataLoaded) return Promise.resolve();
+        if(carouselDataPromise) return carouselDataPromise;
+
+        carouselDataPromise = (async ()=>{
+          try{
+            const curated = await readCarouselPhotosSupabase();
+            if(curated.length){
+              mount(curated);
+              return;
+            }
+
+            const local = await readLocalPhotos();
+            if(local.length) mount(local);
+          } catch(e){
+            if(isAbort(e)) return;
+            console.warn('[nav-carousel] init error', e);
+          } finally {
+            carouselDataLoaded = true;
+            carouselDataPromise = null;
           }
+        })();
 
-          const local = await readLocalPhotos();
-          if(local.length) mount(local);
-
-          const remote = await readSupabasePhotos();
-          if(remote.length){
-            const merged = local.concat(remote);
-            mount(merged);
-          }
-        } catch(e){
-          if(isAbort(e)) return;
-          console.warn('[nav-carousel] init error', e);
-        }
-      })();
+        return carouselDataPromise;
+      };
     }
 
     // ----- Lang dropdown (clean)

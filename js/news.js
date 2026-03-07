@@ -9,6 +9,8 @@
   window.__MMG_NEWS_INIT__ = true;
 
   let renderSeq = 0;
+  let hasStarted = false;
+  let loadObserver = null;
 
   const ROOT_ID = "newsRoot";
   const FALLBACK_ITEMS = [
@@ -31,6 +33,21 @@
   const safeText = (s) => String(s ?? "").replace(/\s+/g, " ").trim();
   const isAbort = (e) =>
     e?.name === "AbortError" || /signal is aborted/i.test(String(e?.message || e || ""));
+
+  function newsRoot() {
+    return document.getElementById(ROOT_ID);
+  }
+
+  function newsSection() {
+    return document.getElementById("actualites") || newsRoot()?.closest?.("section") || newsRoot();
+  }
+
+  function showLoading() {
+    const root = newsRoot();
+    if (!root || hasStarted) return;
+    root.innerHTML = `<div class="muted" data-i18n="common.loading">Chargement…</div>`;
+    window.__applyTranslations?.(root);
+  }
 
   const fmtDate = (iso) => {
     try {
@@ -170,7 +187,7 @@
       .select("id,published_at,title,body,media_type,media_url,media_poster,youtube_id,is_published")
       .eq("is_published", true)
       .order("published_at", { ascending: false })
-      .limit(12);
+      .limit(6);
 
     if (error) {
       console.warn("[MMG] Supabase news error", error);
@@ -344,7 +361,7 @@
   }
 
   async function render(seq) {
-    const root = document.getElementById(ROOT_ID);
+    const root = newsRoot();
     if (!root) return;
     if (seq !== renderSeq) return;
 
@@ -412,6 +429,40 @@
     });
   };
 
-  window.addEventListener("DOMContentLoaded", safeRender);
-  window.addEventListener("i18n:changed", safeRender);
+  const start = () => {
+    if (hasStarted) return;
+    hasStarted = true;
+    loadObserver?.disconnect?.();
+    safeRender();
+  };
+
+  window.addEventListener("DOMContentLoaded", () => {
+    const root = newsRoot();
+    if (!root) return;
+
+    showLoading();
+
+    try {
+      const target = newsSection();
+      if (!target) {
+        start();
+        return;
+      }
+
+      loadObserver = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) start();
+        },
+        { rootMargin: "320px 0px" }
+      );
+      loadObserver.observe(target);
+    } catch {
+      start();
+    }
+  });
+
+  window.addEventListener("i18n:changed", () => {
+    if (hasStarted) safeRender();
+    else showLoading();
+  });
 })();
