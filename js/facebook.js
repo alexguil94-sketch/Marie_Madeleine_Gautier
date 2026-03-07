@@ -2,6 +2,7 @@
   const embedRoot = document.querySelector("[data-fb-embed]");
   if (!embedRoot) return;
 
+  const sectionRoot = document.getElementById("facebook") || embedRoot.closest("section") || embedRoot;
   const frameRoot = embedRoot.querySelector("[data-fb-frame]") || embedRoot;
   const openLink = document.querySelector("[data-fb-link]");
   const tabsSelect = document.querySelector("[data-fb-tabs-select]");
@@ -11,11 +12,14 @@
   let embedTimer = 0;
   let moHref = null;
   let hrefEl = null;
+  let lazyReady = false;
+  let visibilityIo = null;
 
   const STORAGE_TABS_KEY = "mmg.fb.tabs";
   const DEFAULT_TABS = "timeline";
   const ALLOWED_TABS = new Set(["timeline", "events", "messages"]);
   const EMBED_TIMEOUT_MS = 6500;
+  const MOBILE_MQ = window.matchMedia("(max-width: 980px)");
 
   const DEFAULT_PLACEHOLDERS = new Set([
     "",
@@ -41,6 +45,10 @@
     if (!embedTimer) return;
     window.clearTimeout(embedTimer);
     embedTimer = 0;
+  }
+
+  function markReady(v) {
+    frameRoot.setAttribute("data-fb-ready", v ? "true" : "false");
   }
 
   function theme() {
@@ -124,7 +132,7 @@
   }
 
   function heightForViewport() {
-    return window.matchMedia("(max-width: 980px)").matches ? 560 : 680;
+    return MOBILE_MQ.matches ? 560 : 680;
   }
 
   function normalizeTabs(tabs) {
@@ -207,6 +215,7 @@
 
   function showLoading() {
     clearEmbedTimer();
+    markReady(false);
     const existing = frameRoot.querySelector('[data-i18n="common.loading"]');
     if (existing && frameRoot.children.length === 1) return;
 
@@ -221,6 +230,7 @@
 
   function showMissing() {
     clearEmbedTimer();
+    markReady(false);
     frameRoot.innerHTML = "";
 
     const msg = document.createElement("div");
@@ -235,6 +245,7 @@
 
   function showState(key, fallback, url) {
     clearEmbedTimer();
+    markReady(false);
     frameRoot.innerHTML = "";
 
     const wrap = document.createElement("div");
@@ -263,6 +274,65 @@
       wrap.appendChild(actions);
     }
 
+    frameRoot.appendChild(wrap);
+    window.__applyTranslations?.(wrap);
+  }
+
+  function showDeferred(url) {
+    clearEmbedTimer();
+    markReady(false);
+    frameRoot.innerHTML = "";
+
+    const wrap = document.createElement("div");
+    wrap.className = "fb-shell";
+
+    const eyebrow = document.createElement("div");
+    eyebrow.className = "fb-shell__eyebrow";
+    eyebrow.textContent = "Facebook";
+    wrap.appendChild(eyebrow);
+
+    const title = document.createElement("h3");
+    title.className = "fb-shell__title";
+    title.setAttribute("data-i18n", "fb.previewTitle");
+    title.textContent = tr("fb.previewTitle", "Apercu Facebook");
+    wrap.appendChild(title);
+
+    const text = document.createElement("p");
+    text.className = "fb-shell__text muted";
+    text.setAttribute("data-i18n", "fb.deferred");
+    text.textContent = tr(
+      "fb.deferred",
+      "Le fil se charge a l'approche de cette section pour garder la page fluide."
+    );
+    wrap.appendChild(text);
+
+    const actions = document.createElement("div");
+    actions.className = "fb-shell__actions";
+
+    const loadBtn = document.createElement("button");
+    loadBtn.type = "button";
+    loadBtn.className = "btn";
+    loadBtn.setAttribute("data-i18n", "fb.loadNow");
+    loadBtn.textContent = tr("fb.loadNow", "Charger le module");
+    loadBtn.addEventListener("click", () => {
+      lazyReady = true;
+      render({ force: true });
+    });
+    actions.appendChild(loadBtn);
+
+    const candidate = parseFbUrl(url);
+    if (candidate) {
+      const link = document.createElement("a");
+      link.className = "btn ghost";
+      link.href = candidate.url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.setAttribute("data-i18n", "fb.open");
+      link.textContent = tr("fb.open", "Voir sur Facebook");
+      actions.appendChild(link);
+    }
+
+    wrap.appendChild(actions);
     frameRoot.appendChild(wrap);
     window.__applyTranslations?.(wrap);
   }
@@ -324,6 +394,11 @@
       return;
     }
 
+    if (!lazyReady && !force) {
+      showDeferred(url);
+      return;
+    }
+
     const nextSignature = `${url}::${th}::${h}::${tabs}`;
     if (!force && nextSignature === lastSignature && frameRoot.querySelector("iframe")) {
       return;
@@ -337,7 +412,7 @@
     const iframe = document.createElement("iframe");
     iframe.src = buildSrc(url, th, h, tabs);
     iframe.title = frameTitle();
-    iframe.loading = "eager";
+    iframe.loading = "lazy";
     iframe.allow = "encrypted-media; clipboard-write; web-share";
     iframe.referrerPolicy = "no-referrer-when-downgrade";
     iframe.setAttribute("scrolling", "no");
@@ -352,6 +427,7 @@
       "load",
       () => {
         clearEmbedTimer();
+        markReady(true);
       },
       { once: true }
     );
@@ -360,19 +436,41 @@
       () => {
         if (!frameRoot.contains(iframe)) return;
         lastSignature = "";
+        markReady(false);
         showBlocked(url);
       },
       { once: true }
     );
 
     frameRoot.appendChild(iframe);
+    markReady(false);
 
     embedTimer = window.setTimeout(() => {
       embedTimer = 0;
       if (!frameRoot.contains(iframe)) return;
       lastSignature = "";
+      markReady(false);
       showBlocked(url);
     }, EMBED_TIMEOUT_MS);
+  }
+
+  function enableLazyLoad() {
+    if (lazyReady) return;
+    lazyReady = true;
+    visibilityIo?.disconnect?.();
+    render();
+  }
+
+  try {
+    visibilityIo = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) enableLazyLoad();
+      },
+      { rootMargin: "280px 0px" }
+    );
+    visibilityIo.observe(sectionRoot);
+  } catch {
+    lazyReady = true;
   }
 
   render();
@@ -410,10 +508,9 @@
 
   document.addEventListener("partials:loaded", bindSocialHrefObserver);
   bindSocialHrefObserver();
-
-  let rAf = 0;
-  window.addEventListener("resize", () => {
-    if (rAf) cancelAnimationFrame(rAf);
-    rAf = requestAnimationFrame(() => render());
-  });
+  try {
+    MOBILE_MQ.addEventListener("change", () => render());
+  } catch {
+    MOBILE_MQ.addListener(() => render());
+  }
 })();
