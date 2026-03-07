@@ -8,12 +8,14 @@
   const refreshBtn = document.querySelector("[data-fb-refresh]");
   const startedAt = Date.now();
   let retryTimer = 0;
+  let embedTimer = 0;
   let moHref = null;
   let hrefEl = null;
 
   const STORAGE_TABS_KEY = "mmg.fb.tabs";
   const DEFAULT_TABS = "timeline";
   const ALLOWED_TABS = new Set(["timeline", "events", "messages"]);
+  const EMBED_TIMEOUT_MS = 6500;
 
   const DEFAULT_PLACEHOLDERS = new Set([
     "",
@@ -24,12 +26,30 @@
     "https://facebook.com/",
   ]);
 
+  function tr(key, fallback) {
+    const t = window.__t;
+    return typeof t === "function" ? t(key, fallback) : fallback;
+  }
+
+  function clearRetryTimer() {
+    if (!retryTimer) return;
+    window.clearTimeout(retryTimer);
+    retryTimer = 0;
+  }
+
+  function clearEmbedTimer() {
+    if (!embedTimer) return;
+    window.clearTimeout(embedTimer);
+    embedTimer = 0;
+  }
+
   function theme() {
     return document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
   }
 
-  function isValidFbUrl(url) {
-    let raw = String(url || "").trim();
+  function parseFbUrl(url) {
+    const original = String(url || "").trim();
+    let raw = original;
     if (!raw) return false;
     if (DEFAULT_PLACEHOLDERS.has(raw)) return false;
 
@@ -43,26 +63,52 @@
       const host = String(u.hostname || "").toLowerCase();
       const isFb = host.includes("facebook.com") || host === "fb.com" || host.endsWith(".fb.com");
       if (!isFb) return false;
-      if (u.pathname === "/" || u.pathname === "") return false;
-      return u.protocol === "http:" || u.protocol === "https:";
+      if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+
+      const normalized = new URL(u.toString());
+      normalized.protocol = "https:";
+      if (
+        normalized.hostname === "facebook.com" ||
+        normalized.hostname === "m.facebook.com" ||
+        normalized.hostname === "fb.com"
+      ) {
+        normalized.hostname = "www.facebook.com";
+      }
+
+      const path = String(normalized.pathname || "/").replace(/\/+$/, "") || "/";
+      const id = String(normalized.searchParams.get("id") || "").trim();
+      if (path === "/" && !id) return false;
+
+      const lcPath = path.toLowerCase();
+      const isUnsupported =
+        lcPath === "/profile.php" ||
+        lcPath.startsWith("/people/") ||
+        lcPath.startsWith("/groups/");
+
+      return {
+        raw: original,
+        url: normalized.toString(),
+        path: lcPath,
+        embeddable: !isUnsupported,
+      };
     } catch {
       return false;
     }
   }
 
-  function bestPageUrl() {
-    const fromData = String(embedRoot.getAttribute("data-fb-page") || "").trim();
-    if (isValidFbUrl(fromData)) return fromData;
+  function bestPageCandidate() {
+    const fromData = parseFbUrl(embedRoot.getAttribute("data-fb-page"));
+    if (fromData) return fromData;
 
     const social = Array.from(document.querySelectorAll('a[data-social="facebook"]'))
-      .map((a) => String(a.getAttribute("href") || "").trim())
-      .find((u) => isValidFbUrl(u));
+      .map((a) => parseFbUrl(a.getAttribute("href")))
+      .find(Boolean);
     if (social) return social;
 
-    const fromBtn = String(openLink?.getAttribute("href") || "").trim();
-    if (isValidFbUrl(fromBtn)) return fromBtn;
+    const fromBtn = parseFbUrl(openLink?.getAttribute("href"));
+    if (fromBtn) return fromBtn;
 
-    return "";
+    return null;
   }
 
   function frameTitle() {
@@ -73,7 +119,8 @@
 
   function setOpenLink(url) {
     if (!openLink) return;
-    if (isValidFbUrl(url)) openLink.setAttribute("href", url);
+    const candidate = parseFbUrl(url);
+    if (candidate) openLink.setAttribute("href", candidate.url);
   }
 
   function heightForViewport() {
@@ -159,6 +206,7 @@
   }
 
   function showLoading() {
+    clearEmbedTimer();
     const existing = frameRoot.querySelector('[data-i18n="common.loading"]');
     if (existing && frameRoot.children.length === 1) return;
 
@@ -166,42 +214,87 @@
     const msg = document.createElement("div");
     msg.className = "fb-fallback muted";
     msg.setAttribute("data-i18n", "common.loading");
-    msg.textContent =
-      typeof window.__t === "function" ? window.__t("common.loading", "Chargement…") : "Chargement…";
+    msg.textContent = tr("common.loading", "Chargement…");
     frameRoot.appendChild(msg);
     window.__applyTranslations?.(msg);
   }
 
   function showMissing() {
+    clearEmbedTimer();
     frameRoot.innerHTML = "";
 
     const msg = document.createElement("div");
     msg.className = "fb-fallback muted";
     msg.setAttribute("data-i18n", "fb.missing");
-    msg.textContent =
-      typeof window.__t === "function"
-        ? window.__t("fb.missing", "Lien Facebook non configuré.")
-        : "Lien Facebook non configuré.";
+    msg.textContent = tr("fb.missing", "Lien Facebook non configuré.");
 
     frameRoot.appendChild(msg);
 
     window.__applyTranslations?.(msg);
   }
 
-  let lastUrl = "";
-  let lastTheme = "";
-  let lastHeight = 0;
-  let lastTabs = "";
+  function showState(key, fallback, url) {
+    clearEmbedTimer();
+    frameRoot.innerHTML = "";
+
+    const wrap = document.createElement("div");
+    wrap.className = "fb-fallback fb-fallback--state";
+
+    const msg = document.createElement("p");
+    msg.className = "fb-fallback__text muted";
+    msg.setAttribute("data-i18n", key);
+    msg.textContent = tr(key, fallback);
+    wrap.appendChild(msg);
+
+    const candidate = parseFbUrl(url);
+    if (candidate) {
+      const actions = document.createElement("div");
+      actions.className = "fb-fallback__actions";
+
+      const link = document.createElement("a");
+      link.className = "btn ghost";
+      link.href = candidate.url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.setAttribute("data-i18n", "fb.open");
+      link.textContent = tr("fb.open", "Voir sur Facebook");
+
+      actions.appendChild(link);
+      wrap.appendChild(actions);
+    }
+
+    frameRoot.appendChild(wrap);
+    window.__applyTranslations?.(wrap);
+  }
+
+  function showUnsupported(url) {
+    showState(
+      "fb.unsupported",
+      "Le module Facebook fonctionne avec l’URL publique d’une page (ex. facebook.com/nom-de-page). Le lien actuel ne permet pas d’afficher le fil ici.",
+      url
+    );
+  }
+
+  function showBlocked(url) {
+    showState(
+      "fb.blocked",
+      "L’intégration Facebook n’a pas pu être chargée ici. Ouvrez la page dans un nouvel onglet.",
+      url
+    );
+  }
+
+  let lastSignature = "";
 
   function render(opts = {}) {
     const force = !!opts.force;
-    const url = bestPageUrl();
+    const candidate = bestPageCandidate();
+    const url = candidate?.url || "";
     const th = theme();
     const h = heightForViewport();
     const tabs = tabsValue();
     syncTabsUI(tabs);
 
-    if (!url) {
+    if (!candidate) {
       const partialsReady = !!window.__MMG_PARTIALS_LOADED__;
       const sbStatus = String(window.__MMG_SB_STATUS__ || "");
       const waitingForSb = sbStatus === "loading";
@@ -222,30 +315,29 @@
       return;
     }
 
-    if (
-      !force &&
-      url === lastUrl &&
-      th === lastTheme &&
-      h === lastHeight &&
-      tabs === lastTabs &&
-      frameRoot.querySelector("iframe")
-    ) {
+    clearRetryTimer();
+    setOpenLink(url);
+
+    if (!candidate.embeddable) {
+      lastSignature = "";
+      showUnsupported(url);
       return;
     }
 
-    lastUrl = url;
-    lastTheme = th;
-    lastHeight = h;
-    lastTabs = tabs;
+    const nextSignature = `${url}::${th}::${h}::${tabs}`;
+    if (!force && nextSignature === lastSignature && frameRoot.querySelector("iframe")) {
+      return;
+    }
 
-    setOpenLink(url);
+    lastSignature = nextSignature;
+    clearEmbedTimer();
 
     frameRoot.innerHTML = "";
 
     const iframe = document.createElement("iframe");
     iframe.src = buildSrc(url, th, h, tabs);
     iframe.title = frameTitle();
-    iframe.loading = "lazy";
+    iframe.loading = "eager";
     iframe.allow = "encrypted-media; clipboard-write; web-share";
     iframe.referrerPolicy = "no-referrer-when-downgrade";
     iframe.setAttribute("scrolling", "no");
@@ -256,7 +348,31 @@
     iframe.style.width = "100%";
     iframe.style.height = `${h}px`;
 
+    iframe.addEventListener(
+      "load",
+      () => {
+        clearEmbedTimer();
+      },
+      { once: true }
+    );
+    iframe.addEventListener(
+      "error",
+      () => {
+        if (!frameRoot.contains(iframe)) return;
+        lastSignature = "";
+        showBlocked(url);
+      },
+      { once: true }
+    );
+
     frameRoot.appendChild(iframe);
+
+    embedTimer = window.setTimeout(() => {
+      embedTimer = 0;
+      if (!frameRoot.contains(iframe)) return;
+      lastSignature = "";
+      showBlocked(url);
+    }, EMBED_TIMEOUT_MS);
   }
 
   render();
