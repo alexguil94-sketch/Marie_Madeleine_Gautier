@@ -14,12 +14,19 @@ Dans Supabase → **Authentication → Settings** :
 
 ## 2) Database
 Supabase → **SQL Editor** : colle `schema.sql` puis Run.
+Si le projet est déjà en ligne, recolle le fichier complet pour remettre à jour les policies et ajouter les colonnes manquantes (`avatar_url`, contraintes de longueur, policies Storage avatar).
 
 ## 3) Storage
 Supabase → **Storage → Buckets** : crée le bucket `media`.
 Ensuite :
 - soit tu le mets en **public**
 - soit tu gardes privé + policies (déjà dans `schema.sql`)
+
+Les nouvelles policies attendent cette organisation :
+- contenus du site gérés par admin dans `media/*`
+- avatars utilisateurs dans `media/avatars/<user-id>/...`
+
+Les utilisateurs connectés ne peuvent modifier que leur propre dossier `avatars/<user-id>/`.
 
 ## 4) Créer ton compte admin
 Option simple :

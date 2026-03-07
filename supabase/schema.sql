@@ -12,11 +12,21 @@ create extension if not exists pgcrypto;
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   role text not null default 'editor',
+  avatar_url text,
   created_at timestamptz not null default now()
 );
 
 -- Add missing cols if table existed already
 alter table public.profiles add column if not exists display_name text;
+alter table public.profiles add column if not exists avatar_url text;
+
+alter table public.profiles drop constraint if exists profiles_display_name_len_chk;
+alter table public.profiles
+  add constraint profiles_display_name_len_chk
+  check (
+    display_name is null
+    or char_length(btrim(display_name)) between 1 and 32
+  );
 
 alter table public.profiles enable row level security;
 
@@ -36,9 +46,22 @@ as $$
   );
 $$;
 
+create or replace function public.current_profile_role()
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select p.role
+  from public.profiles p
+  where p.id = auth.uid()
+$$;
+
 -- Policies (drop first to be re-runnable)
 drop policy if exists "profiles read own or admin" on public.profiles;
 drop policy if exists "profiles insert own" on public.profiles;
+drop policy if exists "profiles self update safe fields" on public.profiles;
 drop policy if exists "profiles admin update" on public.profiles;
 
 create policy "profiles read own or admin"
@@ -52,6 +75,16 @@ on public.profiles
 for insert
 to authenticated
 with check (auth.uid() = id);
+
+create policy "profiles self update safe fields"
+on public.profiles
+for update
+to authenticated
+using (auth.uid() = id)
+with check (
+  auth.uid() = id
+  and role = public.current_profile_role()
+);
 
 create policy "profiles admin update"
 on public.profiles
@@ -159,6 +192,14 @@ create table if not exists public.news_comments (
 
 -- Add missing col if table existed already
 alter table public.news_comments add column if not exists user_id uuid;
+alter table public.news_comments drop constraint if exists news_comments_name_len_chk;
+alter table public.news_comments drop constraint if exists news_comments_message_len_chk;
+alter table public.news_comments
+  add constraint news_comments_name_len_chk
+  check (char_length(btrim(name)) between 1 and 120);
+alter table public.news_comments
+  add constraint news_comments_message_len_chk
+  check (char_length(btrim(message)) between 1 and 2000);
 
 alter table public.news_comments enable row level security;
 
@@ -181,6 +222,12 @@ for insert
 to authenticated
 with check (
   user_id = auth.uid()
+  and exists (
+    select 1
+    from public.news_posts p
+    where p.id = post_id
+      and p.is_published = true
+  )
 );
 
 create policy "comments admin read all"
@@ -407,8 +454,12 @@ with check (public.is_admin());
 -- IMPORTANT: crée le bucket "media" dans Storage → Buckets
 -- ============================================================
 drop policy if exists "media public read" on storage.objects;
+drop policy if exists "media admin update" on storage.objects;
 drop policy if exists "media admin insert" on storage.objects;
 drop policy if exists "media admin delete" on storage.objects;
+drop policy if exists "media own avatar insert" on storage.objects;
+drop policy if exists "media own avatar update" on storage.objects;
+drop policy if exists "media own avatar delete" on storage.objects;
 
 create policy "media public read"
 on storage.objects
@@ -422,11 +473,53 @@ for insert
 to authenticated
 with check (bucket_id = 'media' and public.is_admin());
 
+create policy "media admin update"
+on storage.objects
+for update
+to authenticated
+using (bucket_id = 'media' and public.is_admin())
+with check (bucket_id = 'media' and public.is_admin());
+
 create policy "media admin delete"
 on storage.objects
 for delete
 to authenticated
 using (bucket_id = 'media' and public.is_admin());
+
+create policy "media own avatar insert"
+on storage.objects
+for insert
+to authenticated
+with check (
+  bucket_id = 'media'
+  and (storage.foldername(name))[1] = 'avatars'
+  and (storage.foldername(name))[2] = auth.uid()::text
+);
+
+create policy "media own avatar update"
+on storage.objects
+for update
+to authenticated
+using (
+  bucket_id = 'media'
+  and (storage.foldername(name))[1] = 'avatars'
+  and (storage.foldername(name))[2] = auth.uid()::text
+)
+with check (
+  bucket_id = 'media'
+  and (storage.foldername(name))[1] = 'avatars'
+  and (storage.foldername(name))[2] = auth.uid()::text
+);
+
+create policy "media own avatar delete"
+on storage.objects
+for delete
+to authenticated
+using (
+  bucket_id = 'media'
+  and (storage.foldername(name))[1] = 'avatars'
+  and (storage.foldername(name))[2] = auth.uid()::text
+);
 
 -- ============================================================
 -- 10) Make your user admin

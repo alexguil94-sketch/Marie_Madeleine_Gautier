@@ -21,37 +21,6 @@
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script defer src="../js/supabase-config.js?v=1"></script>
   <script defer src="../js/supabase-client.js?v=6"></script>
-
-  <script>
-    window.addEventListener("DOMContentLoaded", async () => {
-      const sb = window.mmgSupabase;
-      const form = document.getElementById("resetForm");
-      const msg = document.getElementById("resetMsg");
-
-      // Si le lien recovery est valide, Supabase met une session dans l'URL puis la détecte
-      const { data } = await sb.auth.getSession();
-      if (!data.session) {
-        msg.textContent = "Lien invalide/expiré. Refais une demande de récupération.";
-        return;
-      }
-
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        msg.textContent = "Mise à jour…";
-
-        const pwd = form.elements.pwd.value;
-        const { error } = await sb.auth.updateUser({ password: pwd });
-
-        if (error) {
-          msg.textContent = "Erreur : " + error.message;
-          return;
-        }
-
-        msg.textContent = "Mot de passe mis à jour ✅ Tu peux te reconnecter.";
-        await sb.auth.signOut();
-        setTimeout(() => location.href = "./", 800);
-      });
-    });
-  </script>
+  <script defer src="./reset.js?v=1"></script>
 </body>
 </html>
