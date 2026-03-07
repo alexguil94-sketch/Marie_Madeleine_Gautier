@@ -60,19 +60,24 @@
 
   const isVideoPath = (uOrPath) =>
     /\.(mp4|webm|mov|m4v|ogv)(?:[?#].*)?$/i.test(String(uOrPath || "").trim());
+  const isLocalStaticPath = (v) => /^\/?assets\//i.test(v) || /^\/?favicon\.ico(?:[?#].*)?$/i.test(v);
 
   const resolveUrl = (sb, uOrPath) => {
     const v = String(uOrPath || "").trim();
     if (!v) return "";
-    if (v.startsWith("http://") || v.startsWith("https://") || v.startsWith("/")) return v;
-    const { data } = sb.storage.from(getBucket()).getPublicUrl(v);
+    if (v.startsWith("http://") || v.startsWith("https://")) return v;
+    if (isLocalStaticPath(v)) return v.startsWith("/") ? v : "/" + v;
+    const storagePath = v.replace(/^\/+/, "");
+    if (!storagePath) return v;
+    const { data } = sb.storage.from(getBucket()).getPublicUrl(storagePath);
     return data?.publicUrl || v;
   };
 
   const storagePathFromUrl = (uOrPath) => {
     const v = String(uOrPath || "").trim();
     if (!v) return "";
-    if (v.startsWith("/")) return "";
+    if (isLocalStaticPath(v)) return "";
+    if (v.startsWith("/")) return v.replace(/^\/+/, "");
     if (v.startsWith("http://") || v.startsWith("https://")) {
       const m1 = v.match(/\/storage\/v1\/object\/public\/[^/]+\/(.+)$/);
       if (m1?.[1]) {

@@ -14,6 +14,7 @@
 
   const getSB = () => window.mmgSupabase || null;
   const getBucket = () => (window.MMG_SUPABASE?.bucket || window.SUPABASE_BUCKET || "media");
+  const isLocalStaticPath = (v) => /^\/?assets\//i.test(v) || /^\/?favicon\.ico(?:[?#].*)?$/i.test(v);
 
   const toast = (msg) => {
     const el = document.createElement("div");
@@ -179,11 +180,13 @@
   const resolveUrl = (uOrPath) => {
     const v = String(uOrPath || "").trim();
     if (!v) return "";
-    if (v.startsWith("http://") || v.startsWith("https://") || v.startsWith("/")) return v;
+    if (v.startsWith("http://") || v.startsWith("https://")) return v;
+    if (isLocalStaticPath(v)) return v.startsWith("/") ? v : "/" + v;
 
+    const storagePath = v.replace(/^\/+/, "");
     const sb = getSB();
-    if (!sb?.storage) return v;
-    const { data } = sb.storage.from(getBucket()).getPublicUrl(v);
+    if (!sb?.storage || !storagePath) return v;
+    const { data } = sb.storage.from(getBucket()).getPublicUrl(storagePath);
     return data?.publicUrl || v;
   };
 

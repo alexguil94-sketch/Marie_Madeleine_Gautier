@@ -11,6 +11,7 @@
 
   const getSB = () => window.mmgSupabase || window.mmg_supabase || null;
   const getBucket = () => window.MMG_SUPABASE?.bucket || window.SUPABASE_BUCKET || "media";
+  const isLocalStaticPath = (v) => /^\/?assets\//i.test(v) || /^\/?favicon\.ico(?:[?#].*)?$/i.test(v);
 
   const waitForSB = async (timeoutMs = 3500) => {
     if (getSB()) return getSB();
@@ -40,11 +41,12 @@
   const resolveUrl = (sb, uOrPath) => {
     const v = String(uOrPath || "").trim();
     if (!v) return "";
-    if (v.startsWith("http://") || v.startsWith("https://") || v.startsWith("/")) return v;
-    if (v.startsWith("assets/")) return "/" + v;
+    if (v.startsWith("http://") || v.startsWith("https://")) return v;
+    if (isLocalStaticPath(v)) return v.startsWith("/") ? v : "/" + v;
 
-    if (!sb?.storage) return v;
-    const { data } = sb.storage.from(getBucket()).getPublicUrl(v);
+    const storagePath = v.replace(/^\/+/, "");
+    if (!sb?.storage || !storagePath) return v;
+    const { data } = sb.storage.from(getBucket()).getPublicUrl(storagePath);
     return data?.publicUrl || v;
   };
 
