@@ -125,9 +125,7 @@
     "tabEvents": "Événements",
     "tabMessages": "Messages",
     "note": "Si le module ne s’affiche pas (bloqueur / confidentialité), ouvrez Facebook dans un nouvel onglet.",
-    "missing": "Lien Facebook non configuré. Ajoutez l’URL publique de la page dans vos liens sociaux pour afficher le fil ici.",
-    "unsupported": "Le module Facebook fonctionne avec l’URL publique d’une page (ex. facebook.com/nom-de-page). Le lien actuel ne permet pas d’afficher le fil ici.",
-    "blocked": "L’intégration Facebook n’a pas pu être chargée ici. Ouvrez la page dans un nouvel onglet.",
+    "missing": "Lien Facebook non configuré. Ajoutez l’URL de la page dans vos liens sociaux pour afficher le fil ici.",
     "frameTitle": "Publications Facebook"
   },
   "artist": {

@@ -125,9 +125,7 @@
     "tabEvents": "Events",
     "tabMessages": "Messages",
     "note": "If the embed doesn’t display (blocker / privacy), open Facebook in a new tab.",
-    "missing": "Facebook link not configured. Add the public Page URL in your social links to display the feed here.",
-    "unsupported": "The Facebook embed expects the public URL of a Page (for example facebook.com/page-name). The current link cannot display the feed here.",
-    "blocked": "The Facebook embed could not load here. Open the page in a new tab instead.",
+    "missing": "Facebook link not configured. Add the page URL in your social links to display the feed here.",
     "frameTitle": "Facebook posts"
   },
   "artist": {

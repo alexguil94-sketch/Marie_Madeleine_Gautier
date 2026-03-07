@@ -928,21 +928,6 @@ html[data-theme="light"] .fb-frame{
   text-align:center;
   line-height:1.6;
 }
-.fb-fallback--state{
-  flex-direction:column;
-  align-items:flex-start;
-  gap:14px;
-  text-align:left;
-}
-.fb-fallback__text{
-  margin:0;
-  max-width:36ch;
-}
-.fb-fallback__actions{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-}
 
 /* -----------------------------
    Footer
