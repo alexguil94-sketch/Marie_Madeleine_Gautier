@@ -42,14 +42,7 @@
       .maybeSingle();
 
     const missing = !prof?.display_name || !prof?.avatar_url;
-    if (missing) {
-      // ouvre la modale directement
-      window.MMGProfile.open();
-    } else {
-      // profil ok => affiche le bouton discret
-      const fab = document.getElementById("pfOpen");
-      if (fab) fab.hidden = false;
-    }
+    if (missing) return;
   }
 
   window.addEventListener("DOMContentLoaded", () => {

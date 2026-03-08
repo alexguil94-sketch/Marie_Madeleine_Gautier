@@ -92,76 +92,8 @@
   }
 
   function mountModalIfMissing() {
-    if (isProfilePage) return;
-    if (qs("#pfModal")) return;
-
-    const modal = document.createElement("section");
-    modal.id = "pfModal";
-    modal.className = "pf-modal";
-    modal.hidden = true;
-
-    modal.innerHTML = `
-      <div class="pf-card" role="dialog" aria-modal="true" aria-labelledby="pfTitle">
-        <div class="pf-head">
-          <div>
-            <div class="pf-kicker">Mon profil</div>
-            <h2 id="pfTitle" class="pf-title">Choisis ton pseudo et ton avatar</h2>
-          </div>
-          <button id="pfClose" class="pf-x" type="button" aria-label="Fermer">×</button>
-        </div>
-
-        <div id="pfSignedOut" class="pf-muted" hidden>
-          Tu dois être connecté pour choisir ton pseudo et ton avatar.
-          <div style="margin-top:10px">
-            <a id="pfLoginLink" class="pf-btn pf-primary" href="login.html">Se connecter</a>
-          </div>
-        </div>
-
-        <div id="pfSignedIn" hidden>
-          <div class="pf-row" style="align-items:center">
-            <div class="pf-avatarbig">
-              <img id="pfAvatarPreview" alt="" style="display:none" />
-            </div>
-
-            <div style="flex:1;min-width:0">
-              <div class="pf-muted">Compte</div>
-              <div id="pfEmail" class="pf-email"></div>
-            </div>
-
-            <button id="pfLogout" class="pf-btn" type="button">Se déconnecter</button>
-          </div>
-
-          <div class="pf-field">
-            <label class="pf-label" for="pfName">Pseudo</label>
-            <input id="pfName" class="pf-input" placeholder="Ton pseudo" maxlength="32" />
-          </div>
-
-          <div class="pf-field">
-            <label class="pf-label" for="pfAvatar">Avatar</label>
-            <input id="pfAvatar" class="pf-input" type="file" accept="image/*" />
-            <div class="pf-row" style="margin-top:10px">
-              <button id="pfRemoveAvatar" class="pf-btn" type="button">Retirer l’avatar</button>
-              <button id="pfSave" class="pf-btn pf-primary" type="button">Enregistrer</button>
-            </div>
-          </div>
-
-          <div id="pfMsg" class="pf-muted" style="margin-top:10px;min-height:18px"></div>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-
-    const fab = document.createElement("button");
-    fab.id = "pfOpen";
-    fab.className = "pf-fab";
-    fab.type = "button";
-    fab.hidden = true;
-    fab.textContent = "Profil";
-    document.body.appendChild(fab);
-
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) window.MMGProfile.close();
-    });
+    // Profile editing now lives on profile.html; do not mount a modal on content pages.
+    return;
   }
 
   function setInert(isOn) {
@@ -443,16 +375,7 @@
     },
 
     async open() {
-      const modal = qs("#pfModal");
-      if (!modal) {
-        location.href = "profile.html";
-        return;
-      }
-      modal.hidden = false;
-      document.body.style.overflow = "hidden";
-      setInert(true);
-      await fillModal();
-      setTimeout(() => qs("#pfName")?.focus(), 0);
+      location.href = "profile.html";
     },
 
     close() {
