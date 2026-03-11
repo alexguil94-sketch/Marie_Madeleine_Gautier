@@ -1,95 +1,123 @@
 (function(){
-  function bind(){
-    const header = document.querySelector('.site-header');
-    const nav = document.querySelector('[data-nav]');
-    const burger = document.querySelector('[data-burger]');
-    const overlay = document.querySelector('[data-nav-overlay]');
-    const closeBtn = document.querySelector('[data-nav-close]');
-    const links = Array.from(document.querySelectorAll('.nav-drawer__links a'));
+  let lastFocus = null;
 
-    let lastFocus = null;
+  const getNavEls = ()=>({
+    header: document.querySelector('.site-header'),
+    nav: document.querySelector('[data-nav]'),
+    burger: document.querySelector('[data-burger]'),
+    overlay: document.querySelector('[data-nav-overlay]'),
+    closeBtn: document.querySelector('[data-nav-close]'),
+    links: Array.from(document.querySelectorAll('.nav-drawer__links a'))
+  });
+
+  const lockScroll = (lock)=>{
+    if(!lock){
+      document.body.style.paddingRight = '';
+      return;
+    }
+    const sb = window.innerWidth - document.documentElement.clientWidth;
+    document.body.style.paddingRight = sb ? `${sb}px` : '';
+  };
+
+  const isOpenNow = ()=> document.body.classList.contains('nav-open');
+
+  const setOpen = (isOpen)=>{
+    const { nav, burger, overlay } = getNavEls();
+    if(!nav || !burger) return;
+
+    document.body.classList.toggle('nav-open', isOpen);
+    nav.classList.toggle('is-open', isOpen);
+
+    burger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    nav.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+    overlay?.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+
+    lockScroll(isOpen);
+
+    if(isOpen){
+      lastFocus = document.activeElement;
+      const first = nav.querySelector('button, a, [tabindex]:not([tabindex="-1"])');
+      first?.focus?.();
+    } else {
+      lastFocus?.focus?.();
+      lastFocus = null;
+    }
+  };
+
+  function bind(){
+    const { header, nav, burger, overlay, closeBtn, links } = getNavEls();
 
     // ----- Header shadow on scroll
-    function onScroll(){
-      if(!header) return;
-      header.classList.toggle('is-scrolled', window.scrollY > 6);
+    if(header && !window.__MMG_NAV_SCROLL_BOUND__){
+      window.__MMG_NAV_SCROLL_BOUND__ = true;
+      window.addEventListener('scroll', ()=>{
+        const currentHeader = document.querySelector('.site-header');
+        if(!currentHeader) return;
+        currentHeader.classList.toggle('is-scrolled', window.scrollY > 6);
+      }, { passive:true });
     }
-    window.addEventListener('scroll', onScroll, { passive:true });
-    onScroll();
-
-    // ----- Scroll lock (keeps layout stable)
-    const lockScroll = (lock)=>{
-      if(!lock){
-        document.body.style.paddingRight = '';
-        return;
-      }
-      const sb = window.innerWidth - document.documentElement.clientWidth;
-      document.body.style.paddingRight = sb ? `${sb}px` : '';
-    };
-
-    const isOpenNow = ()=> document.body.classList.contains('nav-open');
-
-    const setOpen = (isOpen)=>{
-      if(!nav || !burger) return;
-
-      document.body.classList.toggle('nav-open', isOpen);
-      nav.classList.toggle('is-open', isOpen);
-
-      burger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-      nav.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
-      overlay?.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
-
-      lockScroll(isOpen);
-
-      if(isOpen){
-        lastFocus = document.activeElement;
-        const first = nav.querySelector('button, a, [tabindex]:not([tabindex="-1"])');
-        first?.focus?.();
-      } else {
-        lastFocus?.focus?.();
-        lastFocus = null;
-      }
-    };
+    header?.classList.toggle('is-scrolled', window.scrollY > 6);
 
     // Initial state
+    document.body.classList.remove('nav-open');
+    nav?.classList.remove('is-open');
     burger?.setAttribute('aria-expanded', 'false');
     nav?.setAttribute('aria-hidden', 'true');
     overlay?.setAttribute('aria-hidden', 'true');
+    lockScroll(false);
 
     // Toggle
-    burger?.addEventListener('click', ()=> setOpen(!isOpenNow()));
-    closeBtn?.addEventListener('click', ()=> setOpen(false));
-    overlay?.addEventListener('click', ()=> setOpen(false));
+    if(burger && !burger.dataset.mmgNavBound){
+      burger.dataset.mmgNavBound = '1';
+      burger.addEventListener('click', ()=> setOpen(!isOpenNow()));
+    }
+    if(closeBtn && !closeBtn.dataset.mmgNavBound){
+      closeBtn.dataset.mmgNavBound = '1';
+      closeBtn.addEventListener('click', ()=> setOpen(false));
+    }
+    if(overlay && !overlay.dataset.mmgNavBound){
+      overlay.dataset.mmgNavBound = '1';
+      overlay.addEventListener('click', ()=> setOpen(false));
+    }
 
     // Close on link click
-    links.forEach(a=> a.addEventListener('click', ()=> setOpen(false)));
+    links.forEach((a)=>{
+      if(a.dataset.mmgNavBound) return;
+      a.dataset.mmgNavBound = '1';
+      a.addEventListener('click', ()=> setOpen(false));
+    });
 
     // Keyboard: ESC + focus trap
-    document.addEventListener('keydown', (e)=>{
-      if(!isOpenNow()) return;
+    if(!window.__MMG_NAV_KEY_BOUND__){
+      window.__MMG_NAV_KEY_BOUND__ = true;
+      document.addEventListener('keydown', (e)=>{
+        if(!isOpenNow()) return;
 
-      if(e.key === 'Escape'){
-        e.preventDefault();
-        setOpen(false);
-        return;
-      }
+        const { nav: currentNav } = getNavEls();
 
-      if(e.key === 'Tab' && nav){
-        const focusables = Array.from(
-          nav.querySelectorAll('a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])')
-        ).filter(el=> !el.hasAttribute('disabled') && el.getAttribute('aria-hidden') !== 'true');
-
-        if(!focusables.length) return;
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
-
-        if(e.shiftKey && document.activeElement === first){
-          e.preventDefault(); last.focus();
-        } else if(!e.shiftKey && document.activeElement === last){
-          e.preventDefault(); first.focus();
+        if(e.key === 'Escape'){
+          e.preventDefault();
+          setOpen(false);
+          return;
         }
-      }
-    });
+
+        if(e.key === 'Tab' && currentNav){
+          const focusables = Array.from(
+            currentNav.querySelectorAll('a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])')
+          ).filter(el=> !el.hasAttribute('disabled') && el.getAttribute('aria-hidden') !== 'true');
+
+          if(!focusables.length) return;
+          const first = focusables[0];
+          const last = focusables[focusables.length - 1];
+
+          if(e.shiftKey && document.activeElement === first){
+            e.preventDefault(); last.focus();
+          } else if(!e.shiftKey && document.activeElement === last){
+            e.preventDefault(); first.focus();
+          }
+        }
+      });
+    }
 
     // Active link by page
     const norm = (href)=> (href||'').replace(/^\/+/, '').toLowerCase();
@@ -98,7 +126,8 @@
 
     // ----- Drawer carousel (tiny)
     const carousel = document.querySelector('[data-nav-carousel]');
-    if(carousel){
+    if(carousel && !carousel.dataset.mmgCarouselBound){
+      carousel.dataset.mmgCarouselBound = '1';
       const track = carousel.querySelector('.nav-carousel__track');
       const prev = carousel.querySelector('[data-carousel-prev]');
       const next = carousel.querySelector('[data-carousel-next]');
@@ -420,43 +449,54 @@
     }
 
     // ----- Lang dropdown (clean)
-    const langWrap = document.querySelector('[data-lang-wrap]');
-    const langToggle = document.querySelector('[data-lang-toggle]');
+    const getLangEls = ()=>({
+      langWrap: document.querySelector('[data-lang-wrap]'),
+      langToggle: document.querySelector('[data-lang-toggle]')
+    });
 
     const setLangOpen = (open)=>{
+      const { langWrap, langToggle } = getLangEls();
       if(!langWrap || !langToggle) return;
       langWrap.classList.toggle('is-open', open);
       langToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
     };
 
-    document.addEventListener('click', (e)=>{
-      if(!langWrap || !langToggle) return;
+    if(!window.__MMG_LANG_BOUND__){
+      window.__MMG_LANG_BOUND__ = true;
 
-      const inside = e.target.closest('[data-lang-wrap]');
-      const hitToggle = !!e.target.closest('[data-lang-toggle]');
-      const hitLang = !!e.target.closest('[data-lang]');
+      document.addEventListener('click', (e)=>{
+        const { langWrap, langToggle } = getLangEls();
+        if(!langWrap || !langToggle) return;
 
-      if(inside && hitToggle){
-        setLangOpen(!langWrap.classList.contains('is-open'));
-        return;
-      }
-      if(inside && hitLang){
-        setLangOpen(false);
-        return;
-      }
-      if(!inside) setLangOpen(false);
-    });
+        const inside = e.target.closest('[data-lang-wrap]');
+        const hitToggle = !!e.target.closest('[data-lang-toggle]');
+        const hitLang = !!e.target.closest('[data-lang]');
 
-    document.addEventListener('keydown', (e)=>{
-      if(e.key !== 'Escape') return;
-      if(langWrap?.classList.contains('is-open')) setLangOpen(false);
-    });
+        if(inside && hitToggle){
+          setLangOpen(!langWrap.classList.contains('is-open'));
+          return;
+        }
+        if(inside && hitLang){
+          setLangOpen(false);
+          return;
+        }
+        if(!inside) setLangOpen(false);
+      });
+
+      document.addEventListener('keydown', (e)=>{
+        if(e.key !== 'Escape') return;
+        const { langWrap } = getLangEls();
+        if(langWrap?.classList.contains('is-open')) setLangOpen(false);
+      });
+    }
 
     // ----- Social links (footer/contact)
     // If admin configured public.site_social_links, update anchors with [data-social].
-    (async ()=>{
-      const anchors = Array.from(document.querySelectorAll('[data-social]'));
-      if(!anchors.length) return;
+    const anchors = Array.from(document.querySelectorAll('[data-social]'));
+    if(anchors.length && !window.__MMG_SOCIAL_INIT__){
+      window.__MMG_SOCIAL_INIT__ = true;
+
+      (async ()=>{
 
       const isAbort = (e)=>
         e?.name === 'AbortError' || /signal is aborted/i.test(String(e?.message || e || ''));
@@ -630,8 +670,25 @@
         if(isAbort(e)) return;
         console.warn('[social-links] init error', e);
       }
-    })();
+      })();
+    }
   }
 
+  const observeHost = (id)=>{
+    const host = document.getElementById(id);
+    if(!host || host.dataset.mmgObserveBound) return;
+
+    host.dataset.mmgObserveBound = '1';
+    const mo = new MutationObserver(()=> bind());
+    mo.observe(host, { childList:true, subtree:true });
+  };
+
+  if(window.__MMG_PARTIALS_LOADED__ || document.querySelector('[data-burger]')) bind();
   document.addEventListener('partials:loaded', bind);
+  window.addEventListener('pageshow', ()=>{
+    bind();
+    setOpen(false);
+  });
+  observeHost('siteHeader');
+  observeHost('siteFooter');
 })();

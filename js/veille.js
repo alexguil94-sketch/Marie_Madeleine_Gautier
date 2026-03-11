@@ -6,8 +6,10 @@
 
   const STORAGE_KEY = "mmg_veille_v1";
   const UI_KEY = "mmg_veille_ui_v1";
+  const AUTO_CACHE_KEY = "mmg_veille_auto_live_v1";
   const ARTIST_NAME = "Marie-Madeleine Gautier";
   const DEFAULT_PUBLIC_SITE = "https://marie-madeleine-gautier-world.com";
+  const LIVE_REFRESH_ENDPOINT = "/.netlify/functions/veille-refresh";
 
   const qs = (s, r = document) => r.querySelector(s);
 
@@ -372,6 +374,40 @@
   let editingId = null;
 
   let autoState = { generatedAt: "", items: [] };
+
+  function autoStamp(state) {
+    const ms = Date.parse(state?.generatedAt || "");
+    return Number.isFinite(ms) ? ms : 0;
+  }
+
+  function normalizeAutoPayload(data) {
+    return {
+      generatedAt: normStr(data?.generatedAt ?? data?.updatedAt ?? ""),
+      items: normalizeAutoItems(data),
+    };
+  }
+
+  function readAutoCache() {
+    const raw = readLocalStorage(AUTO_CACHE_KEY, null);
+    if (!raw || typeof raw !== "object") return null;
+    const next = normalizeAutoPayload(raw);
+    if (!next.generatedAt && !next.items.length) return null;
+    return next;
+  }
+
+  function writeAutoCache(state) {
+    if (!state || typeof state !== "object") return false;
+    return writeLocalStorage(AUTO_CACHE_KEY, {
+      generatedAt: normStr(state.generatedAt),
+      items: Array.isArray(state.items) ? state.items : [],
+    });
+  }
+
+  function setAutoRefreshBusy(isBusy) {
+    if (!dom.autoRefresh) return;
+    dom.autoRefresh.disabled = Boolean(isBusy);
+    dom.autoRefresh.setAttribute("aria-busy", isBusy ? "true" : "false");
+  }
 
   function syncControlsFromUi() {
     if (dom.search) dom.search.value = ui.q;
@@ -748,29 +784,78 @@
     });
   }
 
-  async function loadAuto({ bustCache = false } = {}) {
+  async function fetchAutoJson({ bustCache = false } = {}) {
+    const url = bustCache ? `data/veille-auto.json?t=${Date.now()}` : "data/veille-auto.json";
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  }
+
+  async function fetchAutoLiveJson() {
+    const res = await fetch(LIVE_REFRESH_ENDPOINT, {
+      method: "POST",
+      cache: "no-store",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ refresh: true }),
+    });
+
+    const raw = await res.text();
+    let data = null;
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch {
+      data = null;
+    }
+
+    if (!res.ok || !data?.ok) {
+      throw new Error(String(data?.detail || data?.error || raw || `HTTP ${res.status}`));
+    }
+
+    return data;
+  }
+
+  async function loadAuto({ bustCache = false, live = false } = {}) {
     if (!dom.autoList) return;
     if (dom.autoMeta) dom.autoMeta.textContent = t("veille.autoLoading", "Chargement…");
+    setAutoRefreshBusy(live);
 
-    const url = bustCache ? `data/veille-auto.json?t=${Date.now()}` : "data/veille-auto.json";
     try {
-      const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = live ? await fetchAutoLiveJson() : await fetchAutoJson({ bustCache });
+      const nextState = normalizeAutoPayload(data);
 
-      autoState = {
-        generatedAt: normStr(data?.generatedAt ?? data?.updatedAt ?? ""),
-        items: normalizeAutoItems(data),
-      };
+      const keepCurrent = !live && autoStamp(autoState) > autoStamp(nextState);
+      if (!keepCurrent) {
+        autoState = nextState;
+      }
+
+      if (live) writeAutoCache(autoState);
 
       renderAuto();
     } catch (e) {
+      if (live) {
+        console.warn("[veille] live refresh failed, fallback to static JSON", e);
+        try {
+          const fallbackData = await fetchAutoJson({ bustCache: true });
+          const nextState = normalizeAutoPayload(fallbackData);
+          const keepCurrent = autoStamp(autoState) > autoStamp(nextState);
+          if (!keepCurrent) autoState = nextState;
+          renderAuto();
+          return;
+        } catch (fallbackError) {
+          console.warn("[veille] live fallback failed", fallbackError);
+        }
+      }
+
       autoState = { generatedAt: "", items: [] };
       if (dom.autoList) dom.autoList.innerHTML = "";
       if (dom.autoEmpty) dom.autoEmpty.hidden = false;
       if (dom.autoMeta)
         dom.autoMeta.textContent = t("veille.autoLoadError", "Impossible de charger la recherche automatique.");
       console.warn("[veille] auto load failed", e);
+    } finally {
+      setAutoRefreshBusy(false);
     }
   }
 
@@ -1587,6 +1672,12 @@
     syncControlsFromUi();
     render();
 
+    const cachedAuto = readAutoCache();
+    if (cachedAuto) {
+      autoState = cachedAuto;
+      renderAuto();
+    }
+
     loadAuto().catch(() => {});
 
     // Auto-refresh weekly sort even if the tab stays open.
@@ -1637,7 +1728,7 @@
     const onAutoFilter = () => renderAuto();
     dom.autoSearch?.addEventListener("input", onAutoFilter);
     dom.autoMinScore?.addEventListener("change", onAutoFilter);
-    dom.autoRefresh?.addEventListener("click", () => loadAuto({ bustCache: true }));
+    dom.autoRefresh?.addEventListener("click", () => loadAuto({ live: true, bustCache: true }));
 
     dom.autoList?.addEventListener("click", (e) => {
       const btn = e.target.closest("[data-action]");
