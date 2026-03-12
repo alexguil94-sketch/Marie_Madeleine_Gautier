@@ -44,6 +44,18 @@
     }
   };
 
+  const syncOpenState = ()=>{
+    const { nav, burger, overlay } = getNavEls();
+    if(!nav || !burger) return;
+
+    const isOpen = isOpenNow();
+    nav.classList.toggle('is-open', isOpen);
+    burger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    nav.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+    overlay?.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+    lockScroll(isOpen);
+  };
+
   function bind(){
     const { header, nav, burger, overlay, closeBtn, links } = getNavEls();
 
@@ -58,13 +70,12 @@
     }
     header?.classList.toggle('is-scrolled', window.scrollY > 6);
 
-    // Initial state
-    document.body.classList.remove('nav-open');
-    nav?.classList.remove('is-open');
-    burger?.setAttribute('aria-expanded', 'false');
-    nav?.setAttribute('aria-hidden', 'true');
-    overlay?.setAttribute('aria-hidden', 'true');
-    lockScroll(false);
+    // Initial state only once, then keep the current drawer state intact on rebinds.
+    if(!window.__MMG_NAV_INIT_DONE__){
+      window.__MMG_NAV_INIT_DONE__ = true;
+      document.body.classList.remove('nav-open');
+    }
+    syncOpenState();
 
     // Toggle
     if(burger && !burger.dataset.mmgNavBound){
@@ -674,21 +685,10 @@
     }
   }
 
-  const observeHost = (id)=>{
-    const host = document.getElementById(id);
-    if(!host || host.dataset.mmgObserveBound) return;
-
-    host.dataset.mmgObserveBound = '1';
-    const mo = new MutationObserver(()=> bind());
-    mo.observe(host, { childList:true, subtree:true });
-  };
-
   if(window.__MMG_PARTIALS_LOADED__ || document.querySelector('[data-burger]')) bind();
   document.addEventListener('partials:loaded', bind);
   window.addEventListener('pageshow', ()=>{
     bind();
     setOpen(false);
   });
-  observeHost('siteHeader');
-  observeHost('siteFooter');
 })();
