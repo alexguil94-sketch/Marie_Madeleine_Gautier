@@ -305,7 +305,7 @@
     const listEl = qs("#worksList");
 
     const navBtns = Array.from(document.querySelectorAll(".admin-nav__btn"));
-    const VIEWS = ["works", "news", "publications", "books", "social", "photos", "comments"];
+    const VIEWS = ["works", "news", "publications", "books", "galleries", "social", "photos", "comments"];
 
     const setView = (name) => {
       const view = VIEWS.includes(name) ? name : "works";
@@ -3240,6 +3240,7 @@
       btnSignOut?.addEventListener("click", async () => {
         try { await sb.auth.signOut(); } catch {}
         toast("Déconnecté.", "ok");
+        window.dispatchEvent(new CustomEvent("mmg:admin-logout"));
         showLogin();
       });
 
@@ -3258,6 +3259,12 @@
         await refreshSocial();
         await refreshSitePhotos();
         await refreshModeration();
+        window.dispatchEvent(new CustomEvent("mmg:admin-ready", {
+          detail: {
+            sb,
+            user: res.user,
+          },
+        }));
       } catch (e) {
         if (isAbort(e)) return;
         console.error(e);

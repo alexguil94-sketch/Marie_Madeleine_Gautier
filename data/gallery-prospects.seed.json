@@ -1,0 +1,80 @@
+[
+  {
+    "id": "gp-seed-lelong",
+    "name": "Galerie Lelong & Co.",
+    "city": "Paris",
+    "country": "France",
+    "address": "13 rue de Teheran, 75008 Paris",
+    "email": "info@galerie-lelong.com",
+    "website": "https://www.galerie-lelong.com",
+    "type": "contemporain",
+    "status": "a_contacter",
+    "contactDate": "",
+    "notes": "Galerie internationale avec une forte visibilite museale et un programme compatible avec la sculpture contemporaine."
+  },
+  {
+    "id": "gp-seed-claude-bernard",
+    "name": "Galerie Claude Bernard",
+    "city": "Paris",
+    "country": "France",
+    "address": "7-9 rue des Beaux-Arts, 75006 Paris",
+    "email": "galerie@claude-bernard.com",
+    "website": "https://claude-bernard.com/",
+    "type": "figuratif",
+    "status": "relance",
+    "contactDate": "2026-02-24",
+    "notes": "Bon angle beaux-arts / sculpture. Prevoir une relance avec dossier PDF et selection d'oeuvres recentes."
+  },
+  {
+    "id": "gp-seed-negropontes",
+    "name": "Galerie Negropontes",
+    "city": "Paris",
+    "country": "France",
+    "address": "14-16 rue Jean-Jacques Rousseau, 75001 Paris",
+    "email": "galerie@negropontes-galerie.com",
+    "website": "https://negropontes-galerie.com/en/contact/",
+    "type": "sculpture",
+    "status": "contacte",
+    "contactDate": "2026-03-03",
+    "notes": "Positionnement design collectible / sculpture. Mettre en avant les formats monumentaux et la matiere."
+  },
+  {
+    "id": "gp-seed-minsky",
+    "name": "Galerie Minsky",
+    "city": "Paris",
+    "country": "France",
+    "address": "37 rue Vaneau, 75007 Paris",
+    "email": "a.souhami@leonor-fini.com",
+    "website": "https://www.galerieminsky.com/en/contact/",
+    "type": "figuratif",
+    "status": "reponse",
+    "contactDate": "2026-03-01",
+    "notes": "Interet potentiel pour un rendez-vous apres reception d'un portfolio imprime."
+  },
+  {
+    "id": "gp-seed-vallois",
+    "name": "Galerie Georges-Philippe & Nathalie Vallois",
+    "city": "Paris",
+    "country": "France",
+    "address": "33 rue de Seine, 75006 Paris",
+    "email": "info@galerie-vallois.com",
+    "website": "https://www.galerie-vallois.com/en/contact/",
+    "type": "contemporain",
+    "status": "collaboration",
+    "contactDate": "2026-01-16",
+    "notes": "Echange deja ouvert. Suivi en cours sur une presentation en dialogue avec d'autres artistes."
+  },
+  {
+    "id": "gp-seed-richard",
+    "name": "Galerie Richard",
+    "city": "Paris",
+    "country": "France",
+    "address": "74 rue de Turenne / 3 impasse Saint-Claude, 75003 Paris",
+    "email": "info@galerierichard.com",
+    "website": "https://www.galerierichard.com/",
+    "type": "contemporain",
+    "status": "a_contacter",
+    "contactDate": "",
+    "notes": "Galerie parisienne historique avec ouverture internationale. Cibler les pieces fortes et la coherence curatoriale."
+  }
+]

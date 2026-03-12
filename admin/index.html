@@ -60,6 +60,7 @@
           <button class="admin-nav__btn" type="button" data-view="news">Actualités</button>
           <button class="admin-nav__btn" type="button" data-view="publications">Publications</button>
           <button class="admin-nav__btn" type="button" data-view="books">Livres</button>
+          <button class="admin-nav__btn" type="button" data-view="galleries">Prospection Galeries</button>
           <button class="admin-nav__btn" type="button" data-view="photos">Photos</button>
           <button class="admin-nav__btn" type="button" data-view="comments">Commentaires</button>
         </nav>
@@ -340,6 +341,220 @@
           <div id="sourcesAdminList" class="admin-list"></div>
         </section>
 
+        <section id="view-galleries" hidden>
+          <div class="admin-view__head admin-view__head--stack">
+            <div>
+              <div class="admin-kicker">CRM interne</div>
+              <h2 style="margin:0">Prospection Galeries</h2>
+              <div class="muted">Suivi des galeries a contacter pour Marie-Madeleine Gautier.</div>
+            </div>
+
+            <div class="admin-login-row">
+              <button id="galleryExportBtn" class="btn" type="button">Exporter CSV</button>
+              <label class="btn admin-file-btn" for="galleryImportInput">Importer CSV</label>
+              <input id="galleryImportInput" type="file" accept=".csv,text/csv" hidden />
+            </div>
+          </div>
+
+          <div id="galleryModeNotice" class="admin-card gallery-banner" hidden></div>
+
+          <div class="gallery-stats" id="galleryStats">
+            <article class="gallery-stat">
+              <span class="gallery-stat__label">Total galeries</span>
+              <strong id="galleryStatTotal" class="gallery-stat__value">0</strong>
+              <span class="gallery-stat__hint">Base active</span>
+            </article>
+
+            <article class="gallery-stat">
+              <span class="gallery-stat__label">Contactees</span>
+              <strong id="galleryStatContacted" class="gallery-stat__value">0</strong>
+              <span class="gallery-stat__hint">Suivi lance</span>
+            </article>
+
+            <article class="gallery-stat">
+              <span class="gallery-stat__label">En attente</span>
+              <strong id="galleryStatPending" class="gallery-stat__value">0</strong>
+              <span class="gallery-stat__hint">A traiter / relance</span>
+            </article>
+
+            <article class="gallery-stat">
+              <span class="gallery-stat__label">Collaborations</span>
+              <strong id="galleryStatCollab" class="gallery-stat__value">0</strong>
+              <span class="gallery-stat__hint">Opportunites confirmees</span>
+            </article>
+          </div>
+
+          <div class="admin-card gallery-toolbar">
+            <div class="row gallery-toolbar__row">
+              <div class="field">
+                <span>Recherche par nom</span>
+                <input id="gallerySearch" class="input" type="search" placeholder="Galerie Lelong..." />
+              </div>
+
+              <div class="field">
+                <span>Trier par date</span>
+                <select id="gallerySort" class="input">
+                  <option value="date_desc">Date de contact - recent</option>
+                  <option value="date_asc">Date de contact - ancien</option>
+                  <option value="name_asc">Nom A-Z</option>
+                  <option value="name_desc">Nom Z-A</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row gallery-toolbar__row">
+              <div class="field">
+                <span>Ville</span>
+                <select id="galleryCityFilter" class="input">
+                  <option value="">Toutes les villes</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <span>Pays</span>
+                <select id="galleryCountryFilter" class="input">
+                  <option value="">Tous les pays</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row gallery-toolbar__row">
+              <div class="field">
+                <span>Statut</span>
+                <select id="galleryStatusFilter" class="input">
+                  <option value="">Tous les statuts</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <span>Type de galerie</span>
+                <select id="galleryTypeFilter" class="input">
+                  <option value="">Tous les types</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="galleryStatusMsg" class="muted"></div>
+          </div>
+
+          <div class="gallery-layout">
+            <div class="admin-card gallery-table-card">
+              <div class="gallery-table-wrap">
+                <table class="gallery-table">
+                  <thead>
+                    <tr>
+                      <th>Nom</th>
+                      <th>Ville</th>
+                      <th>Pays</th>
+                      <th>Adresse</th>
+                      <th>Email</th>
+                      <th>Site</th>
+                      <th>Type</th>
+                      <th>Statut</th>
+                      <th>Date</th>
+                      <th>Notes</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="galleryProspectsBody"></tbody>
+                </table>
+              </div>
+
+              <div id="galleryEmptyState" class="gallery-empty" hidden>
+                <strong>Aucune galerie ne correspond aux filtres.</strong>
+                <span>Essaie un autre statut, une autre ville, ou importe un CSV.</span>
+              </div>
+            </div>
+
+            <aside class="admin-card gallery-form-card">
+              <div class="gallery-form__head">
+                <div>
+                  <div class="admin-kicker">Ajout / edition</div>
+                  <h3 id="galleryFormTitle" style="margin:4px 0 0">Ajouter une galerie</h3>
+                </div>
+
+                <button id="galleryFormReset" class="btn" type="button" hidden>Annuler</button>
+              </div>
+
+              <form id="galleryForm" class="admin-form">
+                <input type="hidden" name="id" />
+
+                <div class="row">
+                  <div class="field">
+                    <span>Nom</span>
+                    <input class="input" name="name" required />
+                  </div>
+
+                  <div class="field">
+                    <span>Email</span>
+                    <input class="input" name="email" type="email" autocomplete="email" />
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="field">
+                    <span>Site web</span>
+                    <input class="input" name="website" inputmode="url" placeholder="https://..." />
+                  </div>
+
+                  <div class="field">
+                    <span>Type</span>
+                    <select class="input" name="type">
+                      <option value="sculpture">Sculpture</option>
+                      <option value="contemporain">Contemporain</option>
+                      <option value="figuratif">Figuratif</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <span>Adresse</span>
+                  <input class="input" name="address" />
+                </div>
+
+                <div class="row">
+                  <div class="field">
+                    <span>Ville</span>
+                    <input class="input" name="city" required />
+                  </div>
+
+                  <div class="field">
+                    <span>Pays</span>
+                    <input class="input" name="country" required />
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="field">
+                    <span>Statut</span>
+                    <select class="input" name="status">
+                      <option value="a_contacter">A contacter</option>
+                      <option value="contacte">Contacte</option>
+                      <option value="relance">Relance</option>
+                      <option value="reponse">Reponse</option>
+                      <option value="refus">Refus</option>
+                      <option value="collaboration">Collaboration</option>
+                    </select>
+                  </div>
+
+                  <div class="field">
+                    <span>Date de contact</span>
+                    <input class="input" name="contactDate" type="date" />
+                  </div>
+                </div>
+
+                <div class="field">
+                  <span>Notes</span>
+                  <textarea class="input" name="notes" rows="6" placeholder="Contexte, preferences, prochaines relances..."></textarea>
+                </div>
+
+                <button class="btn" type="submit">Enregistrer</button>
+                <div id="galleryFormMsg" class="muted"></div>
+              </form>
+            </aside>
+          </div>
+        </section>
+
         <section id="view-photos" hidden>
           <div class="admin-view__head">
             <h2 style="margin:0">Photos du site</h2>
@@ -397,5 +612,6 @@
 
   <!-- ✅ Ton bundle admin -->
   <script defer src="../js/admin-app.js?v=16"></script>
+  <script defer src="../js/admin-gallery-prospects.js?v=1"></script>
 </body>
 </html>
