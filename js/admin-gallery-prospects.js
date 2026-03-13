@@ -112,6 +112,16 @@
     return new URL(raw, `${publicSiteUrl()}/`).toString();
   };
 
+  const mailtoHref = (to, subject, body) => {
+    const email = txt(to).toLowerCase();
+    if (!email) return "";
+
+    const params = [];
+    if (subject) params.push(`subject=${encodeURIComponent(subject)}`);
+    if (body) params.push(`body=${encodeURIComponent(body)}`);
+    return `mailto:${email}${params.length ? `?${params.join("&")}` : ""}`;
+  };
+
   const escapeHtml = (value) =>
     String(value ?? "")
       .replace(/&/g, "&amp;")
@@ -561,6 +571,7 @@
       const addBtn = action(existing ? "Ouvrir la fiche" : "Ajouter a la base", "lead-add", String(index));
       actions.appendChild(addBtn);
       if (lead.website) actions.appendChild(action("Site", "lead-site", String(index)));
+      if (lead.email) actions.appendChild(action("Envoyer email", "lead-mail", String(index)));
       if (lead.email) actions.appendChild(action("Copier mail", "lead-rich-mail", String(index)));
 
       head.appendChild(meta);
@@ -654,8 +665,8 @@
       const actions = document.createElement("div");
       actions.className = "gallery-actions";
       actions.appendChild(action("Modifier", "edit", item.id));
-      actions.appendChild(action("Copier email", "copy", item.id, !item.email));
       actions.appendChild(action("Ouvrir site", "site", item.id, !item.website));
+      actions.appendChild(action("Envoyer email", "mail", item.id, !item.email));
       actions.appendChild(action("Copier mail", "rich-mail", item.id, !item.email));
       actions.appendChild(action("Marquer contacte", "contacted", item.id));
 
@@ -1119,6 +1130,12 @@ out center tags;
         window.open(lead.website, "_blank", "noopener,noreferrer");
         return;
       }
+      if (btn.dataset.action === "lead-mail") {
+        const mail = buildProspectMail(lead);
+        window.location.href = mail ? mailtoHref(mail.to, mail.subject, mail.body) : `mailto:${lead.email}`;
+        setLine(refs.leadMsg, `Ouverture de la messagerie vers ${lead.email}`);
+        return;
+      }
       if (btn.dataset.action === "lead-rich-mail") {
         const result = await copyRichMail(lead);
         setLine(
@@ -1200,14 +1217,15 @@ out center tags;
         refs.form.scrollIntoView({ behavior: "smooth", block: "start" });
         return;
       }
-      if (btn.dataset.action === "copy") {
-        await copy(item.email);
-        setLine(refs.msg, `Email copie: ${item.email}`);
-        return;
-      }
       if (btn.dataset.action === "site") {
         window.open(item.website, "_blank", "noopener,noreferrer");
         setLine(refs.msg, `Site ouvert: ${item.website}`);
+        return;
+      }
+      if (btn.dataset.action === "mail") {
+        const mail = buildProspectMail(item);
+        window.location.href = mail ? mailtoHref(mail.to, mail.subject, mail.body) : `mailto:${item.email}`;
+        setLine(refs.msg, `Ouverture de la messagerie vers ${item.email}`);
         return;
       }
       if (btn.dataset.action === "rich-mail") {
