@@ -13,7 +13,7 @@
   const CONTACT_ROLE = "Accompagnement et diffusion artistique";
   const CONTACT_PHONE = "07 67 03 34 08";
   const CONTACT_PHONE_LINK = "0767033408";
-  const STUDIO_NAME = "DigitalExis-Studio";
+  const STUDIO_NAME = "Digitalexis-Studio";
   const STUDIO_LOGO_PATH = "/assets/logo/img-logo-leger.png";
   const STUDIO_LOGO_WIDTH = 88;
   const collator = new Intl.Collator("fr-FR", { sensitivity: "base", numeric: true });
