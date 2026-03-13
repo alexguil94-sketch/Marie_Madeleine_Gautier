@@ -653,7 +653,175 @@
     return `\uFEFF${[keys.join(";")].concat(state.items.map((item) => keys.map((key) => esc(item[key])).join(";"))).join("\r\n")}`;
   }
 
-  async function searchLeads(query, type, limit) {
+  const normSearch = (value) =>
+    txt(value)
+      .toLocaleLowerCase("fr-FR")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+  function buildLeadAddress(parts) {
+    return [parts.street, parts.cityLine, parts.country].filter(Boolean).join(", ");
+  }
+
+  function inferLeadType(parts, requestedType) {
+    const haystack = normSearch([parts.name, parts.description, parts.kind, parts.shop, parts.tourism].join(" "));
+    if (requestedType && haystack.includes(normSearch(requestedType))) return requestedType;
+    if (/(sculpt|bronze|marble|stone)/.test(haystack)) return "sculpture";
+    if (/(figuratif|figurative|painting|peinture)/.test(haystack)) return "figuratif";
+    return requestedType || "contemporain";
+  }
+
+  function scoreLead(lead, requestedType) {
+    let score = 0;
+    if (lead.website) score += 2;
+    if (lead.email) score += 2;
+    if (lead.address) score += 1;
+    if (requestedType && lead.type === requestedType) score += 3;
+    return score;
+  }
+
+  function dedupeLeads(leads) {
+    const seen = new Set();
+    const out = [];
+
+    leads.forEach((lead) => {
+      const key = leadKey(lead);
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      out.push(lead);
+    });
+
+    return out;
+  }
+
+  async function browserFetchJson(url, options = {}) {
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        accept: "application/json",
+        ...(options.headers || {}),
+      },
+    });
+
+    const raw = await res.text();
+    let data = null;
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch {
+      data = null;
+    }
+
+    if (!res.ok) {
+      throw new Error(raw || `HTTP ${res.status}`);
+    }
+
+    return data;
+  }
+
+  async function browserGeocode(query) {
+    const url = new URL("https://nominatim.openstreetmap.org/search");
+    url.searchParams.set("format", "jsonv2");
+    url.searchParams.set("limit", "1");
+    url.searchParams.set("addressdetails", "1");
+    url.searchParams.set("q", query);
+
+    const data = await browserFetchJson(url.toString());
+    if (!Array.isArray(data) || !data.length) {
+      throw new Error("Zone de recherche introuvable.");
+    }
+
+    const hit = data[0];
+    const bbox = Array.isArray(hit.boundingbox) ? hit.boundingbox.map(Number.parseFloat) : [];
+    if (bbox.length !== 4 || bbox.some((value) => !Number.isFinite(value))) {
+      throw new Error("Zone de recherche invalide.");
+    }
+
+    const area = {
+      south: bbox[0],
+      north: bbox[1],
+      west: bbox[2],
+      east: bbox[3],
+    };
+
+    if ((area.north - area.south) * (area.east - area.west) > 6) {
+      throw new Error("Zone trop large. Resserre la recherche a une ville ou un quartier.");
+    }
+
+    return {
+      bbox: area,
+      label: txt(hit.display_name),
+      city: txt(hit?.address?.city || hit?.address?.town || hit?.address?.village || hit?.display_name?.split?.(",")?.[0]),
+      country: txt(hit?.address?.country),
+    };
+  }
+
+  async function browserSearchLeads(query, type, limit) {
+    const area = await browserGeocode(query);
+    const { south, west, north, east } = area.bbox;
+
+    const overpassQuery = `
+[out:json][timeout:25];
+(
+  nwr["tourism"="gallery"](${south},${west},${north},${east});
+  nwr["shop"="art"](${south},${west},${north},${east});
+);
+out center tags;
+    `.trim();
+
+    const data = await browserFetchJson("https://overpass-api.de/api/interpreter", {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded; charset=utf-8",
+      },
+      body: new URLSearchParams({ data: overpassQuery }).toString(),
+    });
+
+    if (!Array.isArray(data?.elements)) {
+      throw new Error("Resultat Overpass invalide.");
+    }
+
+    const leads = data.elements
+      .map((element) => {
+        const tags = element?.tags || {};
+        const name = txt(tags.name);
+        if (!name) return null;
+
+        return norm({
+          name,
+          city: txt(tags["addr:city"] || tags["addr:town"] || tags["addr:village"] || area.city),
+          country: txt(tags["addr:country"] || area.country),
+          address: buildLeadAddress({
+            street: [tags["addr:housenumber"], tags["addr:street"]].filter(Boolean).join(" "),
+            cityLine: [tags["addr:postcode"], tags["addr:city"] || tags["addr:town"] || tags["addr:village"] || area.city].filter(Boolean).join(" "),
+            country: tags["addr:country"] || area.country,
+          }),
+          email: txt(tags.email || tags["contact:email"]),
+          website: txt(tags.website || tags["contact:website"]),
+          type: inferLeadType(
+            {
+              name: tags.name,
+              description: tags.description || tags["description:fr"],
+              kind: tags.artist_name,
+              shop: tags.shop,
+              tourism: tags.tourism,
+            },
+            type
+          ),
+          status: "a_contacter",
+          notes: `Recherche externe OSM pour "${query}".`,
+        });
+      })
+      .filter(Boolean);
+
+    return {
+      location: area.label,
+      results: dedupeLeads(leads)
+        .sort((left, right) => scoreLead(right, type) - scoreLead(left, type))
+        .slice(0, limit),
+    };
+  }
+
+  async function serverSearchLeads(query, type, limit) {
     const res = await fetch("/.netlify/functions/gallery-search", {
       method: "POST",
       headers: {
@@ -671,6 +839,18 @@
       location: txt(body.location),
       results: Array.isArray(body.results) ? body.results.map(norm) : [],
     };
+  }
+
+  async function searchLeads(query, type, limit) {
+    try {
+      return await browserSearchLeads(query, type, limit);
+    } catch (browserError) {
+      try {
+        return await serverSearchLeads(query, type, limit);
+      } catch {
+        throw browserError;
+      }
+    }
   }
 
   async function onLeadSearch(event) {
