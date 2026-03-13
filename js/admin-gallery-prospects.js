@@ -128,7 +128,7 @@
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result || ""));
-      reader.onerror = () => reject(reader.error || new Error("Lecture logo impossible."));
+      reader.onerror = () => reject(reader.error || new Error("Lecture du logo impossible."));
       reader.readAsDataURL(blob);
     });
   }
@@ -154,28 +154,28 @@
     const site = publicSiteUrl();
     const galleryName = txt(item.name);
     const subject = galleryName
-      ? `Presentation du travail de ${ARTIST_NAME} | ${galleryName}`
-      : `Presentation du travail de ${ARTIST_NAME}`;
+      ? `Pr\u00E9sentation du travail de ${ARTIST_NAME} | ${galleryName}`
+      : `Pr\u00E9sentation du travail de ${ARTIST_NAME}`;
     const body = [
       "Madame, Monsieur,",
       "",
-      `Je me permets de vous contacter afin de vous presenter le travail de la sculptrice ${ARTIST_NAME}.`,
+      `Je me permets de vous contacter afin de vous pr\u00E9senter le travail de la sculptrice ${ARTIST_NAME}.`,
       "",
       "Son travail s'inscrit dans une recherche artistique autour de la sculpture contemporaine, de l'architecture et du paysage, explorant les relations entre formes construites et environnement.",
       "",
-      "Nous souhaiterions vous proposer un rendez-vous afin de vous presenter son travail plus en detail et echanger avec vous sur sa demarche artistique.",
+      "Nous souhaiterions vous proposer un rendez-vous afin de vous pr\u00E9senter son travail plus en d\u00E9tail et \u00E9changer avec vous sur sa d\u00E9marche artistique.",
       "",
-      `${ARTIST_NAME} est tout a fait disponible pour se deplacer et venir vous rencontrer en personne afin de vous presenter ses oeuvres et son univers artistique.`,
+      `${ARTIST_NAME} est tout \u00E0 fait disponible pour se d\u00E9placer et venir vous rencontrer en personne afin de vous pr\u00E9senter ses \u0153uvres et son univers artistique.`,
       "",
-      "Je peux egalement vous transmettre un portfolio ou un dossier artistique si vous souhaitez decouvrir son travail en amont.",
+      "Je peux \u00E9galement vous transmettre un portfolio ou un dossier artistique si vous souhaitez d\u00E9couvrir son travail en amont.",
       "",
-      "Je vous remercie pour l'attention portee a ce message et reste a votre disposition.",
+      "Je vous remercie pour l'attention port\u00E9e \u00E0 ce message et reste \u00E0 votre disposition.",
       "",
       "Bien cordialement,",
       "",
       CONTACT_NAME,
       CONTACT_ROLE,
-      `Telephone : ${CONTACT_PHONE}`,
+      `T\u00E9l\u00E9phone : ${CONTACT_PHONE}`,
       site,
     ].join("\n");
 
@@ -197,21 +197,21 @@
       '<div style="margin:0;padding:24px 0;background:#f7f4ef;font-family:Georgia,Times New Roman,serif;color:#1f2937;">',
       '<div style="max-width:720px;margin:0 auto;background:#ffffff;border:1px solid #ece6dc;border-radius:24px;overflow:hidden;box-shadow:0 16px 40px rgba(15,23,42,0.08);">',
       '<div style="padding:28px 40px 18px;border-bottom:1px solid #f1ece3;background:linear-gradient(135deg,#fbf7f0 0%,#ffffff 100%);">',
-      '<div style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#8a6b45;margin:0 0 10px;">Presentation artistique</div>',
+      '<div style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#8a6b45;margin:0 0 10px;">Pr\u00E9sentation artistique</div>',
       `<div style="font-size:32px;line-height:1.15;font-weight:700;color:#121926;margin:0 0 8px;">${escapeHtml(ARTIST_NAME)}</div>`,
       '<div style="font-size:15px;line-height:1.7;color:#667085;">Sculpture contemporaine, architecture et paysage</div>',
       "</div>",
       '<div style="padding:34px 40px 36px;font-size:16px;line-height:1.85;color:#344054;">',
       '<p style="margin:0 0 18px;">Madame, Monsieur,</p>',
-      `<p style="margin:0 0 18px;">Je me permets de vous contacter afin de vous presenter le travail de la sculptrice <strong style="color:#111827;">${escapeHtml(ARTIST_NAME)}</strong>.</p>`,
+      `<p style="margin:0 0 18px;">Je me permets de vous contacter afin de vous pr\u00E9senter le travail de la sculptrice <strong style="color:#111827;">${escapeHtml(ARTIST_NAME)}</strong>.</p>`,
       "<p style=\"margin:0 0 18px;\">Son travail s'inscrit dans une recherche artistique autour de <strong style=\"color:#111827;\">la sculpture contemporaine, de l'architecture et du paysage</strong>, explorant les relations entre formes construites et environnement.</p>",
-      "<p style=\"margin:0 0 18px;\">Nous souhaiterions vous proposer <strong style=\"color:#111827;\">un rendez-vous afin de vous presenter son travail plus en detail</strong> et echanger avec vous sur sa demarche artistique.</p>",
-      `<p style="margin:0 0 18px;"><strong style="color:#111827;">${escapeHtml(ARTIST_NAME)} est tout a fait disponible pour se deplacer et venir vous rencontrer en personne</strong> afin de vous presenter ses oeuvres et son univers artistique.</p>`,
-      "<div style=\"margin:24px 0;padding:18px 22px;border-left:3px solid #b7925f;background:#fcfaf6;border-radius:0 14px 14px 0;color:#4b5563;\">Je peux egalement vous transmettre <strong style=\"color:#111827;\">un portfolio ou un dossier artistique</strong> si vous souhaitez decouvrir son travail en amont.</div>",
-      "<p style=\"margin:0 0 28px;\">Je vous remercie pour l'attention portee a ce message et reste a votre disposition.</p>",
+      "<p style=\"margin:0 0 18px;\">Nous souhaiterions vous proposer <strong style=\"color:#111827;\">un rendez-vous afin de vous pr\u00E9senter son travail plus en d\u00E9tail</strong> et \u00E9changer avec vous sur sa d\u00E9marche artistique.</p>",
+      `<p style="margin:0 0 18px;"><strong style="color:#111827;">${escapeHtml(ARTIST_NAME)} est tout \u00E0 fait disponible pour se d\u00E9placer et venir vous rencontrer en personne</strong> afin de vous pr\u00E9senter ses \u0153uvres et son univers artistique.</p>`,
+      "<div style=\"margin:24px 0;padding:18px 22px;border-left:3px solid #b7925f;background:#fcfaf6;border-radius:0 14px 14px 0;color:#4b5563;\">Je peux \u00E9galement vous transmettre <strong style=\"color:#111827;\">un portfolio ou un dossier artistique</strong> si vous souhaitez d\u00E9couvrir son travail en amont.</div>",
+      "<p style=\"margin:0 0 28px;\">Je vous remercie pour l'attention port\u00E9e \u00E0 ce message et reste \u00E0 votre disposition.</p>",
       '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin-top:8px;">',
       "<tr>",
-      `<td valign="top" style="padding:4px 18px 0 0;"><img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(STUDIO_NAME)}" style="display:block;width:150px;max-width:150px;height:auto;border:0;border-radius:12px;"></td>`,
+      `<td valign="top" style="padding:4px 16px 0 0;"><img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(STUDIO_NAME)}" style="display:block;width:112px;max-width:112px;height:auto;border:0;border-radius:10px;"></td>`,
       '<td valign="top" style="padding:0;">',
       `<div style="font-size:20px;font-weight:700;color:#111827;">${escapeHtml(CONTACT_NAME)}</div>`,
       `<div style="font-size:14px;color:#6b7280;margin:4px 0 8px;">${escapeHtml(CONTACT_ROLE)}</div>`,
