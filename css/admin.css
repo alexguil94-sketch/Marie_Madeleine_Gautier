@@ -637,6 +637,15 @@ hr{
   font-weight:700;
 }
 
+.gallery-cell__note{
+  display:block;
+  max-width:180px;
+  color:rgba(255,255,255,.82);
+  font-size:13px;
+  line-height:1.45;
+  overflow-wrap:anywhere;
+}
+
 .gallery-cell__meta,
 .gallery-cell__muted{
   display:block;

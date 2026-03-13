@@ -89,6 +89,11 @@
     return /^https?:\/\//i.test(s) ? s : `https://${s}`;
   };
 
+  const cleanNotes = (value) => {
+    const notes = txt(value);
+    return /^Recherche externe OSM pour\s+"[^"]+"\.\s*$/i.test(notes) ? "" : notes;
+  };
+
   const fixDate = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(txt(v)) ? txt(v) : "");
   const fixStatus = (v) => (STATUS[txt(v)] ? txt(v) : "a_contacter");
   const fixType = (v) => (TYPES[txt(v)] ? txt(v) : "contemporain");
@@ -284,7 +289,7 @@
     type: fixType(item.type || item.gallery_type),
     status: fixStatus(item.status),
     contactDate: fixDate(item.contactDate || item.contact_date),
-    notes: txt(item.notes),
+    notes: cleanNotes(item.notes),
     createdAt: txt(item.createdAt || item.created_at) || new Date().toISOString(),
     updatedAt: txt(item.updatedAt || item.updated_at) || new Date().toISOString(),
   });
@@ -642,7 +647,7 @@
 
       const note = document.createElement("div");
       const noteText = txt(item.notes);
-      const noteNode = textNode(noteText ? "gallery-cell__title" : "gallery-cell__muted", noteText ? (noteText.length > 110 ? `${noteText.slice(0, 109).trimEnd()}...` : noteText) : "Aucune note");
+      const noteNode = textNode(noteText ? "gallery-cell__note" : "gallery-cell__muted", noteText ? (noteText.length > 110 ? `${noteText.slice(0, 109).trimEnd()}...` : noteText) : "Aucune note");
       if (noteText) noteNode.title = noteText;
       note.appendChild(noteNode);
 
@@ -998,7 +1003,7 @@ out center tags;
             type
           ),
           status: "a_contacter",
-          notes: `Recherche externe OSM pour "${query}".`,
+          notes: "",
         });
       })
       .filter(Boolean);
