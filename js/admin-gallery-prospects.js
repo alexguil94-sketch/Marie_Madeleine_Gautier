@@ -107,16 +107,6 @@
     return new URL(raw, `${publicSiteUrl()}/`).toString();
   };
 
-  const mailtoHref = (to, subject, body) => {
-    const email = txt(to).toLowerCase();
-    if (!email) return "";
-
-    const params = [];
-    if (subject) params.push(`subject=${encodeURIComponent(subject)}`);
-    if (body) params.push(`body=${encodeURIComponent(body)}`);
-    return `mailto:${email}${params.length ? `?${params.join("&")}` : ""}`;
-  };
-
   const escapeHtml = (value) =>
     String(value ?? "")
       .replace(/&/g, "&amp;")
@@ -566,8 +556,7 @@
       const addBtn = action(existing ? "Ouvrir la fiche" : "Ajouter a la base", "lead-add", String(index));
       actions.appendChild(addBtn);
       if (lead.website) actions.appendChild(action("Site", "lead-site", String(index)));
-      if (lead.email) actions.appendChild(action("Email", "lead-mail", String(index)));
-      if (lead.email) actions.appendChild(action("Copier mail pro", "lead-rich-mail", String(index)));
+      if (lead.email) actions.appendChild(action("Copier mail", "lead-rich-mail", String(index)));
 
       head.appendChild(meta);
       card.appendChild(head);
@@ -619,10 +608,9 @@
 
       const mailBox = document.createElement("div");
       if (item.email) {
-        const mail = buildProspectMail(item);
         const link = document.createElement("a");
         link.className = "gallery-link";
-        link.href = mail ? mailtoHref(mail.to, mail.subject, mail.body) : `mailto:${item.email}`;
+        link.href = `mailto:${item.email}`;
         link.textContent = item.email;
         mailBox.appendChild(link);
       } else {
@@ -663,8 +651,7 @@
       actions.appendChild(action("Modifier", "edit", item.id));
       actions.appendChild(action("Copier email", "copy", item.id, !item.email));
       actions.appendChild(action("Ouvrir site", "site", item.id, !item.website));
-      actions.appendChild(action("Envoyer email", "mail", item.id, !item.email));
-      actions.appendChild(action("Copier mail pro", "rich-mail", item.id, !item.email));
+      actions.appendChild(action("Copier mail", "rich-mail", item.id, !item.email));
       actions.appendChild(action("Marquer contacte", "contacted", item.id));
 
       tr.appendChild(cell("Nom", nameBox));
@@ -1127,18 +1114,12 @@ out center tags;
         window.open(lead.website, "_blank", "noopener,noreferrer");
         return;
       }
-      if (btn.dataset.action === "lead-mail") {
-        const mail = buildProspectMail(lead);
-        window.location.href = mail ? mailtoHref(mail.to, mail.subject, mail.body) : `mailto:${lead.email}`;
-        setLine(refs.leadMsg, `Ouverture du mail pre-rempli vers ${lead.email}`);
-        return;
-      }
       if (btn.dataset.action === "lead-rich-mail") {
         const result = await copyRichMail(lead);
         setLine(
           refs.leadMsg,
           result.rich
-            ? `Mail pro copie pour ${lead.name}. Colle-le dans Gmail ou Outlook. Sujet: ${result.subject}`
+            ? `Mail pre-rempli copie pour ${lead.name}. Colle-le dans Gmail ou Outlook. Sujet: ${result.subject}`
             : `Version texte copie pour ${lead.name}. Sujet suggere: ${result.subject}`
         );
       }
@@ -1224,18 +1205,12 @@ out center tags;
         setLine(refs.msg, `Site ouvert: ${item.website}`);
         return;
       }
-      if (btn.dataset.action === "mail") {
-        const mail = buildProspectMail(item);
-        window.location.href = mail ? mailtoHref(mail.to, mail.subject, mail.body) : `mailto:${item.email}`;
-        setLine(refs.msg, `Ouverture du mail pre-rempli vers ${item.email}`);
-        return;
-      }
       if (btn.dataset.action === "rich-mail") {
         const result = await copyRichMail(item);
         setLine(
           refs.msg,
           result.rich
-            ? `Mail pro copie pour ${item.name}. Colle-le dans Gmail ou Outlook. Sujet: ${result.subject}`
+            ? `Mail pre-rempli copie pour ${item.name}. Colle-le dans Gmail ou Outlook. Sujet: ${result.subject}`
             : `Version texte copie pour ${item.name}. Sujet suggere: ${result.subject}`
         );
         return;
