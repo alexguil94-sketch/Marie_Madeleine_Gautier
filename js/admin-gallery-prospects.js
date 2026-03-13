@@ -7,6 +7,8 @@
   const TABLE = "gallery_prospects";
   const STORAGE_KEY = "mmg-gallery-prospects-v1";
   const SORT_DEFAULT = "date_desc";
+  const ARTIST_NAME = "Marie-Madeleine Gautier";
+  const DEFAULT_PUBLIC_SITE = "https://marie-madeleine-gautier-world.com";
   const collator = new Intl.Collator("fr-FR", { sensitivity: "base", numeric: true });
 
   const STATUS = {
@@ -82,6 +84,63 @@
   const fixDate = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(txt(v)) ? txt(v) : "");
   const fixStatus = (v) => (STATUS[txt(v)] ? txt(v) : "a_contacter");
   const fixType = (v) => (TYPES[txt(v)] ? txt(v) : "contemporain");
+
+  const publicSiteUrl = () => {
+    const origin = txt(window.location?.origin);
+    if (!origin || origin === "null" || /^file:/i.test(origin)) return DEFAULT_PUBLIC_SITE;
+    if (/localhost|127\.0\.0\.1/i.test(origin)) return DEFAULT_PUBLIC_SITE;
+    return origin;
+  };
+
+  const mailtoHref = (to, subject, body) => {
+    const email = txt(to).toLowerCase();
+    if (!email) return "";
+
+    const params = [];
+    if (subject) params.push(`subject=${encodeURIComponent(subject)}`);
+    if (body) params.push(`body=${encodeURIComponent(body)}`);
+    return `mailto:${email}${params.length ? `?${params.join("&")}` : ""}`;
+  };
+
+  const pitchByType = (type) => ({
+    sculpture: "travail sculptural sensible a la matiere, au volume et a la presence",
+    figuratif: "travail figuratif attentif a la presence, au geste et a l'espace",
+    contemporain: "travail contemporain ancre dans la forme, la matiere et l'espace",
+  }[fixType(type)]);
+
+  function buildProspectMail(item = {}) {
+    const email = txt(item.email).toLowerCase();
+    if (!email) return null;
+
+    const site = publicSiteUrl();
+    const galleryName = txt(item.name) || "votre galerie";
+    const subject = `${ARTIST_NAME} - proposition artistique pour ${galleryName}`;
+    const body = [
+      "Bonjour,",
+      "",
+      `Je me permets de vous contacter afin de vous presenter le travail de la sculptrice ${ARTIST_NAME}.`,
+      `En decouvrant ${galleryName}, j'ai pense qu'un echange pourrait etre pertinent, notamment autour d'un ${pitchByType(item.type)}.`,
+      "",
+      "Vous pouvez consulter ici une premiere selection :",
+      `- Site officiel : ${site}`,
+      `- Page artiste : ${site}/artiste.html`,
+      `- Galerie en ligne : ${site}/gallery.html`,
+      `- Catalogue : ${site}/assets/pdf/catalogue-2023.pdf`,
+      `- Monographie : ${site}/assets/pdf/monographie.pdf`,
+      "",
+      "Si votre programmation le permet, je peux vous transmettre un dossier plus cible, une selection d'oeuvres ou echanger autour d'une presentation / collaboration.",
+      "",
+      "Bien cordialement,",
+      ARTIST_NAME,
+      `${site}/contact.html`,
+    ].join("\n");
+
+    return {
+      to: email,
+      subject,
+      body: body.length > 1800 ? `${body.slice(0, 1797)}...` : body,
+    };
+  }
 
   const norm = (item = {}) => ({
     id: txt(item.id) || uuid(),
@@ -418,9 +477,10 @@
 
       const mailBox = document.createElement("div");
       if (item.email) {
+        const mail = buildProspectMail(item);
         const link = document.createElement("a");
         link.className = "gallery-link";
-        link.href = `mailto:${item.email}`;
+        link.href = mail ? mailtoHref(mail.to, mail.subject, mail.body) : `mailto:${item.email}`;
         link.textContent = item.email;
         mailBox.appendChild(link);
       } else {
@@ -925,7 +985,8 @@ out center tags;
         return;
       }
       if (btn.dataset.action === "lead-mail") {
-        window.location.href = `mailto:${lead.email}`;
+        const mail = buildProspectMail(lead);
+        window.location.href = mail ? mailtoHref(mail.to, mail.subject, mail.body) : `mailto:${lead.email}`;
       }
     } catch (e) {
       setLine(refs.leadMsg, err(e), true);
@@ -991,8 +1052,9 @@ out center tags;
         return;
       }
       if (btn.dataset.action === "mail") {
-        window.location.href = `mailto:${item.email}`;
-        setLine(refs.msg, `Ouverture du mail vers ${item.email}`);
+        const mail = buildProspectMail(item);
+        window.location.href = mail ? mailtoHref(mail.to, mail.subject, mail.body) : `mailto:${item.email}`;
+        setLine(refs.msg, `Ouverture du mail pre-rempli vers ${item.email}`);
         return;
       }
       if (btn.dataset.action === "contacted") {
