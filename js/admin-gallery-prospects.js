@@ -15,6 +15,7 @@
   const CONTACT_PHONE_LINK = "0767033408";
   const STUDIO_NAME = "DigitalExis-Studio";
   const STUDIO_LOGO_PATH = "/assets/logo/img-logo-leger.png";
+  const STUDIO_LOGO_WIDTH = 88;
   const collator = new Intl.Collator("fr-FR", { sensitivity: "base", numeric: true });
 
   const STATUS = {
@@ -133,6 +134,47 @@
     });
   }
 
+  function resizeImageBlob(blob, maxWidth) {
+    return new Promise((resolve, reject) => {
+      const objectUrl = URL.createObjectURL(blob);
+      const image = new Image();
+
+      image.onload = () => {
+        try {
+          const ratio = Math.min(1, maxWidth / (image.naturalWidth || maxWidth));
+          const width = Math.max(1, Math.round((image.naturalWidth || maxWidth) * ratio));
+          const height = Math.max(1, Math.round((image.naturalHeight || maxWidth) * ratio));
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext("2d");
+          if (!ctx) throw new Error("Canvas indisponible.");
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(image, 0, 0, width, height);
+
+          resolve({
+            src: canvas.toDataURL("image/png"),
+            width,
+            height,
+          });
+        } catch (error) {
+          reject(error);
+        } finally {
+          URL.revokeObjectURL(objectUrl);
+        }
+      };
+
+      image.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error("Chargement du logo impossible."));
+      };
+
+      image.src = objectUrl;
+    });
+  }
+
   async function studioLogoSrc() {
     if (!studioLogoSrcPromise) {
       const fallbackUrl = absoluteUrl(STUDIO_LOGO_PATH);
@@ -141,8 +183,17 @@
           if (!res.ok) throw new Error(`logo ${res.status}`);
           return res.blob();
         })
-        .then(blobToDataUrl)
-        .catch(() => fallbackUrl);
+        .then((blob) => resizeImageBlob(blob, STUDIO_LOGO_WIDTH))
+        .catch(async () => ({
+          src: await blobToDataUrl(await (await fetch(fallbackUrl, { cache: "force-cache" })).blob()),
+          width: STUDIO_LOGO_WIDTH,
+          height: Math.round(STUDIO_LOGO_WIDTH * 0.67),
+        }))
+        .catch(() => ({
+          src: fallbackUrl,
+          width: STUDIO_LOGO_WIDTH,
+          height: Math.round(STUDIO_LOGO_WIDTH * 0.67),
+        }));
     }
     return studioLogoSrcPromise;
   }
@@ -191,7 +242,7 @@
     if (!mail) return null;
 
     const site = publicSiteUrl();
-    const logoUrl = await studioLogoSrc();
+    const logo = await studioLogoSrc();
 
     const html = [
       '<div style="margin:0;padding:24px 0;background:#f7f4ef;font-family:Georgia,Times New Roman,serif;color:#1f2937;">',
@@ -211,7 +262,7 @@
       "<p style=\"margin:0 0 28px;\">Je vous remercie pour l'attention port\u00E9e \u00E0 ce message et reste \u00E0 votre disposition.</p>",
       '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin-top:8px;">',
       "<tr>",
-      `<td valign="top" style="padding:4px 16px 0 0;"><img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(STUDIO_NAME)}" style="display:block;width:112px;max-width:112px;height:auto;border:0;border-radius:10px;"></td>`,
+      `<td valign="top" style="padding:2px 14px 0 0;"><img src="${escapeHtml(logo.src)}" alt="${escapeHtml(STUDIO_NAME)}" width="${logo.width}" height="${logo.height}" style="display:block;width:${logo.width}px;max-width:${logo.width}px;height:${logo.height}px;border:0;border-radius:8px;"></td>`,
       '<td valign="top" style="padding:0;">',
       `<div style="font-size:20px;font-weight:700;color:#111827;">${escapeHtml(CONTACT_NAME)}</div>`,
       `<div style="font-size:14px;color:#6b7280;margin:4px 0 8px;">${escapeHtml(CONTACT_ROLE)}</div>`,
