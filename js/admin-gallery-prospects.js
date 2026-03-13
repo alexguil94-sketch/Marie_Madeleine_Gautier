@@ -54,6 +54,7 @@
     bound: false,
     source: null,
     items: [],
+    leadResults: [],
     filters: {
       search: "",
       city: "",
@@ -229,6 +230,12 @@
     refs.view = $("view-galleries");
     refs.banner = $("galleryModeNotice");
     refs.msg = $("galleryStatusMsg");
+    refs.leadForm = $("galleryLeadSearchForm");
+    refs.leadQuery = $("galleryLeadQuery");
+    refs.leadType = $("galleryLeadType");
+    refs.leadLimit = $("galleryLeadLimit");
+    refs.leadMsg = $("galleryLeadMsg");
+    refs.leadResults = $("galleryLeadResults");
     refs.form = $("galleryForm");
     refs.formTitle = $("galleryFormTitle");
     refs.formMsg = $("galleryFormMsg");
@@ -296,6 +303,78 @@
       .concat(values.map((value) => `<option value="${value}">${labelFn(value)}</option>`))
       .join("");
     el.value = current || "";
+  }
+
+  function leadKey(item) {
+    return [txt(item.name), txt(item.city), txt(item.country), txt(item.website)]
+      .map((value) =>
+        value
+          .toLocaleLowerCase("fr-FR")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+      )
+      .join("|");
+  }
+
+  function findExistingLead(item) {
+    const key = leadKey(item);
+    return state.items.find((entry) => leadKey(entry) === key) || null;
+  }
+
+  function renderLeadResults() {
+    if (!refs.leadResults) return;
+
+    refs.leadResults.innerHTML = "";
+    refs.leadResults.hidden = !state.leadResults.length;
+    if (!state.leadResults.length) return;
+
+    state.leadResults.forEach((lead, index) => {
+      const card = document.createElement("article");
+      card.className = "gallery-lead";
+
+      const existing = findExistingLead(lead);
+
+      const head = document.createElement("div");
+      head.className = "gallery-lead__head";
+
+      const meta = document.createElement("div");
+      meta.className = "gallery-lead__meta";
+      meta.appendChild(textNode("gallery-cell__title", lead.name));
+      meta.appendChild(textNode("gallery-cell__muted", `${lead.city || "Ville ?"} - ${lead.country || "Pays ?"}`));
+      meta.appendChild(textNode(lead.address ? "gallery-cell__title" : "gallery-cell__muted", lead.address || "Adresse non disponible"));
+      if (lead.email) meta.appendChild(textNode("gallery-cell__muted", lead.email));
+      if (lead.website) meta.appendChild(textNode("gallery-cell__muted", lead.website));
+
+      const tags = document.createElement("div");
+      tags.className = "gallery-lead__tags";
+
+      const typeChip = document.createElement("span");
+      typeChip.className = "gallery-chip";
+      typeChip.textContent = TYPES[lead.type] || lead.type;
+      tags.appendChild(typeChip);
+
+      if (existing) {
+        const existingChip = document.createElement("span");
+        existingChip.className = "gallery-chip gallery-chip--reply";
+        existingChip.textContent = "Deja dans la base";
+        tags.appendChild(existingChip);
+      }
+
+      const actions = document.createElement("div");
+      actions.className = "gallery-lead__actions";
+
+      const addBtn = action(existing ? "Ouvrir la fiche" : "Ajouter a la base", "lead-add", String(index));
+      actions.appendChild(addBtn);
+      if (lead.website) actions.appendChild(action("Site", "lead-site", String(index)));
+      if (lead.email) actions.appendChild(action("Email", "lead-mail", String(index)));
+
+      head.appendChild(meta);
+      card.appendChild(head);
+      card.appendChild(tags);
+      card.appendChild(actions);
+
+      refs.leadResults.appendChild(card);
+    });
   }
 
   function filters() {
@@ -418,6 +497,7 @@
 
     const list = filters();
     renderTable(list);
+    renderLeadResults();
     setLine(refs.msg, `${list.length} galerie(s) affichee(s) sur ${total}.`);
   }
 
@@ -573,6 +653,105 @@
     return `\uFEFF${[keys.join(";")].concat(state.items.map((item) => keys.map((key) => esc(item[key])).join(";"))).join("\r\n")}`;
   }
 
+  async function searchLeads(query, type, limit) {
+    const res = await fetch("/.netlify/functions/gallery-search", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ query, type, limit }),
+    });
+
+    const body = await res.json().catch(() => null);
+    if (!res.ok || !body?.ok) {
+      throw new Error(body?.detail || body?.error || `Recherche ${res.status}`);
+    }
+
+    return {
+      location: txt(body.location),
+      results: Array.isArray(body.results) ? body.results.map(norm) : [],
+    };
+  }
+
+  async function onLeadSearch(event) {
+    event.preventDefault();
+
+    const query = txt(refs.leadQuery?.value);
+    const type = txt(refs.leadType?.value);
+    const limit = Number.parseInt(refs.leadLimit?.value || "20", 10) || 20;
+
+    if (!query) {
+      setLine(refs.leadMsg, "Indique une ville, une zone ou un pays.", true);
+      return;
+    }
+
+    setLine(refs.leadMsg, "Recherche externe en cours...");
+    state.leadResults = [];
+    renderLeadResults();
+
+    try {
+      const payload = await searchLeads(query, type, limit);
+      state.leadResults = payload.results;
+      renderLeadResults();
+      setLine(
+        refs.leadMsg,
+        payload.results.length
+          ? `${payload.results.length} resultat(s) trouves pour ${payload.location || query}.`
+          : `Aucune galerie trouvee pour ${payload.location || query}.`,
+        false
+      );
+    } catch (e) {
+      setLine(refs.leadMsg, err(e), true);
+    }
+  }
+
+  async function saveLead(lead) {
+    const existing = findExistingLead(lead);
+    if (existing) {
+      fillForm(existing);
+      refs.form.scrollIntoView({ behavior: "smooth", block: "start" });
+      setLine(refs.formMsg, "Cette galerie existe deja dans la base.");
+      return;
+    }
+
+    await state.source.save(
+      {
+        ...lead,
+        status: "a_contacter",
+        contactDate: "",
+      },
+      ""
+    );
+
+    await refresh();
+    setLine(refs.leadMsg, `${lead.name} ajoutee a la base.`);
+  }
+
+  async function onLeadRow(event) {
+    const btn = event.target.closest("button[data-action]");
+    if (!btn) return;
+
+    const index = Number.parseInt(btn.dataset.id || "-1", 10);
+    const lead = state.leadResults[index];
+    if (!lead) return;
+
+    try {
+      if (btn.dataset.action === "lead-add") {
+        await saveLead(lead);
+        return;
+      }
+      if (btn.dataset.action === "lead-site") {
+        window.open(lead.website, "_blank", "noopener,noreferrer");
+        return;
+      }
+      if (btn.dataset.action === "lead-mail") {
+        window.location.href = `mailto:${lead.email}`;
+      }
+    } catch (e) {
+      setLine(refs.leadMsg, err(e), true);
+    }
+  }
+
   async function copy(value) {
     if (!txt(value)) throw new Error("Aucun email disponible.");
     if (navigator.clipboard?.writeText) {
@@ -684,6 +863,8 @@
     refs.country.addEventListener("change", (event) => { state.filters.country = txt(event.target.value); render(); });
     refs.status.addEventListener("change", (event) => { state.filters.status = txt(event.target.value); render(); });
     refs.type.addEventListener("change", (event) => { state.filters.type = txt(event.target.value); render(); });
+    refs.leadForm.addEventListener("submit", onLeadSearch);
+    refs.leadResults.addEventListener("click", onLeadRow);
     refs.form.addEventListener("submit", onSave);
     refs.formReset.addEventListener("click", resetForm);
     refs.body.addEventListener("click", onRow);
@@ -691,10 +872,16 @@
     refs.importInput.addEventListener("change", onImport);
     window.addEventListener("mmg:admin-logout", () => {
       state.items = [];
+      state.leadResults = [];
       refs.body.innerHTML = "";
       refs.empty.hidden = true;
       setLine(refs.msg, "");
+      setLine(refs.leadMsg, "");
       setLine(refs.formMsg, "");
+      if (refs.leadResults) {
+        refs.leadResults.innerHTML = "";
+        refs.leadResults.hidden = true;
+      }
     });
     state.bound = true;
   }
@@ -707,9 +894,15 @@
     try {
       const source = (await useSupabase(detail.sb || window.mmgSupabase || null)) || (await useLocal());
       state.source = source;
+      state.leadResults = [];
       banner(source.label === "Mode local: stockage navigateur"
         ? "Mode local actif. Les donnees sont stockees dans ce navigateur tant que la table Supabase n'est pas disponible."
         : source.label);
+      if (refs.leadResults) {
+        refs.leadResults.innerHTML = "";
+        refs.leadResults.hidden = true;
+      }
+      setLine(refs.leadMsg, "");
       resetForm();
       await refresh();
     } catch (e) {

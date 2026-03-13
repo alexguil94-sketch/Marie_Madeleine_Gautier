@@ -359,6 +359,57 @@
 
           <div id="galleryModeNotice" class="admin-card gallery-banner" hidden></div>
 
+          <div class="admin-card gallery-discovery">
+            <div class="admin-view__head admin-view__head--stack">
+              <div>
+                <div class="admin-kicker">Recherche externe</div>
+                <h3 style="margin:4px 0 0">Trouver des galeries sans connaitre leur nom</h3>
+                <div class="muted">Recherche par ville, zone ou pays, puis ajout en un clic dans la base.</div>
+              </div>
+            </div>
+
+            <form id="galleryLeadSearchForm" class="admin-form">
+              <div class="row gallery-toolbar__row">
+                <div class="field">
+                  <span>Ville / zone / requete</span>
+                  <input id="galleryLeadQuery" class="input" placeholder="Paris, France / Brussels / Tokyo" required />
+                </div>
+
+                <div class="field">
+                  <span>Type recherche</span>
+                  <select id="galleryLeadType" class="input">
+                    <option value="">Tous les types</option>
+                    <option value="sculpture">Sculpture</option>
+                    <option value="contemporain">Contemporain</option>
+                    <option value="figuratif">Figuratif</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="row gallery-toolbar__row">
+                <div class="field">
+                  <span>Nombre max</span>
+                  <select id="galleryLeadLimit" class="input">
+                    <option value="10">10 resultats</option>
+                    <option value="20" selected>20 resultats</option>
+                    <option value="40">40 resultats</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <span>&nbsp;</span>
+                  <div class="admin-login-row">
+                    <button class="btn" type="submit">Rechercher des galeries</button>
+                  </div>
+                </div>
+              </div>
+
+              <div id="galleryLeadMsg" class="muted"></div>
+            </form>
+
+            <div id="galleryLeadResults" class="gallery-leads" hidden></div>
+          </div>
+
           <div class="gallery-stats" id="galleryStats">
             <article class="gallery-stat">
               <span class="gallery-stat__label">Total galeries</span>
@@ -388,8 +439,8 @@
           <div class="admin-card gallery-toolbar">
             <div class="row gallery-toolbar__row">
               <div class="field">
-                <span>Recherche par nom</span>
-                <input id="gallerySearch" class="input" type="search" placeholder="Galerie Lelong..." />
+                <span>Filtrer la base</span>
+                <input id="gallerySearch" class="input" type="search" placeholder="Nom, ville, pays, email..." />
               </div>
 
               <div class="field">
