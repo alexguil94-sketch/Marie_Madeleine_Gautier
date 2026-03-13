@@ -9,6 +9,9 @@
   const SORT_DEFAULT = "date_desc";
   const ARTIST_NAME = "Marie-Madeleine Gautier";
   const DEFAULT_PUBLIC_SITE = "https://marie-madeleine-gautier-world.com";
+  const STUDIO_NAME = "DigitalExis-Studio";
+  const STUDIO_TAGLINE = "Developpement digital et visibilite pour artistes";
+  const STUDIO_LOGO_PATH = "/assets/logo/logo-digitalexis-email.png";
   const collator = new Intl.Collator("fr-FR", { sensitivity: "base", numeric: true });
 
   const STATUS = {
@@ -92,6 +95,13 @@
     return origin;
   };
 
+  const absoluteUrl = (path) => {
+    const raw = txt(path);
+    if (!raw) return publicSiteUrl();
+    if (/^https?:\/\//i.test(raw)) return raw;
+    return new URL(raw, `${publicSiteUrl()}/`).toString();
+  };
+
   const mailtoHref = (to, subject, body) => {
     const email = txt(to).toLowerCase();
     if (!email) return "";
@@ -102,10 +112,18 @@
     return `mailto:${email}${params.length ? `?${params.join("&")}` : ""}`;
   };
 
+  const escapeHtml = (value) =>
+    String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
   const pitchByType = (type) => ({
-    sculpture: "travail sculptural sensible a la matiere, au volume et a la presence",
-    figuratif: "travail figuratif attentif a la presence, au geste et a l'espace",
-    contemporain: "travail contemporain ancre dans la forme, la matiere et l'espace",
+    sculpture: "recherche sculpturale autour de la matiere, du volume et de la presence",
+    figuratif: "recherche figurative sensible a la presence, au geste et a l'espace",
+    contemporain: "recherche contemporaine autour de la forme, de la matiere et de l'espace",
   }[fixType(type)]);
 
   function buildProspectMail(item = {}) {
@@ -114,31 +132,77 @@
 
     const site = publicSiteUrl();
     const galleryName = txt(item.name) || "votre galerie";
-    const subject = `${ARTIST_NAME} - proposition artistique pour ${galleryName}`;
+    const subject = `${ARTIST_NAME} | proposition pour ${galleryName}`;
     const body = [
       "Bonjour,",
       "",
-      `Je me permets de vous contacter afin de vous presenter le travail de la sculptrice ${ARTIST_NAME}.`,
-      `En decouvrant ${galleryName}, j'ai pense qu'un echange pourrait etre pertinent, notamment autour d'un ${pitchByType(item.type)}.`,
+      `Je me permets de vous contacter au sujet du travail de la sculptrice ${ARTIST_NAME}.`,
+      `Au regard de la ligne artistique de ${galleryName}, il me semble qu'un echange pourrait etre pertinent, son travail developpant une ${pitchByType(item.type)}.`,
       "",
-      "Vous pouvez consulter ici une premiere selection :",
+      "Vous pouvez consulter une premiere selection ici :",
       `- Site officiel : ${site}`,
       `- Page artiste : ${site}/artiste.html`,
       `- Galerie en ligne : ${site}/gallery.html`,
       `- Catalogue : ${site}/assets/pdf/catalogue-2023.pdf`,
       `- Monographie : ${site}/assets/pdf/monographie.pdf`,
       "",
-      "Si votre programmation le permet, je peux vous transmettre un dossier plus cible, une selection d'oeuvres ou echanger autour d'une presentation / collaboration.",
+      "Si cela vous interesse, je peux vous transmettre un dossier plus cible, une selection d'oeuvres avec visuels, formats et disponibilites, ou convenir d'un court echange.",
       "",
       "Bien cordialement,",
-      ARTIST_NAME,
-      `${site}/contact.html`,
+      STUDIO_NAME,
+      STUDIO_TAGLINE,
+      site,
     ].join("\n");
 
     return {
       to: email,
       subject,
       body: body.length > 1800 ? `${body.slice(0, 1797)}...` : body,
+    };
+  }
+
+  function buildProspectHtmlMail(item = {}) {
+    const mail = buildProspectMail(item);
+    if (!mail) return null;
+
+    const galleryName = txt(item.name) || "votre galerie";
+    const site = publicSiteUrl();
+    const logoUrl = absoluteUrl(STUDIO_LOGO_PATH);
+    const links = [
+      { label: "Site officiel", href: site },
+      { label: "Page artiste", href: `${site}/artiste.html` },
+      { label: "Galerie en ligne", href: `${site}/gallery.html` },
+      { label: "Catalogue", href: `${site}/assets/pdf/catalogue-2023.pdf` },
+      { label: "Monographie", href: `${site}/assets/pdf/monographie.pdf` },
+    ];
+
+    const html = [
+      '<div style="margin:0;padding:0;font-family:Segoe UI,Arial,sans-serif;color:#101828;font-size:15px;line-height:1.7;">',
+      '<p style="margin:0 0 16px;">Bonjour,</p>',
+      `<p style="margin:0 0 16px;">Je me permets de vous contacter au sujet du travail de la sculptrice <strong>${escapeHtml(ARTIST_NAME)}</strong>.</p>`,
+      `<p style="margin:0 0 16px;">Au regard de la ligne artistique de <strong>${escapeHtml(galleryName)}</strong>, il me semble qu'un echange pourrait etre pertinent, son travail developpant une ${escapeHtml(pitchByType(item.type))}.</p>`,
+      '<p style="margin:0 0 10px;">Vous pouvez consulter une premiere selection ici :</p>',
+      '<ul style="margin:0 0 20px 18px;padding:0;">',
+      ...links.map((link) => `<li style="margin:0 0 8px;"><a href="${escapeHtml(link.href)}" style="color:#0f4c81;text-decoration:none;">${escapeHtml(link.label)}</a></li>`),
+      '</ul>',
+      '<p style="margin:0 0 18px;">Si cela vous interesse, je peux vous transmettre un dossier plus cible, une selection d&apos;oeuvres avec visuels, formats et disponibilites, ou convenir d&apos;un court echange.</p>',
+      '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin-top:14px;">',
+      "<tr>",
+      `<td valign="middle" style="padding:0 16px 0 0;"><img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(STUDIO_NAME)}" style="display:block;width:220px;max-width:220px;height:auto;border:0;border-radius:14px;"></td>`,
+      '<td valign="middle" style="padding:0;">',
+      `<div style="font-size:18px;font-weight:700;color:#101828;">${escapeHtml(STUDIO_NAME)}</div>`,
+      `<div style="font-size:13px;color:#475467;margin:4px 0 10px;">${escapeHtml(STUDIO_TAGLINE)}</div>`,
+      `<div style="font-size:13px;"><a href="${escapeHtml(site)}" style="color:#0f4c81;text-decoration:none;">${escapeHtml(site.replace(/^https?:\/\//i, ""))}</a></div>`,
+      "</td>",
+      "</tr>",
+      "</table>",
+      "</div>",
+    ].join("");
+
+    return {
+      subject: mail.subject,
+      text: mail.body,
+      html,
     };
   }
 
@@ -426,6 +490,7 @@
       actions.appendChild(addBtn);
       if (lead.website) actions.appendChild(action("Site", "lead-site", String(index)));
       if (lead.email) actions.appendChild(action("Email", "lead-mail", String(index)));
+      if (lead.email) actions.appendChild(action("Copier mail pro", "lead-rich-mail", String(index)));
 
       head.appendChild(meta);
       card.appendChild(head);
@@ -522,6 +587,7 @@
       actions.appendChild(action("Copier email", "copy", item.id, !item.email));
       actions.appendChild(action("Ouvrir site", "site", item.id, !item.website));
       actions.appendChild(action("Envoyer email", "mail", item.id, !item.email));
+      actions.appendChild(action("Copier mail pro", "rich-mail", item.id, !item.email));
       actions.appendChild(action("Marquer contacte", "contacted", item.id));
 
       tr.appendChild(cell("Nom", nameBox));
@@ -987,6 +1053,17 @@ out center tags;
       if (btn.dataset.action === "lead-mail") {
         const mail = buildProspectMail(lead);
         window.location.href = mail ? mailtoHref(mail.to, mail.subject, mail.body) : `mailto:${lead.email}`;
+        setLine(refs.leadMsg, `Ouverture du mail pre-rempli vers ${lead.email}`);
+        return;
+      }
+      if (btn.dataset.action === "lead-rich-mail") {
+        const result = await copyRichMail(lead);
+        setLine(
+          refs.leadMsg,
+          result.rich
+            ? `Mail pro copie pour ${lead.name}. Colle-le dans Gmail ou Outlook. Sujet: ${result.subject}`
+            : `Version texte copie pour ${lead.name}. Sujet suggere: ${result.subject}`
+        );
       }
     } catch (e) {
       setLine(refs.leadMsg, err(e), true);
@@ -1007,6 +1084,25 @@ out center tags;
     area.select();
     document.execCommand("copy");
     area.remove();
+  }
+
+  async function copyRichMail(item) {
+    const payload = buildProspectHtmlMail(item);
+    if (!payload) throw new Error("Aucun email disponible.");
+
+    if (navigator.clipboard?.write && window.ClipboardItem) {
+      try {
+        const entry = new window.ClipboardItem({
+          "text/html": new Blob([payload.html], { type: "text/html" }),
+          "text/plain": new Blob([payload.text], { type: "text/plain" }),
+        });
+        await navigator.clipboard.write([entry]);
+        return { subject: payload.subject, rich: true };
+      } catch {}
+    }
+
+    await copy(payload.text);
+    return { subject: payload.subject, rich: false };
   }
 
   async function onSave(event) {
@@ -1055,6 +1151,16 @@ out center tags;
         const mail = buildProspectMail(item);
         window.location.href = mail ? mailtoHref(mail.to, mail.subject, mail.body) : `mailto:${item.email}`;
         setLine(refs.msg, `Ouverture du mail pre-rempli vers ${item.email}`);
+        return;
+      }
+      if (btn.dataset.action === "rich-mail") {
+        const result = await copyRichMail(item);
+        setLine(
+          refs.msg,
+          result.rich
+            ? `Mail pro copie pour ${item.name}. Colle-le dans Gmail ou Outlook. Sujet: ${result.subject}`
+            : `Version texte copie pour ${item.name}. Sujet suggere: ${result.subject}`
+        );
         return;
       }
       if (btn.dataset.action === "contacted") {
