@@ -9,8 +9,11 @@
   const SORT_DEFAULT = "date_desc";
   const ARTIST_NAME = "Marie-Madeleine Gautier";
   const DEFAULT_PUBLIC_SITE = "https://marie-madeleine-gautier-world.com";
+  const CONTACT_NAME = "Guillotin Alexis";
+  const CONTACT_ROLE = "Accompagnement et diffusion artistique";
+  const CONTACT_PHONE = "07 67 03 34 08";
+  const CONTACT_PHONE_LINK = "0767033408";
   const STUDIO_NAME = "DigitalExis-Studio";
-  const STUDIO_TAGLINE = "Developpement digital et visibilite pour artistes";
   const STUDIO_LOGO_PATH = "/assets/logo/logo-digitalexis-email.png";
   const collator = new Intl.Collator("fr-FR", { sensitivity: "base", numeric: true });
 
@@ -120,37 +123,35 @@
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
 
-  const pitchByType = (type) => ({
-    sculpture: "recherche sculpturale autour de la matiere, du volume et de la presence",
-    figuratif: "recherche figurative sensible a la presence, au geste et a l'espace",
-    contemporain: "recherche contemporaine autour de la forme, de la matiere et de l'espace",
-  }[fixType(type)]);
-
   function buildProspectMail(item = {}) {
     const email = txt(item.email).toLowerCase();
     if (!email) return null;
 
     const site = publicSiteUrl();
-    const galleryName = txt(item.name) || "votre galerie";
-    const subject = `${ARTIST_NAME} | proposition pour ${galleryName}`;
+    const galleryName = txt(item.name);
+    const subject = galleryName
+      ? `Presentation du travail de ${ARTIST_NAME} | ${galleryName}`
+      : `Presentation du travail de ${ARTIST_NAME}`;
     const body = [
-      "Bonjour,",
+      "Madame, Monsieur,",
       "",
-      `Je me permets de vous contacter au sujet du travail de la sculptrice ${ARTIST_NAME}.`,
-      `Au regard de la ligne artistique de ${galleryName}, il me semble qu'un echange pourrait etre pertinent, son travail developpant une ${pitchByType(item.type)}.`,
+      `Je me permets de vous contacter afin de vous presenter le travail de la sculptrice ${ARTIST_NAME}.`,
       "",
-      "Vous pouvez consulter une premiere selection ici :",
-      `- Site officiel : ${site}`,
-      `- Page artiste : ${site}/artiste.html`,
-      `- Galerie en ligne : ${site}/gallery.html`,
-      `- Catalogue : ${site}/assets/pdf/catalogue-2023.pdf`,
-      `- Monographie : ${site}/assets/pdf/monographie.pdf`,
+      "Son travail s'inscrit dans une recherche artistique autour de la sculpture contemporaine, de l'architecture et du paysage, explorant les relations entre formes construites et environnement.",
       "",
-      "Si cela vous interesse, je peux vous transmettre un dossier plus cible, une selection d'oeuvres avec visuels, formats et disponibilites, ou convenir d'un court echange.",
+      "Nous souhaiterions vous proposer un rendez-vous afin de vous presenter son travail plus en detail et echanger avec vous sur sa demarche artistique.",
+      "",
+      `${ARTIST_NAME} est tout a fait disponible pour se deplacer et venir vous rencontrer en personne afin de vous presenter ses oeuvres et son univers artistique.`,
+      "",
+      "Je peux egalement vous transmettre un portfolio ou un dossier artistique si vous souhaitez decouvrir son travail en amont.",
+      "",
+      "Je vous remercie pour l'attention portee a ce message et reste a votre disposition.",
       "",
       "Bien cordialement,",
-      STUDIO_NAME,
-      STUDIO_TAGLINE,
+      "",
+      CONTACT_NAME,
+      CONTACT_ROLE,
+      `Telephone : ${CONTACT_PHONE}`,
       site,
     ].join("\n");
 
@@ -165,37 +166,38 @@
     const mail = buildProspectMail(item);
     if (!mail) return null;
 
-    const galleryName = txt(item.name) || "votre galerie";
     const site = publicSiteUrl();
     const logoUrl = absoluteUrl(STUDIO_LOGO_PATH);
-    const links = [
-      { label: "Site officiel", href: site },
-      { label: "Page artiste", href: `${site}/artiste.html` },
-      { label: "Galerie en ligne", href: `${site}/gallery.html` },
-      { label: "Catalogue", href: `${site}/assets/pdf/catalogue-2023.pdf` },
-      { label: "Monographie", href: `${site}/assets/pdf/monographie.pdf` },
-    ];
 
     const html = [
-      '<div style="margin:0;padding:0;font-family:Segoe UI,Arial,sans-serif;color:#101828;font-size:15px;line-height:1.7;">',
-      '<p style="margin:0 0 16px;">Bonjour,</p>',
-      `<p style="margin:0 0 16px;">Je me permets de vous contacter au sujet du travail de la sculptrice <strong>${escapeHtml(ARTIST_NAME)}</strong>.</p>`,
-      `<p style="margin:0 0 16px;">Au regard de la ligne artistique de <strong>${escapeHtml(galleryName)}</strong>, il me semble qu'un echange pourrait etre pertinent, son travail developpant une ${escapeHtml(pitchByType(item.type))}.</p>`,
-      '<p style="margin:0 0 10px;">Vous pouvez consulter une premiere selection ici :</p>',
-      '<ul style="margin:0 0 20px 18px;padding:0;">',
-      ...links.map((link) => `<li style="margin:0 0 8px;"><a href="${escapeHtml(link.href)}" style="color:#0f4c81;text-decoration:none;">${escapeHtml(link.label)}</a></li>`),
-      '</ul>',
-      '<p style="margin:0 0 18px;">Si cela vous interesse, je peux vous transmettre un dossier plus cible, une selection d&apos;oeuvres avec visuels, formats et disponibilites, ou convenir d&apos;un court echange.</p>',
-      '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin-top:14px;">',
+      '<div style="margin:0;padding:24px 0;background:#f7f4ef;font-family:Georgia,Times New Roman,serif;color:#1f2937;">',
+      '<div style="max-width:720px;margin:0 auto;background:#ffffff;border:1px solid #ece6dc;border-radius:24px;overflow:hidden;box-shadow:0 16px 40px rgba(15,23,42,0.08);">',
+      '<div style="padding:28px 40px 18px;border-bottom:1px solid #f1ece3;background:linear-gradient(135deg,#fbf7f0 0%,#ffffff 100%);">',
+      '<div style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#8a6b45;margin:0 0 10px;">Presentation artistique</div>',
+      `<div style="font-size:32px;line-height:1.15;font-weight:700;color:#121926;margin:0 0 8px;">${escapeHtml(ARTIST_NAME)}</div>`,
+      '<div style="font-size:15px;line-height:1.7;color:#667085;">Sculpture contemporaine, architecture et paysage</div>',
+      "</div>",
+      '<div style="padding:34px 40px 36px;font-size:16px;line-height:1.85;color:#344054;">',
+      '<p style="margin:0 0 18px;">Madame, Monsieur,</p>',
+      `<p style="margin:0 0 18px;">Je me permets de vous contacter afin de vous presenter le travail de la sculptrice <strong style="color:#111827;">${escapeHtml(ARTIST_NAME)}</strong>.</p>`,
+      "<p style=\"margin:0 0 18px;\">Son travail s'inscrit dans une recherche artistique autour de <strong style=\"color:#111827;\">la sculpture contemporaine, de l'architecture et du paysage</strong>, explorant les relations entre formes construites et environnement.</p>",
+      "<p style=\"margin:0 0 18px;\">Nous souhaiterions vous proposer <strong style=\"color:#111827;\">un rendez-vous afin de vous presenter son travail plus en detail</strong> et echanger avec vous sur sa demarche artistique.</p>",
+      `<p style="margin:0 0 18px;"><strong style="color:#111827;">${escapeHtml(ARTIST_NAME)} est tout a fait disponible pour se deplacer et venir vous rencontrer en personne</strong> afin de vous presenter ses oeuvres et son univers artistique.</p>`,
+      "<div style=\"margin:24px 0;padding:18px 22px;border-left:3px solid #b7925f;background:#fcfaf6;border-radius:0 14px 14px 0;color:#4b5563;\">Je peux egalement vous transmettre <strong style=\"color:#111827;\">un portfolio ou un dossier artistique</strong> si vous souhaitez decouvrir son travail en amont.</div>",
+      "<p style=\"margin:0 0 28px;\">Je vous remercie pour l'attention portee a ce message et reste a votre disposition.</p>",
+      '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin-top:8px;">',
       "<tr>",
-      `<td valign="middle" style="padding:0 16px 0 0;"><img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(STUDIO_NAME)}" style="display:block;width:220px;max-width:220px;height:auto;border:0;border-radius:14px;"></td>`,
-      '<td valign="middle" style="padding:0;">',
-      `<div style="font-size:18px;font-weight:700;color:#101828;">${escapeHtml(STUDIO_NAME)}</div>`,
-      `<div style="font-size:13px;color:#475467;margin:4px 0 10px;">${escapeHtml(STUDIO_TAGLINE)}</div>`,
-      `<div style="font-size:13px;"><a href="${escapeHtml(site)}" style="color:#0f4c81;text-decoration:none;">${escapeHtml(site.replace(/^https?:\/\//i, ""))}</a></div>`,
+      `<td valign="top" style="padding:4px 18px 0 0;"><img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(STUDIO_NAME)}" style="display:block;width:150px;max-width:150px;height:auto;border:0;border-radius:12px;"></td>`,
+      '<td valign="top" style="padding:0;">',
+      `<div style="font-size:20px;font-weight:700;color:#111827;">${escapeHtml(CONTACT_NAME)}</div>`,
+      `<div style="font-size:14px;color:#6b7280;margin:4px 0 8px;">${escapeHtml(CONTACT_ROLE)}</div>`,
+      `<div style="font-size:13px;color:#6b7280;margin:0 0 4px;">${escapeHtml(STUDIO_NAME)}</div>`,
+      `<div style="font-size:14px;line-height:1.8;"><a href="tel:${escapeHtml(CONTACT_PHONE_LINK)}" style="color:#0f4c81;text-decoration:none;">${escapeHtml(CONTACT_PHONE)}</a><br><a href="${escapeHtml(site)}" style="color:#0f4c81;text-decoration:none;">${escapeHtml(site.replace(/^https?:\/\//i, ""))}</a></div>`,
       "</td>",
       "</tr>",
       "</table>",
+      "</div>",
+      "</div>",
       "</div>",
     ].join("");
 
