@@ -14,7 +14,7 @@
   const CONTACT_PHONE = "07 67 03 34 08";
   const CONTACT_PHONE_LINK = "0767033408";
   const STUDIO_NAME = "DigitalExis-Studio";
-  const STUDIO_LOGO_PATH = "/assets/logo/logo-digitalexis-email.png";
+  const STUDIO_LOGO_PATH = "/assets/logo/img-logo-leger.png";
   const collator = new Intl.Collator("fr-FR", { sensitivity: "base", numeric: true });
 
   const STATUS = {
@@ -74,6 +74,7 @@
   };
 
   const refs = {};
+  let studioLogoSrcPromise = null;
   const $ = (id) => document.getElementById(id);
   const txt = (v) => String(v ?? "").trim();
   const today = () => new Date().toISOString().slice(0, 10);
@@ -123,6 +124,29 @@
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
 
+  function blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(reader.error || new Error("Lecture logo impossible."));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function studioLogoSrc() {
+    if (!studioLogoSrcPromise) {
+      const fallbackUrl = absoluteUrl(STUDIO_LOGO_PATH);
+      studioLogoSrcPromise = fetch(fallbackUrl, { cache: "force-cache" })
+        .then((res) => {
+          if (!res.ok) throw new Error(`logo ${res.status}`);
+          return res.blob();
+        })
+        .then(blobToDataUrl)
+        .catch(() => fallbackUrl);
+    }
+    return studioLogoSrcPromise;
+  }
+
   function buildProspectMail(item = {}) {
     const email = txt(item.email).toLowerCase();
     if (!email) return null;
@@ -162,12 +186,12 @@
     };
   }
 
-  function buildProspectHtmlMail(item = {}) {
+  async function buildProspectHtmlMail(item = {}) {
     const mail = buildProspectMail(item);
     if (!mail) return null;
 
     const site = publicSiteUrl();
-    const logoUrl = absoluteUrl(STUDIO_LOGO_PATH);
+    const logoUrl = await studioLogoSrc();
 
     const html = [
       '<div style="margin:0;padding:24px 0;background:#f7f4ef;font-family:Georgia,Times New Roman,serif;color:#1f2937;">',
@@ -1089,7 +1113,7 @@ out center tags;
   }
 
   async function copyRichMail(item) {
-    const payload = buildProspectHtmlMail(item);
+    const payload = await buildProspectHtmlMail(item);
     if (!payload) throw new Error("Aucun email disponible.");
 
     if (navigator.clipboard?.write && window.ClipboardItem) {
