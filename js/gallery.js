@@ -39,6 +39,8 @@
     });
   };
 
+  const escHtml = (s) => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
   const resolveUrl = (uOrPath) => {
     const v = String(uOrPath || "").trim();
     if (!v) return "";
@@ -518,9 +520,9 @@
       const parts = [];
       const sl = SALE_STATUS_LABELS[w.sale_status] || "";
       if (sl) parts.push(`<span class="work-badge work-badge--${w.sale_status}">${sl}</span>`);
-      if (w.materiau)   parts.push(`<span>${w.materiau}</span>`);
-      if (w.dimensions) parts.push(`<span>${w.dimensions}</span>`);
-      if (w.poids)      parts.push(`<span>${w.poids}</span>`);
+      if (w.materiau)   parts.push(`<span>${escHtml(w.materiau)}</span>`);
+      if (w.dimensions) parts.push(`<span>${escHtml(w.dimensions)}</span>`);
+      if (w.poids)      parts.push(`<span>${escHtml(w.poids)}</span>`);
       lbMeta.hidden    = parts.length === 0;
       lbMeta.innerHTML = parts.join('<span class="lb-sep"> · </span>');
     }
@@ -933,7 +935,7 @@
     qs("#demandeForm", modal)?.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const sb  = getSB();
+      const sb  = await waitForSB();
       const form = e.target;
       const msg  = qs("#dmMsg");
       const btn  = qs("#dmSubmitBtn");
@@ -1279,6 +1281,8 @@
     window.addEventListener("keydown", (e) => {
       const lb = qs("#lightbox");
       if (!lb || lb.hidden || !lb.classList.contains("is-open")) return;
+      const dm = qs("#demandeModal");
+      if (e.key === "Escape" && dm && !dm.hidden) return;
       if (e.key === "Escape") closeLightbox();
       if (e.key === "ArrowLeft") navLightbox(-1);
       if (e.key === "ArrowRight") navLightbox(+1);
