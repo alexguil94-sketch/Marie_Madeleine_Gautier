@@ -525,6 +525,9 @@
       lbMeta.innerHTML = parts.join('<span class="lb-sep"> · </span>');
     }
 
+    const lbDemander = qs("#lbDemander");
+    if (lbDemander) lbDemander.hidden = w.sale_status === "vendue";
+
     resetPanZoom();
   }
 
@@ -855,6 +858,157 @@
     form.querySelector("#weTitleInput")?.focus();
   }
 
+  // ── Modale "Demander cette œuvre" ────────────────────────────────────────
+  function ensureDemandeModal() {
+    if (qs("#demandeModal")) return;
+
+    const modal = document.createElement("section");
+    modal.id = "demandeModal";
+    modal.className = "mmg-modal";
+    modal.hidden = true;
+    modal.setAttribute("aria-hidden", "true");
+
+    modal.innerHTML = `
+      <div class="mmg-card" role="dialog" aria-modal="true" aria-labelledby="dmTitle">
+        <div class="mmg-head">
+          <div style="min-width:0">
+            <div class="kicker">Renseignement</div>
+            <h2 id="dmTitle" class="mmg-title" style="margin:10px 0 0">Demander une œuvre</h2>
+            <div id="dmOeuvreName" class="muted" style="margin-top:6px; font-style:italic"></div>
+          </div>
+          <button type="button" class="icon-btn" data-dm-close aria-label="Fermer">×</button>
+        </div>
+
+        <div class="hr"></div>
+
+        <form id="demandeForm" class="mmg-form" autocomplete="on" novalidate>
+          <input type="hidden" name="oeuvre_id" />
+          <input type="hidden" name="titre" />
+
+          <div class="columns">
+            <div>
+              <label class="mmg-label" for="dmNomInput">Votre nom *</label>
+              <input id="dmNomInput" class="field" name="nom" required maxlength="120" autocomplete="name" />
+            </div>
+            <div>
+              <label class="mmg-label" for="dmEmailInput">Votre email *</label>
+              <input id="dmEmailInput" class="field" name="email" type="email" required autocomplete="email" />
+            </div>
+          </div>
+
+          <div>
+            <label class="mmg-label" for="dmMsgInput">Message (optionnel)</label>
+            <textarea id="dmMsgInput" class="field" name="message" rows="4" maxlength="2000"
+              placeholder="Précisez votre demande, contexte d'acquisition…"></textarea>
+          </div>
+
+          <div class="mmg-actions">
+            <div class="mmg-actions__right">
+              <button type="button" class="btn ghost" data-dm-cancel>Annuler</button>
+              <button type="submit" class="btn" id="dmSubmitBtn">Envoyer</button>
+            </div>
+          </div>
+
+          <div id="dmMsg" class="muted small-note" style="min-height:18px; margin-top:4px"></div>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const closeModal = () => {
+      const form = qs("#demandeForm");
+      if (form) form.reset();
+      const msg = qs("#dmMsg");
+      if (msg) msg.textContent = "";
+      modal.hidden = true;
+      modal.setAttribute("aria-hidden", "true");
+      document.body.style.overflow = "";
+    };
+
+    modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+    qs("[data-dm-close]",  modal)?.addEventListener("click", closeModal);
+    qs("[data-dm-cancel]", modal)?.addEventListener("click", closeModal);
+
+    qs("#demandeForm", modal)?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const sb  = getSB();
+      const form = e.target;
+      const msg  = qs("#dmMsg");
+      const btn  = qs("#dmSubmitBtn");
+
+      if (msg) msg.textContent = "";
+
+      const fd      = new FormData(form);
+      const nom     = String(fd.get("nom")      || "").trim();
+      const email   = String(fd.get("email")    || "").trim().toLowerCase();
+      const message = String(fd.get("message")  || "").trim() || null;
+      const titre   = String(fd.get("titre")    || "").trim();
+      const oeuvre_id = String(fd.get("oeuvre_id") || "").trim() || null;
+
+      if (!nom)   { if (msg) msg.textContent = "Votre nom est requis.";   return; }
+      if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        if (msg) msg.textContent = "Adresse email invalide.";
+        return;
+      }
+
+      if (btn) btn.disabled = true;
+      if (msg) msg.textContent = "Envoi en cours…";
+
+      const payload = { oeuvre_id, titre, nom, email, message };
+
+      try {
+        if (sb) {
+          const { error } = await sb.from("demandes").insert(payload);
+          if (error) throw error;
+        }
+
+        // Notification email (best-effort, ne bloque pas en cas d'échec)
+        fetch("/.netlify/functions/notify-demande", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        }).catch(() => {});
+
+        if (msg) msg.textContent = "✅ Demande envoyée — je vous recontacte sous 48 h.";
+        setTimeout(() => closeModal(), 2800);
+      } catch (err) {
+        console.error("[demande]", err);
+        if (msg) msg.textContent = "Erreur : " + errText(err);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+  }
+
+  function openDemandeModal(work) {
+    ensureDemandeModal();
+
+    const modal = qs("#demandeModal");
+    const form  = qs("#demandeForm");
+    if (!modal || !form) return;
+
+    const nameEl = qs("#dmOeuvreName");
+    if (nameEl) nameEl.textContent = `« ${work.title || "Œuvre sans titre"} »`;
+
+    form.querySelector('[name="oeuvre_id"]').value = String(work.id || "");
+    form.querySelector('[name="titre"]').value     = work.title || "";
+    form.querySelector('[name="nom"]').value       = "";
+    form.querySelector('[name="email"]').value     = "";
+    form.querySelector('[name="message"]').value   = "";
+
+    const dmMsg = qs("#dmMsg");
+    if (dmMsg) dmMsg.textContent = "";
+
+    modal.hidden = false;
+    modal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+
+    qs("#dmNomInput")?.focus();
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   async function loadFallbackWorks() {
     try {
       const res = await fetch("data/works.json", { cache: "no-store" });
@@ -1104,6 +1258,11 @@
     qs("#aiSearch")?.addEventListener("click", runAiSearch);
     qs("#aiClear")?.addEventListener("click", clearAiSearch);
 
+    qs("#lbDemander")?.addEventListener("click", () => {
+      const w = state.view[state.lightboxIndex];
+      if (w) openDemandeModal(w);
+    });
+
     // Lightbox
     qs("[data-close]")?.addEventListener("click", closeLightbox);
     qs("#lightbox")?.addEventListener("click", (e) => {
@@ -1135,6 +1294,11 @@
       if (qs("#workEditModal") && !qs("#workEditModal").hidden) {
         setEditModalOpen(false);
         state.editingId = null;
+      }
+      if (qs("#demandeModal") && !qs("#demandeModal").hidden) {
+        qs("#demandeModal").hidden = true;
+        qs("#demandeModal").setAttribute("aria-hidden", "true");
+        document.body.style.overflow = "";
       }
     });
   }
