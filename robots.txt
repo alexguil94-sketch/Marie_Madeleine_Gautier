@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Pages privées / admin
+Disallow: /studio.html
+Disallow: /admin.html
+Disallow: /admin/
+Disallow: /login.html
+Disallow: /profile.html
+Disallow: /veille.html
+
+Sitemap: https://marie-madeleine-gautier-world.com/sitemap.xml
