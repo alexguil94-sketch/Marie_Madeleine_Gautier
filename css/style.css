@@ -215,3 +215,14 @@ textarea{resize:vertical}
 .footer-inner{display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap}
 .muted{opacity:.78}
 
+/* work sale-status badge */
+.work-badge{position:absolute; top:10px; right:10px; z-index:2; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; pointer-events:none; line-height:1.4}
+.work-badge--disponible{background:rgba(34,197,94,.85); color:#fff}
+.work-badge--sur_demande{background:rgba(197,160,89,.92); color:#fff}
+.work-badge--vendue{background:rgba(107,114,128,.82); color:#fff; text-decoration:line-through}
+
+/* lightbox meta strip (statut, matériau, dimensions) */
+.lightbox-meta{padding:8px 14px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:13px; border-bottom:1px solid rgba(255,255,255,.08)}
+.lightbox-meta .lb-sep{opacity:.3}
+.lightbox-meta .work-badge{position:static}
+

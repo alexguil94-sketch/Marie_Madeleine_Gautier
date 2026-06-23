@@ -78,6 +78,12 @@
     aiBackup: null,
   };
 
+  const SALE_STATUS_LABELS = {
+    disponible: 'Disponible',
+    sur_demande: 'Sur demande',
+    vendue: 'Vendue',
+  };
+
   const setAiStatus = (msg) => {
     const el = qs("#aiStatus");
     if (!el) return;
@@ -402,8 +408,15 @@
       card.tabIndex = 0;
       card.dataset.workId = String(w.id);
 
+      const sLabel = SALE_STATUS_LABELS[w.sale_status] || "";
+      const badge  = sLabel
+        ? `<div class="work-badge work-badge--${w.sale_status}">${sLabel}</div>`
+        : "";
+      const imgAlt = (w.image_alt || w.title || "").replace(/"/g, "&quot;");
+
       card.innerHTML = `
-        ${img ? `<img loading="lazy" decoding="async" src="${img}" alt="">` : ""}
+        ${badge}
+        ${img ? `<img loading="lazy" decoding="async" src="${img}" alt="${imgAlt}">` : ""}
         <div class="meta">
           <div style="font-weight:700">${w.title || "—"}</div>
           ${sub ? `<div class="muted" style="font-size:12px">${sub}</div>` : ""}
@@ -500,6 +513,18 @@
     if (title) title.textContent = w.title || "—";
     if (count) count.textContent = `${state.lightboxIndex + 1}/${state.view.length}`;
 
+    const lbMeta = qs("#lbMeta");
+    if (lbMeta) {
+      const parts = [];
+      const sl = SALE_STATUS_LABELS[w.sale_status] || "";
+      if (sl) parts.push(`<span class="work-badge work-badge--${w.sale_status}">${sl}</span>`);
+      if (w.materiau)   parts.push(`<span>${w.materiau}</span>`);
+      if (w.dimensions) parts.push(`<span>${w.dimensions}</span>`);
+      if (w.poids)      parts.push(`<span>${w.poids}</span>`);
+      lbMeta.hidden    = parts.length === 0;
+      lbMeta.innerHTML = parts.join('<span class="lb-sep"> · </span>');
+    }
+
     resetPanZoom();
   }
 
@@ -588,6 +613,51 @@
             <textarea id="weDescInput" class="field" name="description" rows="4"></textarea>
           </div>
 
+          <div class="hr" style="margin:14px 0"></div>
+
+          <div class="columns">
+            <div>
+              <label class="mmg-label" for="weSaleStatusInput">Statut commercial</label>
+              <select id="weSaleStatusInput" class="field" name="sale_status">
+                <option value="">— Non renseigné</option>
+                <option value="disponible">Disponible</option>
+                <option value="sur_demande">Sur demande</option>
+                <option value="vendue">Vendue</option>
+              </select>
+            </div>
+            <div>
+              <label class="mmg-label" for="weMateriauInput">Matériau</label>
+              <input id="weMateriauInput" class="field" name="materiau" />
+            </div>
+          </div>
+
+          <div class="columns">
+            <div>
+              <label class="mmg-label" for="weDimsInput">Dimensions</label>
+              <input id="weDimsInput" class="field" name="dimensions" placeholder="ex : 40 × 30 × 20 cm" />
+            </div>
+            <div>
+              <label class="mmg-label" for="wePoidInput">Poids</label>
+              <input id="wePoidInput" class="field" name="poids" placeholder="ex : 2,5 kg" />
+            </div>
+          </div>
+
+          <div class="columns">
+            <div>
+              <label class="mmg-label" for="wePrixInput">Prix (admin uniquement)</label>
+              <input id="wePrixInput" class="field" name="prix" type="number" min="0" step="0.01" placeholder="ex : 1200" />
+            </div>
+            <div>
+              <label class="mmg-label" for="weDeviseInput">Devise</label>
+              <select id="weDeviseInput" class="field" name="devise">
+                <option value="EUR">EUR €</option>
+                <option value="USD">USD $</option>
+                <option value="CHF">CHF</option>
+                <option value="GBP">GBP £</option>
+              </select>
+            </div>
+          </div>
+
           <div class="mmg-row">
             <label class="mmg-check">
               <input type="checkbox" name="is_published" />
@@ -673,6 +743,14 @@
         ? w.sort
         : 1000;
 
+      const saleStatus = String(fd.get("sale_status") || "").trim() || null;
+      const dimensions = String(fd.get("dimensions") || "").trim() || null;
+      const materiau   = String(fd.get("materiau")   || "").trim() || null;
+      const poids      = String(fd.get("poids")      || "").trim() || null;
+      const prixRaw    = String(fd.get("prix")       || "").trim();
+      const prix       = prixRaw ? parseFloat(prixRaw) : null;
+      const devise     = String(fd.get("devise")     || "EUR").trim() || "EUR";
+
       const payload = {
         title,
         year: Number.isFinite(yearVal) ? yearVal : null,
@@ -680,6 +758,12 @@
         sort: safeSort,
         description: description || null,
         is_published: isPublished,
+        sale_status: saleStatus,
+        dimensions,
+        materiau,
+        poids,
+        prix: prix !== null && !Number.isNaN(prix) ? prix : null,
+        devise,
       };
 
       // Upload cover if provided
@@ -755,6 +839,12 @@
     form.querySelector('[name="sort"]').value = w.sort ?? 1000;
     form.querySelector('[name="description"]').value = w.description || "";
     form.querySelector('[name="is_published"]').checked = !!w.is_published;
+    form.querySelector('[name="sale_status"]').value = w.sale_status || "";
+    form.querySelector('[name="materiau"]').value   = w.materiau   || "";
+    form.querySelector('[name="dimensions"]').value = w.dimensions || "";
+    form.querySelector('[name="poids"]').value      = w.poids      || "";
+    form.querySelector('[name="prix"]').value       = w.prix       ?? "";
+    form.querySelector('[name="devise"]').value     = w.devise     || "EUR";
     const coverInput = form.querySelector('input[name="cover"]');
     if (coverInput) coverInput.value = "";
 
@@ -832,9 +922,12 @@
     const from = state.page * state.pageSize;
     const to = from + state.pageSize - 1;
 
+    const publicCols = "id,title,year,category,description,cover_url,thumb_url,images,sort,is_published,created_at,image_alt,sale_status,dimensions,materiau,poids";
+    const adminCols  = publicCols + ",prix,devise";
+
     let q = sb
       .from("works")
-      .select("id,title,year,category,description,cover_url,thumb_url,images,sort,is_published,created_at")
+      .select(state.isAdmin ? adminCols : publicCols)
       .order("sort", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false })
       .range(from, to);
