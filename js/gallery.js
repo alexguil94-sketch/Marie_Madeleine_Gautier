@@ -78,6 +78,12 @@
     aiBackup: null,
   };
 
+  const SALE_STATUS_LABELS = {
+    disponible: 'Disponible',
+    sur_demande: 'Sur demande',
+    vendue: 'Vendue',
+  };
+
   const setAiStatus = (msg) => {
     const el = qs("#aiStatus");
     if (!el) return;
@@ -402,8 +408,15 @@
       card.tabIndex = 0;
       card.dataset.workId = String(w.id);
 
+      const sLabel = SALE_STATUS_LABELS[w.sale_status] || "";
+      const badge  = sLabel
+        ? `<div class="work-badge work-badge--${w.sale_status}">${sLabel}</div>`
+        : "";
+      const imgAlt = (w.image_alt || w.title || "").replace(/"/g, "&quot;");
+
       card.innerHTML = `
-        ${img ? `<img loading="lazy" decoding="async" src="${img}" alt="">` : ""}
+        ${badge}
+        ${img ? `<img loading="lazy" decoding="async" src="${img}" alt="${imgAlt}">` : ""}
         <div class="meta">
           <div style="font-weight:700">${w.title || "—"}</div>
           ${sub ? `<div class="muted" style="font-size:12px">${sub}</div>` : ""}
@@ -500,6 +513,21 @@
     if (title) title.textContent = w.title || "—";
     if (count) count.textContent = `${state.lightboxIndex + 1}/${state.view.length}`;
 
+    const lbMeta = qs("#lbMeta");
+    if (lbMeta) {
+      const parts = [];
+      const sl = SALE_STATUS_LABELS[w.sale_status] || "";
+      if (sl) parts.push(`<span class="work-badge work-badge--${w.sale_status}">${sl}</span>`);
+      if (w.materiau)   parts.push(`<span>${w.materiau}</span>`);
+      if (w.dimensions) parts.push(`<span>${w.dimensions}</span>`);
+      if (w.poids)      parts.push(`<span>${w.poids}</span>`);
+      lbMeta.hidden    = parts.length === 0;
+      lbMeta.innerHTML = parts.join('<span class="lb-sep"> · </span>');
+    }
+
+    const lbDemander = qs("#lbDemander");
+    if (lbDemander) lbDemander.hidden = w.sale_status === "vendue";
+
     resetPanZoom();
   }
 
@@ -588,6 +616,51 @@
             <textarea id="weDescInput" class="field" name="description" rows="4"></textarea>
           </div>
 
+          <div class="hr" style="margin:14px 0"></div>
+
+          <div class="columns">
+            <div>
+              <label class="mmg-label" for="weSaleStatusInput">Statut commercial</label>
+              <select id="weSaleStatusInput" class="field" name="sale_status">
+                <option value="">— Non renseigné</option>
+                <option value="disponible">Disponible</option>
+                <option value="sur_demande">Sur demande</option>
+                <option value="vendue">Vendue</option>
+              </select>
+            </div>
+            <div>
+              <label class="mmg-label" for="weMateriauInput">Matériau</label>
+              <input id="weMateriauInput" class="field" name="materiau" />
+            </div>
+          </div>
+
+          <div class="columns">
+            <div>
+              <label class="mmg-label" for="weDimsInput">Dimensions</label>
+              <input id="weDimsInput" class="field" name="dimensions" placeholder="ex : 40 × 30 × 20 cm" />
+            </div>
+            <div>
+              <label class="mmg-label" for="wePoidInput">Poids</label>
+              <input id="wePoidInput" class="field" name="poids" placeholder="ex : 2,5 kg" />
+            </div>
+          </div>
+
+          <div class="columns">
+            <div>
+              <label class="mmg-label" for="wePrixInput">Prix (admin uniquement)</label>
+              <input id="wePrixInput" class="field" name="prix" type="number" min="0" step="0.01" placeholder="ex : 1200" />
+            </div>
+            <div>
+              <label class="mmg-label" for="weDeviseInput">Devise</label>
+              <select id="weDeviseInput" class="field" name="devise">
+                <option value="EUR">EUR €</option>
+                <option value="USD">USD $</option>
+                <option value="CHF">CHF</option>
+                <option value="GBP">GBP £</option>
+              </select>
+            </div>
+          </div>
+
           <div class="mmg-row">
             <label class="mmg-check">
               <input type="checkbox" name="is_published" />
@@ -673,6 +746,14 @@
         ? w.sort
         : 1000;
 
+      const saleStatus = String(fd.get("sale_status") || "").trim() || null;
+      const dimensions = String(fd.get("dimensions") || "").trim() || null;
+      const materiau   = String(fd.get("materiau")   || "").trim() || null;
+      const poids      = String(fd.get("poids")      || "").trim() || null;
+      const prixRaw    = String(fd.get("prix")       || "").trim();
+      const prix       = prixRaw ? parseFloat(prixRaw) : null;
+      const devise     = String(fd.get("devise")     || "EUR").trim() || "EUR";
+
       const payload = {
         title,
         year: Number.isFinite(yearVal) ? yearVal : null,
@@ -680,6 +761,12 @@
         sort: safeSort,
         description: description || null,
         is_published: isPublished,
+        sale_status: saleStatus,
+        dimensions,
+        materiau,
+        poids,
+        prix: prix !== null && !Number.isNaN(prix) ? prix : null,
+        devise,
       };
 
       // Upload cover if provided
@@ -755,6 +842,12 @@
     form.querySelector('[name="sort"]').value = w.sort ?? 1000;
     form.querySelector('[name="description"]').value = w.description || "";
     form.querySelector('[name="is_published"]').checked = !!w.is_published;
+    form.querySelector('[name="sale_status"]').value = w.sale_status || "";
+    form.querySelector('[name="materiau"]').value   = w.materiau   || "";
+    form.querySelector('[name="dimensions"]').value = w.dimensions || "";
+    form.querySelector('[name="poids"]').value      = w.poids      || "";
+    form.querySelector('[name="prix"]').value       = w.prix       ?? "";
+    form.querySelector('[name="devise"]').value     = w.devise     || "EUR";
     const coverInput = form.querySelector('input[name="cover"]');
     if (coverInput) coverInput.value = "";
 
@@ -764,6 +857,157 @@
     setEditModalOpen(true);
     form.querySelector("#weTitleInput")?.focus();
   }
+
+  // ── Modale "Demander cette œuvre" ────────────────────────────────────────
+  function ensureDemandeModal() {
+    if (qs("#demandeModal")) return;
+
+    const modal = document.createElement("section");
+    modal.id = "demandeModal";
+    modal.className = "mmg-modal";
+    modal.hidden = true;
+    modal.setAttribute("aria-hidden", "true");
+
+    modal.innerHTML = `
+      <div class="mmg-card" role="dialog" aria-modal="true" aria-labelledby="dmTitle">
+        <div class="mmg-head">
+          <div style="min-width:0">
+            <div class="kicker">Renseignement</div>
+            <h2 id="dmTitle" class="mmg-title" style="margin:10px 0 0">Demander une œuvre</h2>
+            <div id="dmOeuvreName" class="muted" style="margin-top:6px; font-style:italic"></div>
+          </div>
+          <button type="button" class="icon-btn" data-dm-close aria-label="Fermer">×</button>
+        </div>
+
+        <div class="hr"></div>
+
+        <form id="demandeForm" class="mmg-form" autocomplete="on" novalidate>
+          <input type="hidden" name="oeuvre_id" />
+          <input type="hidden" name="titre" />
+
+          <div class="columns">
+            <div>
+              <label class="mmg-label" for="dmNomInput">Votre nom *</label>
+              <input id="dmNomInput" class="field" name="nom" required maxlength="120" autocomplete="name" />
+            </div>
+            <div>
+              <label class="mmg-label" for="dmEmailInput">Votre email *</label>
+              <input id="dmEmailInput" class="field" name="email" type="email" required autocomplete="email" />
+            </div>
+          </div>
+
+          <div>
+            <label class="mmg-label" for="dmMsgInput">Message (optionnel)</label>
+            <textarea id="dmMsgInput" class="field" name="message" rows="4" maxlength="2000"
+              placeholder="Précisez votre demande, contexte d'acquisition…"></textarea>
+          </div>
+
+          <div class="mmg-actions">
+            <div class="mmg-actions__right">
+              <button type="button" class="btn ghost" data-dm-cancel>Annuler</button>
+              <button type="submit" class="btn" id="dmSubmitBtn">Envoyer</button>
+            </div>
+          </div>
+
+          <div id="dmMsg" class="muted small-note" style="min-height:18px; margin-top:4px"></div>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const closeModal = () => {
+      const form = qs("#demandeForm");
+      if (form) form.reset();
+      const msg = qs("#dmMsg");
+      if (msg) msg.textContent = "";
+      modal.hidden = true;
+      modal.setAttribute("aria-hidden", "true");
+      document.body.style.overflow = "";
+    };
+
+    modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+    qs("[data-dm-close]",  modal)?.addEventListener("click", closeModal);
+    qs("[data-dm-cancel]", modal)?.addEventListener("click", closeModal);
+
+    qs("#demandeForm", modal)?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const sb  = getSB();
+      const form = e.target;
+      const msg  = qs("#dmMsg");
+      const btn  = qs("#dmSubmitBtn");
+
+      if (msg) msg.textContent = "";
+
+      const fd      = new FormData(form);
+      const nom     = String(fd.get("nom")      || "").trim();
+      const email   = String(fd.get("email")    || "").trim().toLowerCase();
+      const message = String(fd.get("message")  || "").trim() || null;
+      const titre   = String(fd.get("titre")    || "").trim();
+      const oeuvre_id = String(fd.get("oeuvre_id") || "").trim() || null;
+
+      if (!nom)   { if (msg) msg.textContent = "Votre nom est requis.";   return; }
+      if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        if (msg) msg.textContent = "Adresse email invalide.";
+        return;
+      }
+
+      if (btn) btn.disabled = true;
+      if (msg) msg.textContent = "Envoi en cours…";
+
+      const payload = { oeuvre_id, titre, nom, email, message };
+
+      try {
+        if (sb) {
+          const { error } = await sb.from("demandes").insert(payload);
+          if (error) throw error;
+        }
+
+        // Notification email (best-effort, ne bloque pas en cas d'échec)
+        fetch("/.netlify/functions/notify-demande", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        }).catch(() => {});
+
+        if (msg) msg.textContent = "✅ Demande envoyée — je vous recontacte sous 48 h.";
+        setTimeout(() => closeModal(), 2800);
+      } catch (err) {
+        console.error("[demande]", err);
+        if (msg) msg.textContent = "Erreur : " + errText(err);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+  }
+
+  function openDemandeModal(work) {
+    ensureDemandeModal();
+
+    const modal = qs("#demandeModal");
+    const form  = qs("#demandeForm");
+    if (!modal || !form) return;
+
+    const nameEl = qs("#dmOeuvreName");
+    if (nameEl) nameEl.textContent = `« ${work.title || "Œuvre sans titre"} »`;
+
+    form.querySelector('[name="oeuvre_id"]').value = String(work.id || "");
+    form.querySelector('[name="titre"]').value     = work.title || "";
+    form.querySelector('[name="nom"]').value       = "";
+    form.querySelector('[name="email"]').value     = "";
+    form.querySelector('[name="message"]').value   = "";
+
+    const dmMsg = qs("#dmMsg");
+    if (dmMsg) dmMsg.textContent = "";
+
+    modal.hidden = false;
+    modal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+
+    qs("#dmNomInput")?.focus();
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   async function loadFallbackWorks() {
     try {
@@ -832,9 +1076,12 @@
     const from = state.page * state.pageSize;
     const to = from + state.pageSize - 1;
 
+    const publicCols = "id,title,year,category,description,cover_url,thumb_url,images,sort,is_published,created_at,image_alt,sale_status,dimensions,materiau,poids";
+    const adminCols  = publicCols + ",prix,devise";
+
     let q = sb
       .from("works")
-      .select("id,title,year,category,description,cover_url,thumb_url,images,sort,is_published,created_at")
+      .select(state.isAdmin ? adminCols : publicCols)
       .order("sort", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false })
       .range(from, to);
@@ -1011,6 +1258,11 @@
     qs("#aiSearch")?.addEventListener("click", runAiSearch);
     qs("#aiClear")?.addEventListener("click", clearAiSearch);
 
+    qs("#lbDemander")?.addEventListener("click", () => {
+      const w = state.view[state.lightboxIndex];
+      if (w) openDemandeModal(w);
+    });
+
     // Lightbox
     qs("[data-close]")?.addEventListener("click", closeLightbox);
     qs("#lightbox")?.addEventListener("click", (e) => {
@@ -1042,6 +1294,11 @@
       if (qs("#workEditModal") && !qs("#workEditModal").hidden) {
         setEditModalOpen(false);
         state.editingId = null;
+      }
+      if (qs("#demandeModal") && !qs("#demandeModal").hidden) {
+        qs("#demandeModal").hidden = true;
+        qs("#demandeModal").setAttribute("aria-hidden", "true");
+        document.body.style.overflow = "";
       }
     });
   }
