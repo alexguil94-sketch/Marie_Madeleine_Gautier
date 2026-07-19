@@ -356,6 +356,31 @@
   });
 
   // ------------------------
+  // Magic Link (OTP email)
+  // ------------------------
+  const magicForm = document.getElementById("magicForm");
+  const magicMsg  = document.getElementById("magicMsg");
+  const setMagicMsg = (t) => { if (magicMsg) magicMsg.textContent = t || ""; };
+
+  magicForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = String(new FormData(magicForm).get("magicEmail") || "").trim();
+    if (!email) { setMagicMsg("Entrez votre adresse email."); return; }
+
+    setMagicMsg("Envoi du lien…");
+    try {
+      const redirectTo = new URL("login.html", location.href).toString();
+      const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
+      if (error) { setMagicMsg("Erreur : " + (error.message || "impossible d'envoyer le lien")); return; }
+      setMagicMsg("✅ Lien envoyé — vérifiez votre boîte mail (valable 1 heure).");
+      magicForm.reset();
+    } catch (err) {
+      if (isAbort(err)) return;
+      setMagicMsg("Erreur : " + (err?.message || "impossible d'envoyer le lien"));
+    }
+  });
+
+  // ------------------------
   // Link identity buttons (user must be signed in)
   // Requires "Enable Manual Linking" in Supabase Auth settings
   // ------------------------
